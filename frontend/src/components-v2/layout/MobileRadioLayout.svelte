@@ -120,7 +120,10 @@
   }));
 
   // ── Modals ──
-  let settingsOpen = $state(false);
+  // Renamed from settingsOpen for #841 — this sheet now holds only
+  // "SETUP" content (keyboard config, antenna naming, CW defaults,
+  // diagnostics). Operating controls live in chips.
+  let setupOpen = $state(false);
   let modeModalOpen = $state(false);
   let filterModalOpen = $state(false);
   let txSettingsOpen = $state(false);
@@ -499,9 +502,9 @@
       <div class="m-vfo-freq" bind:this={vfoFreqElement}>
         <FrequencyDisplay freq={mainVfo.freq} compact active />
       </div>
-      <button class="m-settings-btn" onclick={() => (settingsOpen = true)}>
+      <button class="m-settings-btn" onclick={() => (setupOpen = true)} aria-label="Setup">
         <Settings size={16} />
-        <span>MORE</span>
+        <span>SETUP</span>
       </button>
     </div>
     <div class="m-vfo-meta">
@@ -718,56 +721,14 @@
     </button>
   </nav>
 
-  <!-- ═══ SETTINGS BOTTOM SHEET ═══ -->
-  <BottomSheet bind:open={settingsOpen} title="SETTINGS">
-          <CollapsiblePanel title="VFO / BAND" panelId="m-vfo-ops">
-            <div class="m-vfo-ops-row">
-              <HardwareButton
-                active={vfoOps.splitActive}
-                indicator="edge-left"
-                color={vfoOps.splitActive ? 'yellow' : 'muted'}
-                onclick={vfoHandlers.onSplitToggle}
-              >
-                SPLIT
-              </HardwareButton>
-              <HardwareButton
-                indicator="edge-left"
-                color="cyan"
-                onclick={vfoHandlers.onSwap}
-              >
-                A↔B
-              </HardwareButton>
-              <HardwareButton
-                indicator="edge-left"
-                color="cyan"
-                onclick={vfoHandlers.onEqual}
-              >
-                A=B
-              </HardwareButton>
-            </div>
-            <BandSelector
-              currentFreq={band.currentFreq}
-              onBandSelect={bandHandlers.onBandSelect}
-              onFreqPreset={presetHandlers.onFreqPreset}
-            />
-          </CollapsiblePanel>
-
-          <CollapsiblePanel title="DSP" panelId="m-dsp">
-            <DspPanel
-              nrMode={dsp.nrMode}
-              nrLevel={dsp.nrLevel}
-              nbActive={dsp.nbActive}
-              nbLevel={dsp.nbLevel}
-              notchMode={dsp.notchMode}
-              notchFreq={dsp.notchFreq}
-              onNrModeChange={dspHandlers.onNrModeChange}
-              onNrLevelChange={dspHandlers.onNrLevelChange}
-              onNbToggle={dspHandlers.onNbToggle}
-              onNbLevelChange={dspHandlers.onNbLevelChange}
-              onNotchModeChange={dspHandlers.onNotchModeChange}
-              onNotchFreqChange={dspHandlers.onNotchFreqChange}
-            />
-          </CollapsiblePanel>
+  <!-- ═══ SETUP BOTTOM SHEET (#841 rename, SETUP-only content) ═══
+       Per docs/plans/2026-04-18-mobile-ia.md §6, rare-config home.
+       BAND / DSP / RF / MODE / FILTER / ESSENTIALS live in chips.
+       Remaining here: AGC, RIT/XIT (until #842 chip lands), ANTENNA, CW. -->
+  <BottomSheet bind:open={setupOpen} title="SETUP">
+          <!-- VFO/BAND, DSP panels removed (#841) — BAND lives in the "band" chip,
+               VFO ops (SPLIT/A↔B/A=B) live in ESSENTIALS, DSP levels+toggles live
+               in ESSENTIALS. -->
 
           <CollapsiblePanel title="AGC" panelId="m-agc">
             <AgcPanel
@@ -776,22 +737,7 @@
             />
           </CollapsiblePanel>
 
-          <CollapsiblePanel title="RF FRONT END" panelId="m-rf">
-            <RfFrontEnd
-              rfGain={rfFrontEnd.rfGain}
-              squelch={rfFrontEnd.squelch}
-              att={rfFrontEnd.att}
-              pre={rfFrontEnd.pre}
-              digiSel={rfFrontEnd.digiSel}
-              ipPlus={rfFrontEnd.ipPlus}
-              onRfGainChange={rfHandlers.onRfGainChange}
-              onSquelchChange={rfHandlers.onSquelchChange}
-              onAttChange={rfHandlers.onAttChange}
-              onPreChange={rfHandlers.onPreChange}
-              onDigiSelToggle={rfHandlers.onDigiSelToggle}
-              onIpPlusToggle={rfHandlers.onIpPlusToggle}
-            />
-          </CollapsiblePanel>
+          <!-- RF FRONT END panel removed (#841) — lives in the "rf" chip. -->
 
           <CollapsiblePanel title="RIT / XIT" panelId="m-rit">
             <RitXitPanel
