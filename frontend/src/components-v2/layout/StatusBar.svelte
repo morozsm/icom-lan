@@ -13,7 +13,7 @@
   } from '$lib/stores/connection.svelte';
   import { getFrequency } from '$lib/stores/radio.svelte';
   import { hasAnyScope, hasAudio, hasSpectrum } from '$lib/stores/capabilities.svelte';
-  import { getLayoutMode, cycleLayoutMode } from '$lib/stores/layout.svelte';
+  import { getLayoutMode, setLayoutMode, type LayoutMode } from '$lib/stores/layout.svelte';
 
   interface Props {
     onSettings?: () => void;
@@ -21,13 +21,18 @@
   let { onSettings }: Props = $props();
 
   let layoutMode = $derived(getLayoutMode());
-  let hasAnyScopeAvail = $derived(hasAnyScope());
-  const layoutLabels: Record<string, string> = { auto: 'AUTO', lcd: 'LCD', standard: 'STD' };
-  const layoutTitles: Record<string, string> = {
-    auto: 'Cycle layout (currently AUTO — click to force LCD)',
-    lcd: 'Cycle layout (currently LCD — click to force STANDARD)',
-    standard: 'Cycle layout (currently STANDARD — click to return to AUTO)',
-  };
+  // Skin-switcher dropdown options. When #888 lands, this list can be sourced
+  // from the skin registry; for now it mirrors the LayoutMode preferences.
+  const skinOptions: Array<{ value: LayoutMode; label: string }> = [
+    { value: 'auto', label: 'AUTO' },
+    { value: 'standard', label: 'Standard' },
+    { value: 'lcd', label: 'LCD' },
+  ];
+
+  function handleSkinChange(ev: Event) {
+    const value = (ev.currentTarget as HTMLSelectElement).value as LayoutMode;
+    setLayoutMode(value);
+  }
 
   let radioPowerOn = $derived(getRadioPowerOn());
   let isPoweredOff = $derived(radioPowerOn === false);
@@ -219,19 +224,24 @@
         <Settings size={14} strokeWidth={2} />
       </button>
     {/if}
-    <button
-      type="button"
-      class="control-btn layout-btn"
-      onclick={() => cycleLayoutMode(hasAnyScopeAvail)}
-      title={layoutTitles[layoutMode]}
-    >
+    <label class="skin-switcher" title="Select UI skin">
       {#if layoutMode === 'lcd'}
-        <Tv size={14} strokeWidth={2} />
+        <Tv size={14} strokeWidth={2} aria-hidden="true" />
       {:else}
-        <Monitor size={14} strokeWidth={2} />
+        <Monitor size={14} strokeWidth={2} aria-hidden="true" />
       {/if}
-      <span class="btn-label">{layoutLabels[layoutMode]}</span>
-    </button>
+      <span class="sr-only">Skin</span>
+      <select
+        class="skin-select"
+        aria-label="Select UI skin"
+        value={layoutMode}
+        onchange={handleSkinChange}
+      >
+        {#each skinOptions as opt (opt.value)}
+          <option value={opt.value}>{opt.label}</option>
+        {/each}
+      </select>
+    </label>
     <ThemePicker />
     <button
       type="button"
@@ -354,6 +364,67 @@
 
   .btn-label {
     white-space: nowrap;
+  }
+
+  /* Skin switcher (replaces the old STD/LCD cycle button) */
+  .skin-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px 3px 8px;
+    background: var(--v2-bg-input, #1a1a2e);
+    border: 1px solid var(--v2-border, #2a2a3e);
+    border-radius: 3px;
+    color: var(--v2-text-primary, #fff);
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+
+  .skin-switcher:hover,
+  .skin-switcher:focus-within {
+    background: var(--v2-bg-card, #252540);
+    border-color: var(--v2-accent-cyan, #06b6d4);
+  }
+
+  .skin-select {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font: inherit;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 14px 0 2px;
+    cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 7px) 50%, calc(100% - 3px) 50%;
+    background-size: 4px 4px;
+    background-repeat: no-repeat;
+  }
+
+  .skin-select:focus {
+    outline: none;
+  }
+
+  .skin-select option {
+    background: var(--v2-bg-input, #1a1a2e);
+    color: var(--v2-text-primary, #fff);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .control-btn:hover {
