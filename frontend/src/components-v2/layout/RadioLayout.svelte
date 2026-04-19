@@ -55,7 +55,6 @@
   import RitXitPanel from '../panels/RitXitPanel.svelte';
   import CwPanel from '../panels/CwPanel.svelte';
   import { HardwareButton } from '$lib/Button';
-  import { Settings } from 'lucide-svelte';
 
   // Reactive state + capabilities — via runtime
   let radioState = $derived(runtime.state);
@@ -201,10 +200,7 @@
   <LcdLayout />
 {:else}
 <div class="radio-layout">
-  <StatusBar />
-  <button class="settings-button" onclick={() => (settingsOpen = true)} title="Settings">
-    <Settings size={20} />
-  </button>
+  <StatusBar onSettings={() => (settingsOpen = true)} />
   <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
 
   <section class="receiver-deck" bind:this={receiverDeckElement} style={receiverDeckStyle}>
@@ -803,35 +799,6 @@
   @keyframes pulse-dim {
     0%, 100% { opacity: 0.6; }
     50% { opacity: 1; }
-  }
-
-  /* ── Settings Button ── */
-  .settings-button {
-    position: fixed;
-    top: 36px;
-    right: 16px;
-    z-index: 100;
-    width: 40px;
-    height: 40px;
-    border: 1px solid var(--v2-border-panel, #333);
-    border-radius: 6px;
-    background: var(--v2-bg-card, #1a1a2e);
-    color: var(--v2-text-secondary, #aaa);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 150ms;
-  }
-
-  .settings-button:hover {
-    background: var(--v2-bg-panel, #252540);
-    color: var(--v2-accent-cyan, #00d4ff);
-    border-color: var(--v2-accent-cyan, #00d4ff);
-  }
-
-  .settings-button:active {
-    transform: scale(0.95);
   }
 
   /* ── Settings Modal ── */
