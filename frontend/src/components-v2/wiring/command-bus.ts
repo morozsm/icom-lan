@@ -1028,8 +1028,12 @@ export function makeKeyboardHandlers() {
           if (target !== 'MAIN' && target !== 'SUB') {
             return;
           }
-          patchRadioState({ active: target });
-          cmd('set_vfo', { vfo: target });
+          // Route through the same helper the VFO-click path uses so the
+          // audio focus follows the active receiver (#827 follow-up): a
+          // `m`/Shift+M/Shift+S keypress must behave identically to
+          // clicking MAIN/SUB, otherwise the operator tunes one side but
+          // keeps hearing the other in Dual-Watch / browser-audio flows.
+          _activateReceiver(target);
           return;
         }
         case 'focus_target': {
