@@ -946,7 +946,9 @@ async def test_get_level_af(handler: RigctldHandler, mock_radio: AsyncMock) -> N
 
 
 @pytest.mark.asyncio
-async def test_get_level_rf_gain(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_rf_gain(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_rf_gain = AsyncMock(return_value=255)
     resp = await handler.execute(get_cmd("get_level", "RF"))
     assert resp.ok
@@ -978,7 +980,9 @@ async def test_get_level_comp(handler: RigctldHandler, mock_radio: AsyncMock) ->
 
 
 @pytest.mark.asyncio
-async def test_get_level_micgain(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_micgain(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_mic_gain = AsyncMock(return_value=0)
     resp = await handler.execute(get_cmd("get_level", "MICGAIN"))
     assert resp.ok
@@ -1004,7 +1008,9 @@ async def test_get_level_keyspd(handler: RigctldHandler, mock_radio: AsyncMock) 
 
 
 @pytest.mark.asyncio
-async def test_get_level_cwpitch(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_cwpitch(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_cw_pitch = AsyncMock(return_value=600)
     resp = await handler.execute(get_cmd("get_level", "CWPITCH"))
     assert resp.ok
@@ -1042,7 +1048,9 @@ async def test_get_level_preamp_2(
 
 
 @pytest.mark.asyncio
-async def test_get_level_att_off(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_att_off(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_attenuator_level = AsyncMock(return_value=0)
     resp = await handler.execute(get_cmd("get_level", "ATT"))
     assert resp.ok
@@ -1140,7 +1148,9 @@ async def test_set_level_comp(handler: RigctldHandler, mock_radio: AsyncMock) ->
 
 
 @pytest.mark.asyncio
-async def test_set_level_micgain(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_level_micgain(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_level", "MICGAIN", "0.0"))
     assert resp.ok
     mock_radio.set_mic_gain.assert_awaited_once_with(0)
@@ -1154,7 +1164,9 @@ async def test_set_level_keyspd(handler: RigctldHandler, mock_radio: AsyncMock) 
 
 
 @pytest.mark.asyncio
-async def test_set_level_cwpitch(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_level_cwpitch(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_level", "CWPITCH", "700"))
     assert resp.ok
     mock_radio.set_cw_pitch.assert_awaited_once_with(700)
@@ -1205,20 +1217,26 @@ async def test_set_level_att_rounds_to_nearest(
 
 
 @pytest.mark.asyncio
-async def test_set_level_rfpower(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_level_rfpower(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_level", "RFPOWER", "1.0"))
     assert resp.ok
     mock_radio.set_rf_power.assert_awaited_once_with(255)
 
 
 @pytest.mark.asyncio
-async def test_set_level_no_args(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_level_no_args(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_level"))
     assert resp.error == HamlibError.EINVAL
 
 
 @pytest.mark.asyncio
-async def test_set_level_unknown(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_level_unknown(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_level", "NOSUCHLEVEL", "1.0"))
     assert resp.error == HamlibError.EINVAL
 
@@ -1458,13 +1476,17 @@ async def test_send_raw_space_separated_hex(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
     """Space-separated hex tokens are parsed and sent as raw bytes."""
-    response = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x03, data=b"\x00\x60\x00\x00\x00")
+    response = CivFrame(
+        to_addr=0xE0, from_addr=0x98, command=0x03, data=b"\x00\x60\x00\x00\x00"
+    )
     mock_radio._send_civ_raw = AsyncMock(return_value=response)
 
-    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+    resp = await handler.execute(
+        get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD")
+    )
 
     assert resp.ok
-    mock_radio._send_civ_raw.assert_awaited_once_with(b"\xFE\xFE\x98\xE0\x03\xFD")
+    mock_radio._send_civ_raw.assert_awaited_once_with(b"\xfe\xfe\x98\xe0\x03\xfd")
 
 
 @pytest.mark.asyncio
@@ -1478,7 +1500,7 @@ async def test_send_raw_backslash_escaped_hex(
     resp = await handler.execute(get_cmd("send_raw", "\\xFE\\xFE\\x98\\xE0\\x03\\xFD"))
 
     assert resp.ok
-    mock_radio._send_civ_raw.assert_awaited_once_with(b"\xFE\xFE\x98\xE0\x03\xFD")
+    mock_radio._send_civ_raw.assert_awaited_once_with(b"\xfe\xfe\x98\xe0\x03\xfd")
 
 
 @pytest.mark.asyncio
@@ -1486,10 +1508,14 @@ async def test_send_raw_returns_hex_response(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
     """Response CivFrame bytes are returned as space-separated uppercase hex."""
-    response = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x03, data=b"\x00\x60\x00\x00\x00")
+    response = CivFrame(
+        to_addr=0xE0, from_addr=0x98, command=0x03, data=b"\x00\x60\x00\x00\x00"
+    )
     mock_radio._send_civ_raw = AsyncMock(return_value=response)
 
-    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+    resp = await handler.execute(
+        get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD")
+    )
 
     assert resp.ok
     assert resp.values == ["FE FE E0 98 03 00 60 00 00 00 FD"]
@@ -1502,7 +1528,9 @@ async def test_send_raw_icom_timeout_returns_empty(
     """IcomTimeoutError produces empty ok response (not ETIMEOUT)."""
     mock_radio._send_civ_raw = AsyncMock(side_effect=IcomTimeoutError("timeout"))
 
-    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+    resp = await handler.execute(
+        get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD")
+    )
 
     assert resp.ok
     assert resp.values == []
@@ -1515,7 +1543,9 @@ async def test_send_raw_asyncio_timeout_returns_empty(
     """asyncio.TimeoutError also produces empty ok response."""
     mock_radio._send_civ_raw = AsyncMock(side_effect=asyncio.TimeoutError())
 
-    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+    resp = await handler.execute(
+        get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD")
+    )
 
     assert resp.ok
     assert resp.values == []
@@ -1528,7 +1558,9 @@ async def test_send_raw_none_response_returns_empty(
     """None response (fire-and-forget or no response) returns empty ok."""
     mock_radio._send_civ_raw = AsyncMock(return_value=None)
 
-    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "17", "FD"))
+    resp = await handler.execute(
+        get_cmd("send_raw", "FE", "FE", "98", "E0", "17", "FD")
+    )
 
     assert resp.ok
     assert resp.values == []
@@ -1560,7 +1592,9 @@ async def test_send_raw_no_send_civ_raw_returns_enimpl(config: RigctldConfig) ->
         pass
 
     handler = RigctldHandler(_NoRawRadio(), config)  # type: ignore[arg-type]
-    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+    resp = await handler.execute(
+        get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD")
+    )
     assert resp.error == HamlibError.ENIMPL
 
 
@@ -2124,9 +2158,7 @@ def dual_rx_radio() -> AsyncMock:
 
 
 @pytest.fixture
-def dual_rx_handler(
-    dual_rx_radio: AsyncMock, config: RigctldConfig
-) -> RigctldHandler:
+def dual_rx_handler(dual_rx_radio: AsyncMock, config: RigctldConfig) -> RigctldHandler:
     return RigctldHandler(dual_rx_radio, config)
 
 

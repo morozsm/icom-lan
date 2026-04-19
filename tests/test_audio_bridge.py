@@ -461,7 +461,7 @@ async def test_reconnect_succeeds_when_device_returns():
     backend.remove_devices()
 
     packet = MagicMock()
-    packet.data = b"\xAA" * 100
+    packet.data = b"\xaa" * 100
     radio.audio_bus._on_opus_packet(packet)
 
     # Wait for RECONNECTING state
@@ -498,7 +498,7 @@ async def test_failed_state_after_max_retries():
     backend.remove_devices()
 
     packet = MagicMock()
-    packet.data = b"\xBB" * 100
+    packet.data = b"\xbb" * 100
     radio.audio_bus._on_opus_packet(packet)
 
     # Wait for FAILED state (event-based — no timing assumption)
@@ -527,7 +527,7 @@ async def test_stop_cancels_reconnect_task():
     backend.remove_devices()
 
     packet = MagicMock()
-    packet.data = b"\xCC" * 100
+    packet.data = b"\xcc" * 100
     radio.audio_bus._on_opus_packet(packet)
 
     # Wait for RECONNECTING (event-based)
@@ -732,7 +732,7 @@ async def test_on_metrics_callback():
     # Deliver 50 frames to trigger a metrics emission (every 50 frames)
     for i in range(51):
         packet = MagicMock()
-        packet.data = b"\xAA" * 100
+        packet.data = b"\xaa" * 100
         radio.audio_bus._on_opus_packet(packet)
 
     await asyncio.sleep(0.1)

@@ -73,8 +73,8 @@ class TestBuildSslContext:
         key = tmp_path / "key.pem"
         with patch(
             "icom_lan.web.tls.generate_self_signed",
-            side_effect=lambda **kw: (
-                generate_self_signed(cert, key, hostname="localhost")
+            side_effect=lambda **kw: generate_self_signed(
+                cert, key, hostname="localhost"
             ),
         ) as mock_gen:
             ctx = build_ssl_context()

@@ -18,7 +18,11 @@ import pytest
 from icom_lan._audio_codecs import decode_ulaw_to_pcm16
 from icom_lan.types import AudioCodec
 from icom_lan.web.handlers import AudioBroadcaster
-from icom_lan.web.protocol import encode_audio_frame, MSG_TYPE_AUDIO_RX, AUDIO_CODEC_PCM16
+from icom_lan.web.protocol import (
+    encode_audio_frame,
+    MSG_TYPE_AUDIO_RX,
+    AUDIO_CODEC_PCM16,
+)
 
 
 class TestAudioCodecPerformance:
@@ -43,7 +47,9 @@ class TestAudioCodecPerformance:
         p95 = sorted(latencies)[int(0.95 * len(latencies))]
         p99 = sorted(latencies)[int(0.99 * len(latencies))]
 
-        print(f"\nulaw decode (160 bytes): p50={p50:.2f}µs, p95={p95:.2f}µs, p99={p99:.2f}µs")
+        print(
+            f"\nulaw decode (160 bytes): p50={p50:.2f}µs, p95={p95:.2f}µs, p99={p99:.2f}µs"
+        )
         assert p50 < 1000, "ulaw decode should be <1ms"
 
     def test_ulaw_decode_throughput(self) -> None:
@@ -69,7 +75,7 @@ class TestAudioCodecPerformance:
         total_samples = iterations * samples_per_frame
         throughput = total_samples / elapsed
 
-        print(f"ulaw decode throughput: {throughput/1e6:.2f}M samples/sec")
+        print(f"ulaw decode throughput: {throughput / 1e6:.2f}M samples/sec")
         assert throughput > 5e6, "Should decode >5M samples/sec"
 
     def test_pcm_encode_frame_latency(self) -> None:
@@ -240,7 +246,9 @@ class TestAudioStreamingEndToEnd:
         p95 = sorted(latencies)[int(0.95 * len(latencies))]
         p99 = sorted(latencies)[int(0.99 * len(latencies))]
 
-        print(f"full pipeline latency: p50={p50:.2f}µs, p95={p95:.2f}µs, p99={p99:.2f}µs")
+        print(
+            f"full pipeline latency: p50={p50:.2f}µs, p95={p95:.2f}µs, p99={p99:.2f}µs"
+        )
         assert p50 < 2000, "Full pipeline should be <2ms"
 
     def test_frame_size_impact(self) -> None:

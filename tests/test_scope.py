@@ -47,7 +47,7 @@ from icom_lan.commands import (
     scope_set_span,
     scope_set_speed,
     scope_set_vbw,
-    scope_single_dual
+    scope_single_dual,
 )
 from icom_lan.scope import ScopeAssembler, ScopeFrame
 from icom_lan.types import bcd_encode
@@ -561,8 +561,13 @@ class TestScopeAssemblerShedIncomplete:
         """A single-packet frame completes immediately and is not shed."""
         asm = ScopeAssembler()
         payload = _seq1_payload(
-            receiver=0, seq=1, seq_max=1, mode=1,
-            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=1,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
             extra_pixels=bytes([0x80] * 10),
         )
         frame = asm.feed(payload, 0)
@@ -573,8 +578,13 @@ class TestScopeAssemblerShedIncomplete:
         """An incomplete multi-packet frame is discarded by shed."""
         asm = ScopeAssembler()
         seq1 = _seq1_payload(
-            receiver=0, seq=1, seq_max=3, mode=1,
-            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=3,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         asm.feed(seq1, 0)  # starts assembly, not complete
         assert asm.shed_incomplete() == 1
@@ -583,12 +593,22 @@ class TestScopeAssemblerShedIncomplete:
         """Incomplete frames on both receivers are shed independently."""
         asm = ScopeAssembler()
         seq1_main = _seq1_payload(
-            receiver=0, seq=1, seq_max=3, mode=1,
-            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=3,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         seq1_sub = _seq1_payload(
-            receiver=1, seq=1, seq_max=5, mode=1,
-            start_hz=7_000_000, end_hz=7_300_000, oor=False,
+            receiver=1,
+            seq=1,
+            seq_max=5,
+            mode=1,
+            start_hz=7_000_000,
+            end_hz=7_300_000,
+            oor=False,
         )
         asm.feed(seq1_main, 0)
         asm.feed(seq1_sub, 1)
@@ -599,15 +619,25 @@ class TestScopeAssemblerShedIncomplete:
         asm = ScopeAssembler()
         # Main: complete single-packet
         complete = _seq1_payload(
-            receiver=0, seq=1, seq_max=1, mode=1,
-            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=1,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
             extra_pixels=bytes([0x80] * 10),
         )
         asm.feed(complete, 0)
         # Sub: incomplete multi-packet
         incomplete = _seq1_payload(
-            receiver=1, seq=1, seq_max=3, mode=1,
-            start_hz=7_000_000, end_hz=7_300_000, oor=False,
+            receiver=1,
+            seq=1,
+            seq_max=3,
+            mode=1,
+            start_hz=7_000_000,
+            end_hz=7_300_000,
+            oor=False,
         )
         asm.feed(incomplete, 1)
         assert asm.shed_incomplete() == 1
@@ -616,15 +646,25 @@ class TestScopeAssemblerShedIncomplete:
         """After shedding, assembler accepts new frames normally."""
         asm = ScopeAssembler()
         seq1 = _seq1_payload(
-            receiver=0, seq=1, seq_max=2, mode=1,
-            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=2,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         asm.feed(seq1, 0)
         asm.shed_incomplete()
         # Start a new frame and complete it
         new_seq1 = _seq1_payload(
-            receiver=0, seq=1, seq_max=2, mode=1,
-            start_hz=7_000_000, end_hz=7_300_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=2,
+            mode=1,
+            start_hz=7_000_000,
+            end_hz=7_300_000,
+            oor=False,
         )
         asm.feed(new_seq1, 0)
         seq2 = _seq_n_payload(2, 2, bytes([0x42] * 5))

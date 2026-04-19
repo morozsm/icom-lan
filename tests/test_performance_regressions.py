@@ -58,7 +58,9 @@ class TestCivParsing:
         elapsed_ms = (time.perf_counter() - start) * 1000
 
         # 100 frames should parse in <100ms (1ms per frame)
-        assert elapsed_ms < 100.0, f"Parse latency too high: {elapsed_ms:.2f}ms for 100 frames"
+        assert elapsed_ms < 100.0, (
+            f"Parse latency too high: {elapsed_ms:.2f}ms for 100 frames"
+        )
 
     def test_mode_response_parse_latency(self):
         """Parsing mode response should be fast."""
@@ -69,7 +71,9 @@ class TestCivParsing:
             _ = response
         elapsed_ms = (time.perf_counter() - start) * 1000
 
-        assert elapsed_ms < 100.0, f"Parse latency too high: {elapsed_ms:.2f}ms for 100 frames"
+        assert elapsed_ms < 100.0, (
+            f"Parse latency too high: {elapsed_ms:.2f}ms for 100 frames"
+        )
 
 
 # =============================================================================
@@ -91,7 +95,9 @@ class TestBcdEncodingPerformance:
         elapsed_ms = (time.perf_counter() - start) * 1000
 
         # 3000 BCD encodings should take <50ms
-        assert elapsed_ms < 50.0, f"BCD encoding too slow: {elapsed_ms:.2f}ms for 3000 ops"
+        assert elapsed_ms < 50.0, (
+            f"BCD encoding too slow: {elapsed_ms:.2f}ms for 3000 ops"
+        )
 
 
 # =============================================================================
@@ -115,7 +121,9 @@ class TestFrameBuildingPerformance:
         elapsed_ms = (time.perf_counter() - start) * 1000
 
         # 1000 frame builds should take <50ms
-        assert elapsed_ms < 50.0, f"Frame building too slow: {elapsed_ms:.2f}ms for 1000 frames"
+        assert elapsed_ms < 50.0, (
+            f"Frame building too slow: {elapsed_ms:.2f}ms for 1000 frames"
+        )
 
     def test_freq_command_build_latency(self):
         """Building frequency commands should be fast."""
@@ -126,9 +134,9 @@ class TestFrameBuildingPerformance:
         elapsed_ms = (time.perf_counter() - start) * 1000
 
         # 1000 frequency encodes should take <20ms
-        assert (
-            elapsed_ms < 20.0
-        ), f"Frequency encode too slow: {elapsed_ms:.2f}ms for 1000 ops"
+        assert elapsed_ms < 20.0, (
+            f"Frequency encode too slow: {elapsed_ms:.2f}ms for 1000 ops"
+        )
 
 
 # =============================================================================
@@ -165,9 +173,9 @@ class TestPerformanceSloValidation:
         total_time = build_time + wrap_time + parse_time
 
         # Total pipeline should complete in <20ms
-        assert (
-            total_time < 20.0
-        ), f"CI-V pipeline too slow: {total_time:.2f}ms (build={build_time:.2f}, wrap={wrap_time:.2f}, parse={parse_time:.2f})"
+        assert total_time < 20.0, (
+            f"CI-V pipeline too slow: {total_time:.2f}ms (build={build_time:.2f}, wrap={wrap_time:.2f}, parse={parse_time:.2f})"
+        )
 
     def test_frame_overhead_acceptable(self):
         """Frame construction overhead should be minimal."""
@@ -183,6 +191,6 @@ class TestPerformanceSloValidation:
         frames_per_ms = count / ((time.perf_counter() - start) * 1000)
 
         # Should be able to build >1000 frames per millisecond
-        assert (
-            frames_per_ms > 1000
-        ), f"Frame building too slow: {frames_per_ms:.0f} frames/ms (need >1000)"
+        assert frames_per_ms > 1000, (
+            f"Frame building too slow: {frames_per_ms:.0f} frames/ms (need >1000)"
+        )

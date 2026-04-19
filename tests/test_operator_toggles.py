@@ -9,7 +9,7 @@ from icom_lan.commands import (
     RECEIVER_MAIN,
     RECEIVER_SUB,
     parse_bool_response,
-    parse_level_response
+    parse_level_response,
 )
 from icom_lan.types import AgcMode, AudioPeakFilter, BreakInMode, CivFrame
 from _command_test_helpers import bind_default_addr_globals

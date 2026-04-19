@@ -49,15 +49,16 @@ _DEPENDENCY_HINT = (
 )
 
 # ── Defaults ──────────────────────────────────────────────────────────
-_DEFAULT_TIMEOUT = 1.0          # Read timeout for queries (seconds)
-_DRAIN_TIMEOUT = 0.03           # Wait for echo/auto-info after write
-_DRAIN_MAX_LINES = 4            # Max lines to drain after a write
-_QUERY_MAX_ATTEMPTS = 6         # Max readline attempts per query
-_RECONNECT_AFTER_ERRORS = 5     # Consecutive errors before auto-reconnect
-_RECONNECT_COOLDOWN = 2.0       # Min seconds between reconnect attempts
+_DEFAULT_TIMEOUT = 1.0  # Read timeout for queries (seconds)
+_DRAIN_TIMEOUT = 0.03  # Wait for echo/auto-info after write
+_DRAIN_MAX_LINES = 4  # Max lines to drain after a write
+_QUERY_MAX_ATTEMPTS = 6  # Max readline attempts per query
+_RECONNECT_AFTER_ERRORS = 5  # Consecutive errors before auto-reconnect
+_RECONNECT_COOLDOWN = 2.0  # Min seconds between reconnect attempts
 
 
 # ── Exceptions ────────────────────────────────────────────────────────
+
 
 class CatTransportError(Exception):
     """Base error for CAT transport failures."""
@@ -72,6 +73,7 @@ class CatCommandRejected(CatTransportError):
 
 
 # ── Stats ─────────────────────────────────────────────────────────────
+
 
 @dataclass
 class TransportStats:
@@ -103,6 +105,7 @@ class TransportStats:
 
 
 # ── Transport ─────────────────────────────────────────────────────────
+
 
 class YaesuCatTransport:
     """Async serial transport for Yaesu CAT protocol.
@@ -167,14 +170,12 @@ class YaesuCatTransport:
         )
 
         try:
-            self._reader, self._writer = (
-                await serial_asyncio.open_serial_connection(
-                    url=self._device,
-                    baudrate=self._baudrate,
-                    bytesize=8,
-                    parity="N",
-                    stopbits=1,
-                )
+            self._reader, self._writer = await serial_asyncio.open_serial_connection(
+                url=self._device,
+                baudrate=self._baudrate,
+                bytesize=8,
+                parity="N",
+                stopbits=1,
             )
             self._connected = True
             self._stats.record_success()
@@ -294,9 +295,7 @@ class YaesuCatTransport:
         if discarded:
             self._stats.bytes_flushed += discarded
             if self._debug_logging:
-                logger.debug(
-                    "CAT: flushing %d stale bytes: %r", discarded, bytes(buf)
-                )
+                logger.debug("CAT: flushing %d stale bytes: %r", discarded, bytes(buf))
             buf.clear()
         return discarded
 
@@ -351,9 +350,7 @@ class YaesuCatTransport:
             drained = await self._drain_responses()
             self._stats.record_success()
             if drained and self._debug_logging:
-                logger.debug(
-                    "CAT: drained %d line(s) after write %r", drained, command
-                )
+                logger.debug("CAT: drained %d line(s) after write %r", drained, command)
 
     async def query(self, command: str, *, timeout: float | None = None) -> str:
         """Send a GET command and return the matching response.

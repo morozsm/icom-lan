@@ -150,9 +150,7 @@ class _Missing:
 _MISSING = _Missing()
 
 
-def apply_delta(
-    full_state: dict[str, Any], delta: dict[str, Any]
-) -> dict[str, Any]:
+def apply_delta(full_state: dict[str, Any], delta: dict[str, Any]) -> dict[str, Any]:
     """Apply a delta message to a full state snapshot.
 
     Used by web clients to reconstruct state from deltas.

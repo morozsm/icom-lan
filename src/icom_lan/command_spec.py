@@ -17,7 +17,7 @@ __all__ = [
 @dataclass(frozen=True, slots=True)
 class CivCommandSpec:
     """CI-V command specification (Icom radios).
-    
+
     Example TOML:
         get_freq = [0x03]
         set_mode = [0x06]
@@ -30,7 +30,7 @@ class CivCommandSpec:
 @dataclass(frozen=True, slots=True)
 class CatCommandSpec:
     """Yaesu CAT command specification (text-based protocol).
-    
+
     Example TOML:
         get_freq = { cat = { read = "FA;", parse = "FA{freq:09d};" } }
         set_mode = { cat = { write = "MD0{mode};" } }
@@ -38,10 +38,10 @@ class CatCommandSpec:
 
     read: str | None = None
     """Template for READ command (e.g., "FA;" for get_freq)."""
-    
+
     write: str | None = None
     """Template for WRITE command (e.g., "FA{freq:09d};" for set_freq)."""
-    
+
     parse: str | None = None
     """Template for parsing response (e.g., "FA{freq:09d};" for get_freq).
     

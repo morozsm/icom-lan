@@ -8,7 +8,7 @@ from icom_lan.commands import (
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
     RECEIVER_SUB,
-    parse_level_response
+    parse_level_response,
 )
 from icom_lan.types import CivFrame
 from _command_test_helpers import bind_default_addr_globals

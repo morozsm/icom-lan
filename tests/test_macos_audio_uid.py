@@ -16,6 +16,7 @@ from icom_lan.audio.usb_driver import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 def _make_sd_module(devices: list[dict]) -> SimpleNamespace:
     """Build a fake sounddevice module that returns *devices*."""
     return SimpleNamespace(

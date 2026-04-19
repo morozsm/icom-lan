@@ -7,11 +7,7 @@ import pytest
 
 from icom_lan import commands
 from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
-    CONTROLLER_ADDR,
-    parse_bool_response,
-    parse_level_response
-)
+from icom_lan.commands import CONTROLLER_ADDR, parse_bool_response, parse_level_response
 from icom_lan.exceptions import CommandError
 from icom_lan.radio import IcomRadio
 from icom_lan.types import CivFrame
@@ -496,8 +492,9 @@ class TestSwapMainSubVsSwapVfoAb:
             set_vfo_calls.append(vfo.upper())
 
         send = _RecordingSend()
-        with patch.object(r, "set_vfo", _fake_set_vfo), patch.object(
-            r, "_send_civ_raw", send
+        with (
+            patch.object(r, "set_vfo", _fake_set_vfo),
+            patch.object(r, "_send_civ_raw", send),
         ):
             with pytest.raises(CommandError) as exc_info:
                 await r.swap_vfo_ab(receiver=0)
@@ -522,8 +519,9 @@ class TestSwapMainSubVsSwapVfoAb:
             set_vfo_calls.append(vfo.upper())
 
         send = _RecordingSend()
-        with patch.object(r, "set_vfo", _fake_set_vfo), patch.object(
-            r, "_send_civ_raw", send
+        with (
+            patch.object(r, "set_vfo", _fake_set_vfo),
+            patch.object(r, "_send_civ_raw", send),
         ):
             with pytest.raises(CommandError) as exc_info:
                 await r.equalize_vfo_ab(receiver=0)
@@ -559,8 +557,9 @@ class TestSwapMainSubVsSwapVfoAb:
             set_vfo_calls.append(vfo.upper())
 
         send = _RecordingSend()
-        with patch.object(r, "set_vfo", _fake_set_vfo), patch.object(
-            r, "_send_civ_raw", send
+        with (
+            patch.object(r, "set_vfo", _fake_set_vfo),
+            patch.object(r, "_send_civ_raw", send),
         ):
             await r.swap_vfo_ab(receiver=0)
 

@@ -574,8 +574,20 @@ def _scope_frame() -> ScopeFrame:
         ("quick_split", {}, QuickSplitTrigger, {}, {}),
         ("set_compressor", {"on": True}, SetCompressor, {"on": True}, {"on": True}),
         ("set_scope_edge", {"edge": 2}, SetScopeEdge, {"edge": 2}, {"edge": 2}),
-        ("set_scope_vbw", {"narrow": True}, SetScopeVbw, {"narrow": True}, {"narrow": True}),
-        ("set_scope_vbw", {"narrow": False}, SetScopeVbw, {"narrow": False}, {"narrow": False}),
+        (
+            "set_scope_vbw",
+            {"narrow": True},
+            SetScopeVbw,
+            {"narrow": True},
+            {"narrow": True},
+        ),
+        (
+            "set_scope_vbw",
+            {"narrow": False},
+            SetScopeVbw,
+            {"narrow": False},
+            {"narrow": False},
+        ),
         ("set_scope_rbw", {"rbw": 1}, SetScopeRbw, {"rbw": 1}, {"rbw": 1}),
         ("set_scope_rbw", {"rbw": 2}, SetScopeRbw, {"rbw": 2}, {"rbw": 2}),
     ],
@@ -1358,9 +1370,7 @@ async def test_audio_handler_tx_other_runtime_error_propagates() -> None:
 
     radio = MagicMock(spec=AudioCapable)
     radio.capabilities = {"audio"}
-    radio.start_audio_tx_opus = AsyncMock(
-        side_effect=RuntimeError("Something else")
-    )
+    radio.start_audio_tx_opus = AsyncMock(side_effect=RuntimeError("Something else"))
 
     ws = SimpleNamespace(recv=AsyncMock(), send_binary=AsyncMock())
     handler = AudioHandler(ws, radio, None)

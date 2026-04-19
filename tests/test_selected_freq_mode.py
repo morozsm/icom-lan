@@ -1,6 +1,5 @@
 """Tests for CI-V 0x25/0x26 selected/unselected freq & mode commands."""
 
-
 import pytest
 
 from icom_lan import IC_7610_ADDR
@@ -206,9 +205,7 @@ class TestRadioSelectedFreq:
     async def test_get_selected_freq(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(
-            _selected_freq_response(0x00, 14_074_000)
-        )
+        mock_transport.queue_response(_selected_freq_response(0x00, 14_074_000))
         freq = await radio._get_selected_freq()
         assert freq == 14_074_000
 
@@ -216,9 +213,7 @@ class TestRadioSelectedFreq:
     async def test_get_unselected_freq(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(
-            _selected_freq_response(0x01, 7_074_000)
-        )
+        mock_transport.queue_response(_selected_freq_response(0x01, 7_074_000))
         freq = await radio._get_unselected_freq()
         assert freq == 7_074_000
 
@@ -227,9 +222,7 @@ class TestRadioSelectedFreq:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         """get_freq(receiver=1) should use 0x25 0x01 instead of VFO swap."""
-        mock_transport.queue_response(
-            _selected_freq_response(0x01, 7_074_000)
-        )
+        mock_transport.queue_response(_selected_freq_response(0x01, 7_074_000))
         freq = await radio.get_freq(receiver=1)
         assert freq == 7_074_000
 
@@ -239,9 +232,7 @@ class TestRadioSelectedMode:
     async def test_get_selected_mode(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(
-            _selected_mode_response(0x00, Mode.USB, filt=1)
-        )
+        mock_transport.queue_response(_selected_mode_response(0x00, Mode.USB, filt=1))
         mode, filt = await radio._get_selected_mode()
         assert mode == Mode.USB
         assert filt == 1
@@ -250,9 +241,7 @@ class TestRadioSelectedMode:
     async def test_get_unselected_mode(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(
-            _selected_mode_response(0x01, Mode.LSB, filt=2)
-        )
+        mock_transport.queue_response(_selected_mode_response(0x01, Mode.LSB, filt=2))
         mode, filt = await radio._get_unselected_mode()
         assert mode == Mode.LSB
         assert filt == 2
@@ -262,9 +251,7 @@ class TestRadioSelectedMode:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         """get_mode(receiver=1) should use 0x26 0x01 instead of VFO swap."""
-        mock_transport.queue_response(
-            _selected_mode_response(0x01, Mode.CW, filt=3)
-        )
+        mock_transport.queue_response(_selected_mode_response(0x01, Mode.CW, filt=3))
         mode_name, filt = await radio.get_mode(receiver=1)
         assert mode_name == "CW"
         assert filt == 3
@@ -280,9 +267,7 @@ class TestVfoSlotOverrideCivRx:
     poller has installed a ``_vfo_slot_override`` entry for the target
     receiver."""
 
-    def test_cmd03_routes_to_vfo_b_when_override_set(
-        self, radio: IcomRadio
-    ) -> None:
+    def test_cmd03_routes_to_vfo_b_when_override_set(self, radio: IcomRadio) -> None:
         from icom_lan.radio_state import RadioState
         from icom_lan.types import bcd_encode
 
@@ -302,9 +287,7 @@ class TestVfoSlotOverrideCivRx:
         assert rs.main.vfo_a.freq_hz == 14_000_000  # active slot unchanged
         assert rs.main.vfo_b.freq_hz == 21_000_000  # unselected slot populated
 
-    def test_cmd04_routes_to_vfo_b_when_override_set(
-        self, radio: IcomRadio
-    ) -> None:
+    def test_cmd04_routes_to_vfo_b_when_override_set(self, radio: IcomRadio) -> None:
         from icom_lan.radio_state import RadioState
 
         radio._radio_state = RadioState()
@@ -323,9 +306,7 @@ class TestVfoSlotOverrideCivRx:
         assert rs.main.vfo_b.mode == "LSB"
         assert rs.main.vfo_b.filter_num == 2
 
-    def test_override_absent_falls_back_to_active_slot(
-        self, radio: IcomRadio
-    ) -> None:
+    def test_override_absent_falls_back_to_active_slot(self, radio: IcomRadio) -> None:
         """Without the override flag, 0x03 writes to the active slot as before."""
         from icom_lan.radio_state import RadioState
         from icom_lan.types import bcd_encode
@@ -388,9 +369,7 @@ class TestPollerUnselectedSlotGate:
         radio.set_freq = AsyncMock()
         radio.set_mode = AsyncMock()
         state = RadioState()
-        poller = RadioPoller(
-            radio, StateCache(), CommandQueue(), radio_state=state
-        )
+        poller = RadioPoller(radio, StateCache(), CommandQueue(), radio_state=state)
         return poller, radio, state
 
     @pytest.mark.asyncio

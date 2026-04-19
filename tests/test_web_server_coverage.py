@@ -175,7 +175,9 @@ async def test_start_aborts_before_listening_when_radio_not_ready() -> None:
             "icom_lan.web.server.assert_radio_startup_ready",
             side_effect=RuntimeError("web startup aborted"),
         ),
-        patch("icom_lan.web.server.asyncio.start_server", new=AsyncMock()) as start_server,
+        patch(
+            "icom_lan.web.server.asyncio.start_server", new=AsyncMock()
+        ) as start_server,
     ):
         with pytest.raises(RuntimeError, match="web startup aborted"):
             await srv.start()
@@ -848,6 +850,7 @@ class TestCamelCaseState:
 # ETag / 304 behaviour for /api/v1/state (#248)
 # ---------------------------------------------------------------------------
 
+
 class TestStateEtag:
     """Backend ETag/304 support for /api/v1/state."""
 
@@ -871,7 +874,9 @@ class TestStateEtag:
         await srv._serve_state(writer)
         text = writer.buffer.decode("ascii", errors="replace")
         header_block = text[: text.index("\r\n\r\n")]
-        etag_line = next(line for line in header_block.splitlines() if line.startswith("ETag:"))
+        etag_line = next(
+            line for line in header_block.splitlines() if line.startswith("ETag:")
+        )
         etag = etag_line.split(":", 1)[1].strip()
 
         # Second request — send If-None-Match with the same ETag

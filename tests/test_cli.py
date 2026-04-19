@@ -6,7 +6,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.cli import _build_backend_config, _build_parser, _parse_frequency, check_ports_available, main
+from icom_lan.cli import (
+    _build_backend_config,
+    _build_parser,
+    _parse_frequency,
+    check_ports_available,
+    main,
+)
 from icom_lan.backends.config import LanBackendConfig, SerialBackendConfig
 
 
@@ -342,7 +348,10 @@ class TestPidFile:
         with patch.dict("os.environ", {"ICOM_PID_FILE": str(pid_path)}, clear=False):
             with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "status"]):
                 with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
-                    with patch("icom_lan.cli.os._exit", side_effect=lambda c: (_ for _ in ()).throw(SystemExit(c))):
+                    with patch(
+                        "icom_lan.cli.os._exit",
+                        side_effect=lambda c: (_ for _ in ()).throw(SystemExit(c)),
+                    ):
                         with pytest.raises(SystemExit) as exc:
                             main()
                         assert exc.value.code == 0
@@ -528,7 +537,9 @@ class TestBuildBackendConfig:
         p = _build_parser()
         args = p.parse_args(["--backend", "serial", "status"])
         # Discovery finds nothing → sys.exit(1)
-        with patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])):
+        with patch(
+            "icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])
+        ):
             with pytest.raises(SystemExit):
                 await _build_backend_config(args)
 
@@ -570,10 +581,12 @@ class TestAutoDiscovery:
         args = p.parse_args(["status"])
         with patch(
             "icom_lan.discovery.discover_lan_radios",
-            AsyncMock(return_value=[
-                {"host": "10.0.0.1", "remote_id": 1},
-                {"host": "10.0.0.2", "remote_id": 2},
-            ]),
+            AsyncMock(
+                return_value=[
+                    {"host": "10.0.0.1", "remote_id": 1},
+                    {"host": "10.0.0.2", "remote_id": 2},
+                ]
+            ),
         ):
             with pytest.raises(SystemExit):
                 await _build_backend_config(args)
@@ -597,6 +610,7 @@ class TestPresets:
 
     async def test_preset_digimode_enables_bridge_and_wsjtx(self):
         from icom_lan.cli import _apply_preset
+
         p = _build_parser()
         args = p.parse_args(["--host", "1.2.3.4", "web"])
         _apply_preset(args, "digimode")
@@ -606,6 +620,7 @@ class TestPresets:
 
     async def test_preset_does_not_override_explicit_flags(self):
         from icom_lan.cli import _apply_preset
+
         p = _build_parser()
         args = p.parse_args(["--host", "1.2.3.4", "web", "--bridge", "MyDevice"])
         _apply_preset(args, "digimode")
@@ -614,6 +629,7 @@ class TestPresets:
 
     def test_unknown_preset_exits(self):
         from icom_lan.cli import _apply_preset
+
         p = _build_parser()
         args = p.parse_args(["--host", "1.2.3.4", "web"])
         with pytest.raises(SystemExit):
@@ -623,8 +639,13 @@ class TestPresets:
 class TestBackendAwareDiscover:
     def test_discover_serial_exits_with_error(self, capsys):
         with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
-            with patch("icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])):
-                with patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])):
+            with patch(
+                "icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])
+            ):
+                with patch(
+                    "icom_lan.discovery.discover_serial_radios",
+                    AsyncMock(return_value=[]),
+                ):
                     with pytest.raises(SystemExit) as exc_info:
                         main()
         assert exc_info.value.code == 0
@@ -634,8 +655,13 @@ class TestBackendAwareDiscover:
 
     def test_discover_serial_error_mentions_lan(self, capsys):
         with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
-            with patch("icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])):
-                with patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])):
+            with patch(
+                "icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])
+            ):
+                with patch(
+                    "icom_lan.discovery.discover_serial_radios",
+                    AsyncMock(return_value=[]),
+                ):
                     with pytest.raises(SystemExit) as exc_info:
                         main()
         assert exc_info.value.code == 0
@@ -742,7 +768,9 @@ class TestCheckPortsAvailable:
             s.bind(("", 0))
             s.listen(1)
             occupied_port = s.getsockname()[1]
-            with pytest.raises(RuntimeError, match=f"Port {occupied_port} already in use"):
+            with pytest.raises(
+                RuntimeError, match=f"Port {occupied_port} already in use"
+            ):
                 check_ports_available([occupied_port])
 
     def test_error_message_includes_port_number(self):
@@ -776,10 +804,15 @@ class TestCheckPortsAvailable:
             s.listen(1)
             occupied_port = s.getsockname()[1]
 
-            args = _build_parser().parse_args([
-                "--host", "192.168.1.100", "web",
-                "--port", str(occupied_port),
-            ])
+            args = _build_parser().parse_args(
+                [
+                    "--host",
+                    "192.168.1.100",
+                    "web",
+                    "--port",
+                    str(occupied_port),
+                ]
+            )
 
             mock_radio = MagicMock()
             mock_radio.__aenter__ = AsyncMock(return_value=mock_radio)

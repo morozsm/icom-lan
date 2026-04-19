@@ -52,7 +52,9 @@ class TestTapRegistry:
         reg.unregister(handle)
         assert reg.active is False
 
-    def test_feed_catches_tap_exceptions(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_feed_catches_tap_exceptions(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         reg = TapRegistry()
         received: list[bytes] = []
 

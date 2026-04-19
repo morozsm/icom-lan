@@ -162,9 +162,7 @@ async def _try_baud(
                 if remaining <= 0:
                     break
                 try:
-                    chunk = await asyncio.wait_for(
-                        reader.read(64), timeout=remaining
-                    )
+                    chunk = await asyncio.wait_for(reader.read(64), timeout=remaining)
                     buf.extend(chunk)
                 except asyncio.TimeoutError:
                     break
@@ -224,7 +222,9 @@ def _parse_probe_response(port: str, baud: int, data: bytes) -> CivProbeResult |
 
     # Verify command echo: bytes 4-5 should be 0x19 0x00
     if frame[4] != 0x19 or frame[5] != 0x00:
-        logger.debug("probe_serial_civ: unexpected command bytes in response from %s", port)
+        logger.debug(
+            "probe_serial_civ: unexpected command bytes in response from %s", port
+        )
         return None
 
     address = frame[3]
@@ -313,7 +313,9 @@ async def _try_yaesu_baud(
     factory: _YaesuTransportFactory,
 ) -> RadioDiscoveryResult | None:
     """Open *port* at *baud* via Yaesu CAT, send ``ID;``, return result or None."""
-    transport = factory(device=port, baudrate=baud, timeout=timeout, echo_suppression=True)
+    transport = factory(
+        device=port, baudrate=baud, timeout=timeout, echo_suppression=True
+    )
     try:
         await transport.connect()
     except Exception:
@@ -333,7 +335,9 @@ async def _try_yaesu_baud(
             pass
 
 
-def _parse_yaesu_id_response(port: str, baud: int, response: str) -> RadioDiscoveryResult | None:
+def _parse_yaesu_id_response(
+    port: str, baud: int, response: str
+) -> RadioDiscoveryResult | None:
     """Parse Yaesu CAT ``ID;`` response into a :class:`RadioDiscoveryResult`.
 
     Expected response (semicolon already stripped by transport): ``ID0840``
@@ -447,12 +451,12 @@ async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
         # Build "Are You There" packet with random sender_id
         # IC-7610 ignores packets with sender_id=0
         pkt = bytearray(0x10)
-        struct.pack_into("<I", pkt, 0, 0x10)        # size
-        struct.pack_into("<H", pkt, 4, 0x03)         # ARE_YOU_THERE
-        struct.pack_into("<H", pkt, 6, 0)            # seq=0
+        struct.pack_into("<I", pkt, 0, 0x10)  # size
+        struct.pack_into("<H", pkt, 4, 0x03)  # ARE_YOU_THERE
+        struct.pack_into("<H", pkt, 6, 0)  # seq=0
         my_id = random.randint(1, 0xFFFFFFFF)
-        struct.pack_into("<I", pkt, 8, my_id)        # sender_id (non-zero!)
-        struct.pack_into("<I", pkt, 0x0C, 0)         # remote_id=0 (unknown)
+        struct.pack_into("<I", pkt, 8, my_id)  # sender_id (non-zero!)
+        struct.pack_into("<I", pkt, 0x0C, 0)  # remote_id=0 (unknown)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -477,7 +481,11 @@ async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
                     if ptype == 0x04:  # I_AM_HERE
                         remote_id = struct.unpack_from("<I", data, 8)[0]
                         found[addr[0]] = {"host": addr[0], "remote_id": remote_id}
-                        logger.info("discover_lan_radios: found %s id=0x%08X", addr[0], remote_id)
+                        logger.info(
+                            "discover_lan_radios: found %s id=0x%08X",
+                            addr[0],
+                            remote_id,
+                        )
             except socket.timeout:
                 continue
 

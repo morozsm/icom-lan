@@ -6,7 +6,14 @@ Reference: wfview rigs/*.rig files and rigidentities.h.
 import logging
 from dataclasses import dataclass
 
-__all__ = ["RadioModel", "RADIOS", "SERIAL_RADIO_MAP", "CIV_PROFILE_MAP", "identify_radio", "IC_7610_ADDR"]
+__all__ = [
+    "RadioModel",
+    "RADIOS",
+    "SERIAL_RADIO_MAP",
+    "CIV_PROFILE_MAP",
+    "identify_radio",
+    "IC_7610_ADDR",
+]
 
 logger = logging.getLogger(__name__)
 

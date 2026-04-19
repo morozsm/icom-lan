@@ -115,9 +115,7 @@ class TestGainNode:
         # +6 dB — approximately doubles
         node.set_params(gain_db=6.0)
         result_after = node.process(samples, 48000)
-        np.testing.assert_allclose(
-            result_after, [0.25 * 10 ** (6.0 / 20.0)], rtol=1e-5
-        )
+        np.testing.assert_allclose(result_after, [0.25 * 10 ** (6.0 / 20.0)], rtol=1e-5)
 
     def test_conforms_to_dsp_node(self) -> None:
         from icom_lan.dsp.nodes import GainNode

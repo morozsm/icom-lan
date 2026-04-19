@@ -191,7 +191,10 @@ class ConnectionManager:
         if evicted:
             logger.debug(
                 "conn_manager: %s from %s now has %d connections (evicted %d)",
-                channel, ip, len(conns), len(evicted)
+                channel,
+                ip,
+                len(conns),
+                len(evicted),
             )
         return evicted
 
@@ -255,12 +258,8 @@ class WebServer:
         # For hardware-scope radios, audio FFT is ONLY on /api/v1/audio-scope.
         # PCM tap is lazy — enabled only when audio-scope clients connect.
         self._audio_fft_scope: AudioFftScope | None = None
-        _has_audio = (
-            CAP_AUDIO in radio.capabilities
-        ) if radio is not None else False
-        _has_scope = (
-            CAP_SCOPE in radio.capabilities
-        ) if radio is not None else False
+        _has_audio = (CAP_AUDIO in radio.capabilities) if radio is not None else False
+        _has_scope = (CAP_SCOPE in radio.capabilities) if radio is not None else False
         if radio is not None and _has_audio:
             self._audio_fft_scope = AudioFftScope(fft_size=2048, fps=20, avg_count=2)
             self._audio_fft_scope.on_frame(self._broadcast_audio_scope)
@@ -268,7 +267,11 @@ class WebServer:
                 # No hardware scope — audio FFT also feeds /api/v1/scope
                 self._audio_fft_scope.on_frame(self._broadcast_scope)
                 self._audio_broadcaster.set_pcm_tap(self._audio_fft_scope.feed_audio)
-            logger.info("Audio FFT scope available (has_audio=%s, has_hw_scope=%s)", _has_audio, _has_scope)
+            logger.info(
+                "Audio FFT scope available (has_audio=%s, has_hw_scope=%s)",
+                _has_audio,
+                _has_scope,
+            )
         # Audio analyzer: lightweight SNR estimator, tapped from PCM stream.
         self._audio_analyzer: AudioAnalyzer | None = None
         if radio is not None and _has_audio:
@@ -394,7 +397,6 @@ class WebServer:
         async with self._scope_enable_lock:
             self._scope_handlers.add(handler)
             if self._radio is not None:
-
                 if not _supports_scope(self._radio):
                     logger.info(
                         "scope: active radio does not expose runtime scope support"
@@ -477,18 +479,28 @@ class WebServer:
                 # Ensure relay is running so PCM tap fires even without audio WS clients
                 await self._audio_broadcaster.ensure_relay()
                 logger.info("audio-scope: PCM tap + relay enabled (first client)")
-        logger.info("audio-scope: handler registered (%d total)", len(self._audio_scope_handlers))
+        logger.info(
+            "audio-scope: handler registered (%d total)",
+            len(self._audio_scope_handlers),
+        )
 
     def unregister_audio_scope_handler(self, handler: "ScopeHandler") -> None:
         """Unregister an audio scope handler. Disable PCM tap when last client leaves."""
         self._audio_scope_handlers.discard(handler)
         if not self._audio_scope_handlers and self._audio_fft_scope is not None:
             # Only disable tap for hardware-scope radios (non-hw radios keep tap always on)
-            _has_scope = CAP_SCOPE in self._radio.capabilities if self._radio is not None else False
+            _has_scope = (
+                CAP_SCOPE in self._radio.capabilities
+                if self._radio is not None
+                else False
+            )
             if _has_scope:
                 self._audio_broadcaster.set_pcm_tap(None)
                 logger.info("audio-scope: PCM tap disabled (no clients)")
-        logger.info("audio-scope: handler unregistered (%d remaining)", len(self._audio_scope_handlers))
+        logger.info(
+            "audio-scope: handler unregistered (%d remaining)",
+            len(self._audio_scope_handlers),
+        )
 
     def _update_fft_scope_freq(self) -> None:
         """Sync AudioFftScope center frequency from current radio state."""
@@ -608,7 +620,9 @@ class WebServer:
             try:
                 q.put_nowait(notification)
             except asyncio.QueueFull:
-                logger.debug("broadcast_notification: queue full, dropping notification")
+                logger.debug(
+                    "broadcast_notification: queue full, dropping notification"
+                )
 
     def _broadcast_dx_spot(self, spot: Any) -> None:
         """Add DX spot to buffer and push dx_spot message to all control clients."""
@@ -661,7 +675,9 @@ class WebServer:
         async def _refetch_and_reenable() -> None:
             """Refetch state, signal readiness, then re-enable scope."""
             try:
-                if self._radio is not None and hasattr(self._radio, "_fetch_initial_state"):
+                if self._radio is not None and hasattr(
+                    self._radio, "_fetch_initial_state"
+                ):
                     await self._radio._fetch_initial_state()
             except Exception:
                 logger.warning("reconnect: refetch failed", exc_info=True)
@@ -861,6 +877,7 @@ class WebServer:
         # Load band plan TOML files
         # Try project-level band-plans/ directory first, then package fallback
         from pathlib import Path
+
         project_bp = Path(__file__).resolve().parents[3] / "band-plans"
         if project_bp.is_dir():
             self._band_plan.load(project_bp)
@@ -908,6 +925,7 @@ class WebServer:
             _is_yaesu = False
             try:
                 from ..backends.yaesu_cat.radio import YaesuCatRadio
+
                 _is_yaesu = isinstance(self._radio, YaesuCatRadio)
             except ImportError:
                 pass
@@ -920,6 +938,7 @@ class WebServer:
                     self._broadcast_state_update()
 
                 from ..backends.yaesu_cat.radio import YaesuCatRadio as _YaesuCatRadio
+
                 self._yaesu_poller = YaesuCatPoller(
                     cast(_YaesuCatRadio, self._radio),
                     callback=_yaesu_state_cb,
@@ -1087,7 +1106,11 @@ class WebServer:
             self._dx_client_task = None
 
         # 5. Cancel housekeeping tasks
-        for task in (self._zombie_reaper_task, self._scope_health_task, self._scope_reenable_task):
+        for task in (
+            self._zombie_reaper_task,
+            self._scope_health_task,
+            self._scope_reenable_task,
+        ):
             if task is not None:
                 task.cancel()
         self._zombie_reaper_task = None
@@ -1148,6 +1171,7 @@ class WebServer:
             else:
                 logger.info("forced exit")
                 import os
+
                 os._exit(1)
 
         for sig in (_signal.SIGTERM, _signal.SIGINT):
@@ -1346,10 +1370,15 @@ class WebServer:
 
         if path == "/api/v1/eibi/status":
             body = json.dumps(
-                self._eibi.status(), separators=(",", ":"),
+                self._eibi.status(),
+                separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 200, "OK", body, {"Content-Type": "application/json"},
+                writer,
+                200,
+                "OK",
+                body,
+                {"Content-Type": "application/json"},
             )
             return
 
@@ -1370,25 +1399,36 @@ class WebServer:
             if not matches and 530_000 <= freq <= 1_700_000:
                 try:
                     from .eibi import fcc_identify
+
                     matches = await fcc_identify(freq, tol)
                 except Exception:
                     logger.debug("fcc identify fallback failed")
 
             body = json.dumps(
-                {"stations": matches, "freq_hz": freq}, separators=(",", ":"),
+                {"stations": matches, "freq_hz": freq},
+                separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 200, "OK", body, {"Content-Type": "application/json"},
+                writer,
+                200,
+                "OK",
+                body,
+                {"Content-Type": "application/json"},
             )
             return
 
         if path == "/api/v1/eibi/bands":
             bands = self._eibi.get_bands()
             body = json.dumps(
-                {"bands": bands}, separators=(",", ":"),
+                {"bands": bands},
+                separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 200, "OK", body, {"Content-Type": "application/json"},
+                writer,
+                200,
+                "OK",
+                body,
+                {"Content-Type": "application/json"},
             )
             return
 
@@ -1509,7 +1549,8 @@ class WebServer:
                         {"name": b.name, "start": b.start, "end": b.end}
                         for fr in profile.freq_ranges
                         for b in fr.bands
-                    ] or None,
+                    ]
+                    or None,
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -1539,9 +1580,13 @@ class WebServer:
                 {"error": "unavailable", "message": "Audio analyzer not active"},
                 separators=(",", ":"),
             ).encode()
-            await _send_response(writer, 404, "Not Found", body, {"Content-Type": "application/json"})
+            await _send_response(
+                writer, 404, "Not Found", body, {"Content-Type": "application/json"}
+            )
             return
-        body = json.dumps(self._audio_analyzer.to_dict(), separators=(",", ":")).encode()
+        body = json.dumps(
+            self._audio_analyzer.to_dict(), separators=(",", ":")
+        ).encode()
         await _send_json(writer, body, headers)
 
     def _get_meter_cal_payload(self) -> dict[str, Any]:
@@ -1627,7 +1672,8 @@ class WebServer:
                 ),
                 "keyboard": _serialize_keyboard_config(profile),
                 "scopeSource": (
-                    "hardware" if "scope" in caps
+                    "hardware"
+                    if "scope" in caps
                     else ("audio_fft" if self._audio_fft_scope is not None else None)
                 ),
                 "audioFftAvailable": self._audio_fft_scope is not None,
@@ -1652,7 +1698,8 @@ class WebServer:
                     {"name": b.name, "start": b.start, "end": b.end}
                     for fr in profile.freq_ranges
                     for b in fr.bands
-                ] or None,
+                ]
+                or None,
                 **self._get_meter_cal_payload(),
             },
             separators=(",", ":"),
@@ -1694,16 +1741,12 @@ class WebServer:
         # Sort by start freq (stable for overlay rendering)
         segments.sort(key=lambda s: s.get("start", 0))
 
-        body = json.dumps(
-            {"segments": segments}, separators=(",", ":")
-        ).encode()
+        body = json.dumps({"segments": segments}, separators=(",", ":")).encode()
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
         )
 
-    async def _serve_band_plan_layers(
-        self, writer: asyncio.StreamWriter
-    ) -> None:
+    async def _serve_band_plan_layers(self, writer: asyncio.StreamWriter) -> None:
         """GET /api/v1/band-plan/layers"""
         layers = self._band_plan.get_layers()
 
@@ -1723,16 +1766,12 @@ class WebServer:
         # Sort by priority desc
         layers = sorted(layers, key=lambda layer: -layer.get("priority", 0))
 
-        body = json.dumps(
-            {"layers": layers}, separators=(",", ":")
-        ).encode()
+        body = json.dumps({"layers": layers}, separators=(",", ":")).encode()
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
         )
 
-    async def _serve_band_plan_config(
-        self, writer: asyncio.StreamWriter
-    ) -> None:
+    async def _serve_band_plan_config(self, writer: asyncio.StreamWriter) -> None:
         """GET /api/v1/band-plan/config"""
         body = json.dumps(
             {
@@ -1758,14 +1797,19 @@ class WebServer:
                 cl = int((headers or {}).get("content-length", "0"))
                 if cl > 0:
                     body_bytes = await asyncio.wait_for(
-                        reader.readexactly(cl), timeout=5.0,
+                        reader.readexactly(cl),
+                        timeout=5.0,
                     )
             if not body_bytes:
                 err = json.dumps(
-                    {"error": "missing_body"}, separators=(",", ":"),
+                    {"error": "missing_body"},
+                    separators=(",", ":"),
                 ).encode()
                 await _send_response(
-                    writer, 400, "Bad Request", err,
+                    writer,
+                    400,
+                    "Bad Request",
+                    err,
                     {"Content-Type": "application/json"},
                 )
                 return
@@ -1779,7 +1823,10 @@ class WebServer:
                     separators=(",", ":"),
                 ).encode()
                 await _send_response(
-                    writer, 400, "Bad Request", err,
+                    writer,
+                    400,
+                    "Bad Request",
+                    err,
                     {"Content-Type": "application/json"},
                 )
                 return
@@ -1818,15 +1865,23 @@ class WebServer:
                 separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 200, "OK", body, {"Content-Type": "application/json"},
+                writer,
+                200,
+                "OK",
+                body,
+                {"Content-Type": "application/json"},
             )
         except Exception as exc:
             logger.exception("band-plan config update failed")
             err = json.dumps(
-                {"error": str(exc)}, separators=(",", ":"),
+                {"error": str(exc)},
+                separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 500, "Internal Server Error", err,
+                writer,
+                500,
+                "Internal Server Error",
+                err,
                 {"Content-Type": "application/json"},
             )
 
@@ -1843,7 +1898,8 @@ class WebServer:
                 cl = int((headers or {}).get("content-length", "0"))
                 if cl > 0:
                     body_bytes = await asyncio.wait_for(
-                        reader.readexactly(cl), timeout=5.0,
+                        reader.readexactly(cl),
+                        timeout=5.0,
                     )
                     payload = json.loads(body_bytes)
                     force = payload.get("force", False)
@@ -1852,16 +1908,23 @@ class WebServer:
             body = json.dumps(result, separators=(",", ":")).encode()
             status = 200 if result.get("status") == "ok" else 502
             await _send_response(
-                writer, status, "OK" if status == 200 else "Bad Gateway",
-                body, {"Content-Type": "application/json"},
+                writer,
+                status,
+                "OK" if status == 200 else "Bad Gateway",
+                body,
+                {"Content-Type": "application/json"},
             )
         except Exception as exc:
             logger.exception("eibi fetch failed")
             err = json.dumps(
-                {"error": str(exc)}, separators=(",", ":"),
+                {"error": str(exc)},
+                separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 500, "Internal Server Error", err,
+                writer,
+                500,
+                "Internal Server Error",
+                err,
                 {"Content-Type": "application/json"},
             )
 
@@ -1873,11 +1936,17 @@ class WebServer:
         """GET /api/v1/eibi/stations — paginated station list with filters."""
         if not self._eibi.loaded:
             err = json.dumps(
-                {"error": "not_loaded", "message": "EiBi data not loaded. POST /api/v1/eibi/fetch first."},
+                {
+                    "error": "not_loaded",
+                    "message": "EiBi data not loaded. POST /api/v1/eibi/fetch first.",
+                },
                 separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 404, "Not Found", err,
+                writer,
+                404,
+                "Not Found",
+                err,
                 {"Content-Type": "application/json"},
             )
             return
@@ -1903,7 +1972,11 @@ class WebServer:
         )
         body = json.dumps(result, separators=(",", ":")).encode()
         await _send_response(
-            writer, 200, "OK", body, {"Content-Type": "application/json"},
+            writer,
+            200,
+            "OK",
+            body,
+            {"Content-Type": "application/json"},
         )
 
     async def _serve_eibi_segments(
@@ -1914,10 +1987,15 @@ class WebServer:
         """GET /api/v1/eibi/segments — on-air stations as overlay segments."""
         if not self._eibi.loaded:
             body = json.dumps(
-                {"segments": []}, separators=(",", ":"),
+                {"segments": []},
+                separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 200, "OK", body, {"Content-Type": "application/json"},
+                writer,
+                200,
+                "OK",
+                body,
+                {"Content-Type": "application/json"},
             )
             return
 
@@ -1927,10 +2005,15 @@ class WebServer:
 
         segments = self._eibi.get_segments(start_hz, end_hz, on_air_only=on_air)
         body = json.dumps(
-            {"segments": segments}, separators=(",", ":"),
+            {"segments": segments},
+            separators=(",", ":"),
         ).encode()
         await _send_response(
-            writer, 200, "OK", body, {"Content-Type": "application/json"},
+            writer,
+            200,
+            "OK",
+            body,
+            {"Content-Type": "application/json"},
         )
 
     async def _handle_radio_control(
@@ -1948,7 +2031,10 @@ class WebServer:
                 separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 503, "Service Unavailable", body,
+                writer,
+                503,
+                "Service Unavailable",
+                body,
                 {"Content-Type": "application/json"},
             )
             return
@@ -1967,15 +2053,22 @@ class WebServer:
                     cl = int((headers or {}).get("content-length", "0"))
                     if cl > 0:
                         body_bytes = await asyncio.wait_for(
-                            reader.readexactly(cl), timeout=5.0,
+                            reader.readexactly(cl),
+                            timeout=5.0,
                         )
                 if not body_bytes:
                     err = json.dumps(
-                        {"error": "missing_body", "message": "JSON body with 'state' required"},
+                        {
+                            "error": "missing_body",
+                            "message": "JSON body with 'state' required",
+                        },
                         separators=(",", ":"),
                     ).encode()
                     await _send_response(
-                        writer, 400, "Bad Request", err,
+                        writer,
+                        400,
+                        "Bad Request",
+                        err,
                         {"Content-Type": "application/json"},
                     )
                     return
@@ -1983,15 +2076,23 @@ class WebServer:
                 power_state = payload.get("state")
                 if power_state not in ("on", "off"):
                     err = json.dumps(
-                        {"error": "invalid_state", "message": "state must be 'on' or 'off'"},
+                        {
+                            "error": "invalid_state",
+                            "message": "state must be 'on' or 'off'",
+                        },
                         separators=(",", ":"),
                     ).encode()
                     await _send_response(
-                        writer, 400, "Bad Request", err,
+                        writer,
+                        400,
+                        "Bad Request",
+                        err,
                         {"Content-Type": "application/json"},
                     )
                     return
-                if power_state == "on" and not getattr(radio, "control_connected", False):
+                if power_state == "on" and not getattr(
+                    radio, "control_connected", False
+                ):
                     # Radio is off → reconnect transport first, then send power-on CI-V
                     logger.info("power-on: radio disconnected, reconnecting first")
                     try:
@@ -2006,26 +2107,32 @@ class WebServer:
                 # Optimistic state update: radio won't respond to polls when off
                 if self._radio_state is not None:
                     self._radio_state.power_on = is_on
-                self._on_radio_state_change(
-                    "powerstat_changed", {"power_on": is_on}
-                )
+                self._on_radio_state_change("powerstat_changed", {"power_on": is_on})
                 resp = {"status": "ok", "power": power_state}
             else:
                 await _send_response(writer, 404, "Not Found", b"", {})
                 return
         except Exception as exc:
             body = json.dumps(
-                {"error": str(exc)}, separators=(",", ":"),
+                {"error": str(exc)},
+                separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 500, "Internal Server Error", body,
+                writer,
+                500,
+                "Internal Server Error",
+                body,
                 {"Content-Type": "application/json"},
             )
             return
 
         body = json.dumps(resp, separators=(",", ":")).encode()
         await _send_response(
-            writer, 200, "OK", body, {"Content-Type": "application/json"},
+            writer,
+            200,
+            "OK",
+            body,
+            {"Content-Type": "application/json"},
         )
 
     async def _handle_rtc_offer(
@@ -2037,12 +2144,18 @@ class WebServer:
         """Handle POST /api/v1/rtc/offer — WebRTC SDP signaling."""
         if not webrtc_available():
             body = json.dumps(
-                {"status": "error", "code": "webrtc_unavailable",
-                 "message": "WebRTC backend unavailable; install icom-lan[webrtc]."},
+                {
+                    "status": "error",
+                    "code": "webrtc_unavailable",
+                    "message": "WebRTC backend unavailable; install icom-lan[webrtc].",
+                },
                 separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 501, "Not Implemented", body,
+                writer,
+                501,
+                "Not Implemented",
+                body,
                 {"Content-Type": "application/json"},
             )
             return
@@ -2053,16 +2166,23 @@ class WebServer:
             cl = int((headers or {}).get("content-length", "0"))
             if cl > 0:
                 body_bytes = await asyncio.wait_for(
-                    reader.readexactly(cl), timeout=5.0,
+                    reader.readexactly(cl),
+                    timeout=5.0,
                 )
         if not body_bytes:
             err = json.dumps(
-                {"status": "error", "code": "missing_body",
-                 "message": "JSON body with 'sdp' and 'type' required."},
+                {
+                    "status": "error",
+                    "code": "missing_body",
+                    "message": "JSON body with 'sdp' and 'type' required.",
+                },
                 separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 400, "Bad Request", err,
+                writer,
+                400,
+                "Bad Request",
+                err,
                 {"Content-Type": "application/json"},
             )
             return
@@ -2071,12 +2191,18 @@ class WebServer:
             payload = json.loads(body_bytes)
         except (json.JSONDecodeError, ValueError):
             err = json.dumps(
-                {"status": "error", "code": "invalid_json",
-                 "message": "Request body is not valid JSON."},
+                {
+                    "status": "error",
+                    "code": "invalid_json",
+                    "message": "Request body is not valid JSON.",
+                },
                 separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 400, "Bad Request", err,
+                writer,
+                400,
+                "Bad Request",
+                err,
                 {"Content-Type": "application/json"},
             )
             return
@@ -2085,12 +2211,18 @@ class WebServer:
         offer_type = payload.get("type", "offer")
         if not isinstance(sdp, str) or not sdp.strip():
             err = json.dumps(
-                {"status": "error", "code": "missing_sdp",
-                 "message": "Field 'sdp' is required and must be a non-empty string."},
+                {
+                    "status": "error",
+                    "code": "missing_sdp",
+                    "message": "Field 'sdp' is required and must be a non-empty string.",
+                },
                 separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 400, "Bad Request", err,
+                writer,
+                400,
+                "Bad Request",
+                err,
                 {"Content-Type": "application/json"},
             )
             return
@@ -2108,7 +2240,10 @@ class WebServer:
 
         resp_body = json.dumps(result, separators=(",", ":")).encode()
         await _send_response(
-            writer, status_code, reason, resp_body,
+            writer,
+            status_code,
+            reason,
+            resp_body,
             {"Content-Type": "application/json"},
         )
 

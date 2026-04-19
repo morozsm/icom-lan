@@ -41,7 +41,9 @@ class TestUlawDecoder:
         samples = []
         for i in range(3):
             start = i * 2
-            sample = int.from_bytes(pcm[start : start + 2], byteorder="little", signed=True)
+            sample = int.from_bytes(
+                pcm[start : start + 2], byteorder="little", signed=True
+            )
             samples.append(sample)
         assert len(samples) == 3
 
@@ -55,7 +57,9 @@ class TestUlawDecoder:
         samples = []
         for i in range(len(test_ulaws)):
             start = i * 2
-            sample = int.from_bytes(pcm[start : start + 2], byteorder="little", signed=True)
+            sample = int.from_bytes(
+                pcm[start : start + 2], byteorder="little", signed=True
+            )
             samples.append(sample)
 
         # All samples should be within 16-bit range
@@ -97,7 +101,9 @@ class TestUlawDecoder:
         # All samples should be valid 16-bit signed integers
         for i in range(256):
             start = i * 2
-            sample = int.from_bytes(pcm[start : start + 2], byteorder="little", signed=True)
+            sample = int.from_bytes(
+                pcm[start : start + 2], byteorder="little", signed=True
+            )
             # Check bounds
             assert -32768 <= sample <= 32767
             # Check non-zero (as the lookup table has specific values for each byte)
@@ -133,7 +139,9 @@ class TestUlawDecoder:
         samples = []
         for i in range(4):
             start = i * 2
-            sample = int.from_bytes(pcm[start : start + 2], byteorder="little", signed=True)
+            sample = int.from_bytes(
+                pcm[start : start + 2], byteorder="little", signed=True
+            )
             samples.append(sample)
 
         # All samples should be different (different input bytes)

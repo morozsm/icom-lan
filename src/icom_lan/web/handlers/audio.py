@@ -328,9 +328,7 @@ class AudioBroadcaster:
                 data=bytes([0x00, 0x72, 0x00]),
                 wait_response=False,
             )
-            logger.info(
-                "audio-broadcaster: Phones L/R Mix = OFF sent (1A 05 00 72 00)"
-            )
+            logger.info("audio-broadcaster: Phones L/R Mix = OFF sent (1A 05 00 72 00)")
         except Exception:
             logger.warning(
                 "audio-broadcaster: Phones L/R Mix init failed", exc_info=True

@@ -119,7 +119,9 @@ def test_overrides_have_prefix(rig_toml: Path) -> None:
 def test_toml_commands_in_commands_module(rig_toml: Path) -> None:
     """Each active TOML command has a matching function in commands.py."""
     commands_mod = importlib.import_module("icom_lan.commands")
-    available = {name for name, _ in inspect.getmembers(commands_mod, inspect.isfunction)}
+    available = {
+        name for name, _ in inspect.getmembers(commands_mod, inspect.isfunction)
+    }
 
     missing: list[str] = []
     for cmd in _active_commands(rig_toml):
@@ -142,8 +144,7 @@ def test_toml_commands_in_radio(rig_toml: Path) -> None:
     from icom_lan.radio import IcomRadio  # noqa: PLC0415
 
     radio_methods = {
-        name
-        for name, _ in inspect.getmembers(IcomRadio, predicate=inspect.isfunction)
+        name for name, _ in inspect.getmembers(IcomRadio, predicate=inspect.isfunction)
     }
 
     missing: list[str] = []
@@ -156,6 +157,4 @@ def test_toml_commands_in_radio(rig_toml: Path) -> None:
         elif cmd not in radio_methods:
             missing.append(cmd)
 
-    assert not missing, (
-        f"{rig_toml.name}: commands missing from IcomRadio: {missing}"
-    )
+    assert not missing, f"{rig_toml.name}: commands missing from IcomRadio: {missing}"

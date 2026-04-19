@@ -23,27 +23,46 @@ class TestIcomSupportsCommand:
 
     def test_known_commands_return_true(self):
         known = [
-            "get_freq", "set_freq", "get_mode", "set_mode",
-            "set_ptt", "get_s_meter", "set_nb", "set_nr",
-            "set_agc", "set_attenuator", "set_preamp", "set_filter",
-            "send_cw_text", "set_key_speed", "get_key_speed",
-            "enable_scope", "disable_scope",
-            "get_powerstat", "set_powerstat",
+            "get_freq",
+            "set_freq",
+            "get_mode",
+            "set_mode",
+            "set_ptt",
+            "get_s_meter",
+            "set_nb",
+            "set_nr",
+            "set_agc",
+            "set_attenuator",
+            "set_preamp",
+            "set_filter",
+            "send_cw_text",
+            "set_key_speed",
+            "get_key_speed",
+            "enable_scope",
+            "disable_scope",
+            "get_powerstat",
+            "set_powerstat",
             "send_civ",
         ]
         for cmd in known:
             assert CoreRadio.supports_command(
-                CoreRadio, cmd,  # type: ignore[arg-type]
+                CoreRadio,
+                cmd,  # type: ignore[arg-type]
             ), f"{cmd} should be supported"
 
     def test_unknown_commands_return_false(self):
         unknown = [
-            "do_magic", "fly_to_moon", "get_coffee",
-            "set_hyperdrive", "", "GET_FREQ",
+            "do_magic",
+            "fly_to_moon",
+            "get_coffee",
+            "set_hyperdrive",
+            "",
+            "GET_FREQ",
         ]
         for cmd in unknown:
             assert not CoreRadio.supports_command(
-                CoreRadio, cmd,  # type: ignore[arg-type]
+                CoreRadio,
+                cmd,  # type: ignore[arg-type]
             ), f"{cmd!r} should NOT be supported"
 
     def test_known_commands_match_public_async_methods(self):
@@ -73,8 +92,16 @@ class TestYaesuSupportsCommand:
     """YaesuCatRadio.supports_command delegates to has_command."""
 
     def test_defined_commands_return_true(self, yaesu_radio):
-        for cmd in ("get_freq", "set_freq", "get_mode", "set_mode",
-                     "set_ptt", "get_s_meter", "get_af_level", "set_af_level"):
+        for cmd in (
+            "get_freq",
+            "set_freq",
+            "get_mode",
+            "set_mode",
+            "set_ptt",
+            "get_s_meter",
+            "get_af_level",
+            "set_af_level",
+        ):
             assert yaesu_radio.supports_command(cmd), (
                 f"{cmd} should be supported on FTX-1"
             )
@@ -101,20 +128,24 @@ class TestSerialBackendsSupportsCommand:
 
     def test_ic7300_serial(self):
         from icom_lan.backends.ic7300.serial import Ic7300SerialRadio
+
         assert hasattr(Ic7300SerialRadio, "supports_command")
         assert Ic7300SerialRadio.supports_command is CoreRadio.supports_command
 
     def test_ic705_serial(self):
         from icom_lan.backends.ic705.serial import Ic705SerialRadio
+
         assert hasattr(Ic705SerialRadio, "supports_command")
         assert Ic705SerialRadio.supports_command is CoreRadio.supports_command
 
     def test_ic9700_serial(self):
         from icom_lan.backends.ic9700.serial import Ic9700SerialRadio
+
         assert hasattr(Ic9700SerialRadio, "supports_command")
         assert Ic9700SerialRadio.supports_command is CoreRadio.supports_command
 
     def test_icom7610_serial(self):
         from icom_lan.backends.icom7610.serial import Icom7610SerialRadio
+
         assert hasattr(Icom7610SerialRadio, "supports_command")
         assert Icom7610SerialRadio.supports_command is CoreRadio.supports_command

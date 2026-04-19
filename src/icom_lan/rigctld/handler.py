@@ -308,13 +308,15 @@ def _parse_raw_hex(args: tuple[str, ...]) -> bytes:
 
 def _civ_frame_to_bytes(frame: Any) -> bytes:
     """Reconstruct raw CI-V frame bytes from a parsed CivFrame."""
-    return bytes(build_civ_frame(
-        frame.to_addr,
-        frame.from_addr,
-        frame.command,
-        sub=frame.sub,
-        data=frame.data if frame.data else None,
-    ))
+    return bytes(
+        build_civ_frame(
+            frame.to_addr,
+            frame.from_addr,
+            frame.command,
+            sub=frame.sub,
+            data=frame.data if frame.data else None,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -340,7 +342,9 @@ class RigctldHandler:
         self._ptt_state: bool | None = None
         self._cache = _FallbackRigState()
         self._pending = _PendingRigState()
-        self._routing = create_routing(radio, self._cache, getattr(config, 'max_power_w', 100.0))
+        self._routing = create_routing(
+            radio, self._cache, getattr(config, "max_power_w", 100.0)
+        )
 
     def _radio_state(self) -> RadioState | None:
         state = getattr(self._radio, "radio_state", None)
@@ -690,7 +694,9 @@ class RigctldHandler:
             if main_state is not None:
                 raw = main_state.s_meter
                 self._cache.update_s_meter(raw)
-                return RigctldResponse(values=[str(round((raw / 241.0) * 114.0 - 54.0))])
+                return RigctldResponse(
+                    values=[str(round((raw / 241.0) * 114.0 - 54.0))]
+                )
             if CAP_METERS not in self._radio.capabilities:
                 if self._cache.s_meter is not None:
                     raw = self._cache.s_meter
@@ -787,7 +793,10 @@ class RigctldHandler:
         if level == "PREAMP":
             db = round(value)
             # Find nearest supported dB (0, 12, 20)
-            idx = min(range(len(_PREAMP_IDX_TO_DB)), key=lambda i: abs(_PREAMP_IDX_TO_DB[i] - db))
+            idx = min(
+                range(len(_PREAMP_IDX_TO_DB)),
+                key=lambda i: abs(_PREAMP_IDX_TO_DB[i] - db),
+            )
             await self._radio.set_preamp(idx)
             return _ok()
 
@@ -885,8 +894,7 @@ class RigctldHandler:
                     return _err(HamlibError.EIO)
                 except TimeoutError as exc:
                     logger.warning(
-                        "set_split_vfo: set_vfo(%s) timed out (%s); "
-                        "rolling back split",
+                        "set_split_vfo: set_vfo(%s) timed out (%s); rolling back split",
                         target,
                         exc,
                     )
@@ -999,7 +1007,6 @@ class RigctldHandler:
     async def _cmd_get_lock_mode(self, cmd: RigctldCommand) -> RigctldResponse:
         """Get lock mode — always unlocked."""
         return RigctldResponse(values=["0"])
-
 
     # ------------------------------------------------------------------
     # Raw CI-V

@@ -108,9 +108,8 @@ class NRScipyNode:
             self._frame_count += 1
         else:
             # Exponential smoothing — tracks slowly-changing noise floor.
-            self._noise_estimate = (
-                self._noise_estimate * _NOISE_SMOOTH
-                + magnitude * (1 - _NOISE_SMOOTH)
+            self._noise_estimate = self._noise_estimate * _NOISE_SMOOTH + magnitude * (
+                1 - _NOISE_SMOOTH
             )
             self._frame_count += 1
 

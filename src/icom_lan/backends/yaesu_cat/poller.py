@@ -38,9 +38,9 @@ __all__ = ["YaesuCatPoller"]
 
 logger = logging.getLogger(__name__)
 
-_FAST_INTERVAL: float = 0.075    # 13.3 Hz
+_FAST_INTERVAL: float = 0.075  # 13.3 Hz
 _MEDIUM_INTERVAL: float = 0.200  # 5 Hz
-_SLOW_INTERVAL: float = 1.000    # 1 Hz
+_SLOW_INTERVAL: float = 1.000  # 1 Hz
 _EMA_ALPHA: float = 0.3
 
 
@@ -111,7 +111,11 @@ class YaesuCatPoller:
         """Convert a raw filter index to Hz (pass-through if no table)."""
         profile = self._radio.profile
         mode = self._radio.radio_state.main.mode
-        rule = profile.resolve_filter_rule(mode) if profile.filter_width_encoding == "table_index" else None
+        rule = (
+            profile.resolve_filter_rule(mode)
+            if profile.filter_width_encoding == "table_index"
+            else None
+        )
         if rule and rule.fixed and rule.defaults:
             return rule.defaults[0]
         table = self._get_filter_table()
@@ -233,7 +237,11 @@ class YaesuCatPoller:
                 # Radio off or connection lost — single-line log, backoff
                 _conn_backoff = min(_conn_backoff + 1.0, _MAX_CONN_BACKOFF)
                 if _conn_backoff <= 1.0:
-                    logger.warning("YaesuCatPoller: %s — radio not connected, retrying in %.0fs", name, _conn_backoff)
+                    logger.warning(
+                        "YaesuCatPoller: %s — radio not connected, retrying in %.0fs",
+                        name,
+                        _conn_backoff,
+                    )
                 await self._try_reconnect()
                 await asyncio.sleep(_conn_backoff)
                 continue
@@ -277,16 +285,16 @@ class YaesuCatPoller:
 
     # CI-V band codes → Yaesu BS band codes
     _CIV_TO_YAESU_BAND: dict[int, int] = {
-        0x00: 0,   # 160m → 1.8M
-        0x01: 1,   # 80m  → 3.5M
-        0x02: 2,   # 60m  → 5M
-        0x03: 3,   # 40m  → 7M
-        0x04: 4,   # 30m  → 10M
-        0x05: 5,   # 20m  → 14M
-        0x06: 6,   # 17m  → 18M
-        0x07: 7,   # 15m  → 21M
-        0x08: 8,   # 12m  → 24M
-        0x09: 9,   # 10m  → 28M
+        0x00: 0,  # 160m → 1.8M
+        0x01: 1,  # 80m  → 3.5M
+        0x02: 2,  # 60m  → 5M
+        0x03: 3,  # 40m  → 7M
+        0x04: 4,  # 30m  → 10M
+        0x05: 5,  # 20m  → 14M
+        0x06: 6,  # 17m  → 18M
+        0x07: 7,  # 15m  → 21M
+        0x08: 8,  # 12m  → 24M
+        0x09: 9,  # 10m  → 28M
         0x0A: 10,  # 6m   → 50M
     }
 
@@ -525,7 +533,9 @@ class YaesuCatPoller:
                 except NotImplementedError:
                     pass
                 except Exception:
-                    logger.debug("YaesuCatPoller: sub S-meter unavailable", exc_info=True)
+                    logger.debug(
+                        "YaesuCatPoller: sub S-meter unavailable", exc_info=True
+                    )
 
         self._callback(state)
 

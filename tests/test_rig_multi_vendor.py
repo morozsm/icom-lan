@@ -176,8 +176,8 @@ class TestMeterCalibration:
         toml = (
             _CIV_BASE_TOML
             + "\n[meters.s_meter]\nredline_raw = 130\n"
-            + "\n[[meters.s_meter.calibration]]\nraw = 0\nactual = -54.0\nlabel = \"S0\"\n"
-            + "\n[[meters.s_meter.calibration]]\nraw = 130\nactual = 0.0\nlabel = \"S9\"\n"
+            + '\n[[meters.s_meter.calibration]]\nraw = 0\nactual = -54.0\nlabel = "S0"\n'
+            + '\n[[meters.s_meter.calibration]]\nraw = 130\nactual = 0.0\nlabel = "S9"\n'
         )
         p = _write_toml(tmp_path, toml)
         rig = load_rig(p)
@@ -194,7 +194,7 @@ class TestMeterCalibration:
         toml = (
             _CIV_BASE_TOML
             + "\n[meters.s_meter]\nredline_raw = 130\n"
-            + "\n[[meters.s_meter.calibration]]\nraw = 0\nactual = -54.0\nlabel = \"S0\"\n"
+            + '\n[[meters.s_meter.calibration]]\nraw = 0\nactual = -54.0\nlabel = "S0"\n'
         )
         p = _write_toml(tmp_path, toml)
         rig = load_rig(p)
@@ -387,7 +387,7 @@ class TestProfileBuilding:
         toml = (
             _CIV_BASE_TOML
             + "\n[meters.s_meter]\nredline_raw = 130\n"
-            + "\n[[meters.s_meter.calibration]]\nraw = 0\nactual = -54.0\nlabel = \"S0\"\n"
+            + '\n[[meters.s_meter.calibration]]\nraw = 0\nactual = -54.0\nlabel = "S0"\n'
         )
         p = _write_toml(tmp_path, toml)
         profile = load_rig(p).to_profile()

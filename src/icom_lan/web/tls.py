@@ -33,10 +33,12 @@ def _generate_with_cryptography(
 
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, "icom-lan"),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "icom-lan"),
-    ])
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, "icom-lan"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "icom-lan"),
+        ]
+    )
 
     san_entries: list[x509.GeneralName] = [
         x509.DNSName(hostname),
@@ -84,12 +86,20 @@ def _generate_with_openssl(
     """Generate a self-signed cert using the ``openssl`` CLI."""
     subprocess.run(
         [
-            "openssl", "req", "-x509", "-newkey", "rsa:2048",
-            "-keyout", str(key_path),
-            "-out", str(cert_path),
-            "-days", str(days),
+            "openssl",
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:2048",
+            "-keyout",
+            str(key_path),
+            "-out",
+            str(cert_path),
+            "-days",
+            str(days),
             "-nodes",
-            "-subj", f"/CN={hostname}/O=icom-lan",
+            "-subj",
+            f"/CN={hostname}/O=icom-lan",
         ],
         check=True,
         capture_output=True,

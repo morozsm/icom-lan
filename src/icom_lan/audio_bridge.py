@@ -72,15 +72,15 @@ FRAME_BYTES = SAMPLES_PER_FRAME * CHANNELS * BYTES_PER_SAMPLE  # 1920
 
 # Virtual loopback device name candidates for auto-detection
 _LOOPBACK_CANDIDATES = (
-    "BlackHole",    # macOS (brew install blackhole-2ch)
-    "Loopback",     # macOS (Rogue Amoeba) / Linux (generic)
-    "VB-Audio",     # Windows (VB-Cable)
-    "Virtual",      # generic virtual device
-    "pipewire",     # Linux (PipeWire loopback)
-    "PipeWire",     # Linux (PipeWire loopback, title case)
-    "null",         # Linux (PulseAudio null-sink)
-    "snd-aloop",    # Linux (ALSA loopback)
-    "JACK",         # Linux (JACK audio)
+    "BlackHole",  # macOS (brew install blackhole-2ch)
+    "Loopback",  # macOS (Rogue Amoeba) / Linux (generic)
+    "VB-Audio",  # Windows (VB-Cable)
+    "Virtual",  # generic virtual device
+    "pipewire",  # Linux (PipeWire loopback)
+    "PipeWire",  # Linux (PipeWire loopback, title case)
+    "null",  # Linux (PulseAudio null-sink)
+    "snd-aloop",  # Linux (ALSA loopback)
+    "JACK",  # Linux (JACK audio)
 )
 
 _INT16_MAX = 32767.0
@@ -100,7 +100,7 @@ def _rms_dbfs(pcm: bytes) -> float:
     import numpy as np
 
     samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float64)
-    rms = float(np.sqrt(np.mean(samples ** 2)))
+    rms = float(np.sqrt(np.mean(samples**2)))
     if rms < 1.0:
         return -96.0
     return 20.0 * math.log10(rms / _INT16_MAX)
@@ -294,8 +294,16 @@ class AudioBridge:
             if self._tx_latency_samples
             else 0.0
         )
-        rx_jitter = _std_dev(self._rx_latency_samples) * 1000 if self._rx_latency_samples else 0.0
-        tx_jitter = _std_dev(self._tx_latency_samples) * 1000 if self._tx_latency_samples else 0.0
+        rx_jitter = (
+            _std_dev(self._rx_latency_samples) * 1000
+            if self._rx_latency_samples
+            else 0.0
+        )
+        tx_jitter = (
+            _std_dev(self._tx_latency_samples) * 1000
+            if self._tx_latency_samples
+            else 0.0
+        )
         return BridgeMetrics(
             running=self._running,
             label=self._label,
@@ -325,9 +333,7 @@ class AudioBridge:
     # State machine
     # ------------------------------------------------------------------
 
-    def _set_state(
-        self, new: BridgeState, reason: str, attempt: int = 0
-    ) -> None:
+    def _set_state(self, new: BridgeState, reason: str, attempt: int = 0) -> None:
         prev = self._bridge_state
         if prev == new:
             return
@@ -375,9 +381,7 @@ class AudioBridge:
             )
 
         dev_id = dev.id
-        logger.info(
-            "%s: using device %r (id %d)", self._label, dev.name, int(dev_id)
-        )
+        logger.info("%s: using device %r (id %d)", self._label, dev.name, int(dev_id))
 
         # --- RX path: radio → virtual device output ---
         self._rx_stream = self._backend.open_tx(
@@ -426,9 +430,7 @@ class AudioBridge:
 
             tx_dev_id = dev_id
             if self._tx_device_name:
-                tx_dev = _find_device_in_backend(
-                    self._backend, self._tx_device_name
-                )
+                tx_dev = _find_device_in_backend(self._backend, self._tx_device_name)
                 if tx_dev is None:
                     logger.warning(
                         "%s: TX device %r not found, using RX device",
@@ -478,18 +480,14 @@ class AudioBridge:
             try:
                 await self._tx_stream.stop()
             except Exception:
-                logger.debug(
-                    "%s: TX stream stop error", self._label, exc_info=True
-                )
+                logger.debug("%s: TX stream stop error", self._label, exc_info=True)
             self._tx_stream = None
 
         if self._rx_stream is not None:
             try:
                 await self._rx_stream.stop()
             except Exception:
-                logger.debug(
-                    "%s: RX stream stop error", self._label, exc_info=True
-                )
+                logger.debug("%s: RX stream stop error", self._label, exc_info=True)
             self._rx_stream = None
 
     # ------------------------------------------------------------------
@@ -503,9 +501,7 @@ class AudioBridge:
         """
         if self._bridge_state != BridgeState.RUNNING:
             return
-        logger.warning(
-            "%s: stream error, will reconnect: %s", self._label, exc
-        )
+        logger.warning("%s: stream error, will reconnect: %s", self._label, exc)
         self._running = False
         self._set_state(BridgeState.RECONNECTING, "device_lost")
         if self._reconnect_task is None or self._reconnect_task.done():
@@ -517,7 +513,7 @@ class AudioBridge:
         self._reconnect_attempt = 0
         while self._max_retries == 0 or self._reconnect_attempt < self._max_retries:
             delay = min(
-                self._retry_base_delay * (2 ** self._reconnect_attempt),
+                self._retry_base_delay * (2**self._reconnect_attempt),
                 self._retry_max_delay,
             )
             self._reconnect_attempt += 1

@@ -21,7 +21,7 @@ from icom_lan.commands import (
     RECEIVER_SUB,
     parse_bool_response,
     parse_tone_freq_response,
-    parse_tsql_freq_response
+    parse_tsql_freq_response,
 )
 from icom_lan.types import CivFrame
 from _command_test_helpers import bind_default_addr_globals

@@ -11,6 +11,7 @@ from icom_lan.dsp.exceptions import DSPBackendUnavailable
 
 try:
     import scipy  # noqa: F401
+
     _HAS_SCIPY = True
 except ImportError:
     _HAS_SCIPY = False
@@ -44,7 +45,13 @@ class TestNRScipyNode(unittest.TestCase):
 
         # Phase 2: feed signal + noise frames and collect output.
         n_test_frames = 8
-        t = np.linspace(0, frame_size * n_test_frames / sr, frame_size * n_test_frames, endpoint=False, dtype=np.float32)
+        t = np.linspace(
+            0,
+            frame_size * n_test_frames / sr,
+            frame_size * n_test_frames,
+            endpoint=False,
+            dtype=np.float32,
+        )
         clean = 0.5 * np.sin(2 * np.pi * 1000 * t).astype(np.float32)
         noise = 0.1 * rng.standard_normal(len(t)).astype(np.float32)
         noisy = clean + noise
@@ -61,13 +68,18 @@ class TestNRScipyNode(unittest.TestCase):
         """NR node passes clean sine wave mostly unchanged (correlation > 0.9)."""
         sr = 48000
         duration = 0.5
-        t = np.linspace(0, duration, int(sr * duration), endpoint=False, dtype=np.float32)
+        t = np.linspace(
+            0, duration, int(sr * duration), endpoint=False, dtype=np.float32
+        )
         clean = 0.5 * np.sin(2 * np.pi * 1000 * t).astype(np.float32)
 
         node = self._make_node(strength=0.6)
         frame_size = 1024
 
-        frames = [clean[i : i + frame_size] for i in range(0, len(clean) - frame_size + 1, frame_size)]
+        frames = [
+            clean[i : i + frame_size]
+            for i in range(0, len(clean) - frame_size + 1, frame_size)
+        ]
         processed_frames = []
         for frame in frames:
             out = node.process(frame, sr)

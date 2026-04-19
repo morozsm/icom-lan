@@ -6,7 +6,7 @@ from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
     get_main_sub_tracking,
     set_main_sub_tracking,
-    parse_civ_frame
+    parse_civ_frame,
 )
 from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
 

@@ -39,7 +39,9 @@ def _read_positive_int(var: str) -> int:
     try:
         value = int(raw)
     except ValueError:
-        msg = f"env_config: {var}={raw!r} is not a valid integer, using default {default}"
+        msg = (
+            f"env_config: {var}={raw!r} is not a valid integer, using default {default}"
+        )
         logger.warning(msg)
         print(f"Warning: {msg}", file=sys.stderr)
         return default

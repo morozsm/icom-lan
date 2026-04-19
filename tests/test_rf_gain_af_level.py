@@ -9,7 +9,7 @@ from icom_lan.commands import (
     set_rf_gain,
     get_af_level,
     set_af_level,
-    build_civ_frame
+    build_civ_frame,
 )
 from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
 

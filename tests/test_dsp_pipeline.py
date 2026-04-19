@@ -15,6 +15,7 @@ from icom_lan.dsp import DSPBackendUnavailable, DSPConfigError, DSPPipeline
 # Test node helpers
 # ---------------------------------------------------------------------------
 
+
 class GainNode:
     """Multiplies samples by a fixed gain factor."""
 
@@ -66,6 +67,7 @@ class OffsetNode:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestDSPPipelinePassthrough:
     """Empty pipeline returns input unchanged."""

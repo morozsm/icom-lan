@@ -60,7 +60,9 @@ async def responder_no_radio():
 
 
 class TestDiscoveryResponder:
-    async def test_valid_request_returns_json(self, responder: DiscoveryResponder) -> None:
+    async def test_valid_request_returns_json(
+        self, responder: DiscoveryResponder
+    ) -> None:
         raw = await _query(responder.port, MAGIC)
         assert raw is not None
         data = json.loads(raw)
@@ -86,7 +88,9 @@ class TestDiscoveryResponder:
         result = await _query(responder.port, b"ICOM_LAN_DISCOVER", timeout=0.3)
         assert result is None
 
-    async def test_no_radio_provider(self, responder_no_radio: DiscoveryResponder) -> None:
+    async def test_no_radio_provider(
+        self, responder_no_radio: DiscoveryResponder
+    ) -> None:
         raw = await _query(responder_no_radio.port, MAGIC)
         assert raw is not None
         data = json.loads(raw)
@@ -95,7 +99,9 @@ class TestDiscoveryResponder:
         assert data["url"].startswith("https://")
         assert ":9090" in data["url"]
 
-    async def test_response_fits_single_udp_packet(self, responder: DiscoveryResponder) -> None:
+    async def test_response_fits_single_udp_packet(
+        self, responder: DiscoveryResponder
+    ) -> None:
         raw = await _query(responder.port, MAGIC)
         assert raw is not None
         assert len(raw) <= 512
@@ -106,6 +112,7 @@ class TestDiscoveryResponder:
 
     async def test_broken_radio_provider_does_not_crash(self) -> None:
         """A failing radio_provider must not kill the responder."""
+
         def _boom() -> RadioInfo:
             raise RuntimeError("radio exploded")
 

@@ -5,10 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, call
 import pytest
 
 from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
-    CONTROLLER_ADDR,
-    build_civ_frame
-)
+from icom_lan.commands import CONTROLLER_ADDR, build_civ_frame
 from icom_lan.commander import Priority
 from icom_lan.exceptions import ConnectionError, CommandError
 from icom_lan.radio import IcomRadio
@@ -316,9 +313,7 @@ class TestReceiverAwareContract:
         assert got == expected
 
     @pytest.mark.asyncio
-    async def test_get_mode_receiver_sub_uses_cmd26(
-        self, radio: IcomRadio
-    ) -> None:
+    async def test_get_mode_receiver_sub_uses_cmd26(self, radio: IcomRadio) -> None:
         radio._send_civ_raw = AsyncMock(  # type: ignore[method-assign]
             return_value=CivFrame(
                 to_addr=CONTROLLER_ADDR,

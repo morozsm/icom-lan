@@ -126,8 +126,7 @@ async def test_web_server_gc_while_running_logs_warning() -> None:
         target_logger.removeHandler(handler)
 
     assert any(
-        "running" in r.message.lower() or "stop" in r.message.lower()
-        for r in caught
+        "running" in r.message.lower() or "stop" in r.message.lower() for r in caught
     ), f"Expected WARN about running server; got: {[r.message for r in caught]}"
     assert any(r.levelno == logging.WARNING for r in caught)
 

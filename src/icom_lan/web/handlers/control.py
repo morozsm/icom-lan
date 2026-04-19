@@ -383,7 +383,10 @@ class ControlHandler:
             try:
                 initial_state = self._server.build_public_state()
                 rev = self._server._delta_encoder.revision
-                msg = {"type": "state_update", "data": {"type": "full", "data": initial_state, "revision": rev}}
+                msg = {
+                    "type": "state_update",
+                    "data": {"type": "full", "data": initial_state, "revision": rev},
+                }
                 await self._ws.send_text(encode_json(msg))
             except Exception:
                 logger.debug("control: failed to send initial state", exc_info=True)
@@ -913,7 +916,9 @@ class ControlHandler:
                 raise RuntimeError("radio does not support this command")
             text = str(params.get("text", ""))
             if len(text) > 30:
-                raise ValueError(f"CW text too long: max 30 characters, got {len(text)}")
+                raise ValueError(
+                    f"CW text too long: max 30 characters, got {len(text)}"
+                )
             await radio.send_cw_text(text)
             return {"text": text}
         if name == "stop_cw_text":
@@ -968,6 +973,7 @@ class ControlHandler:
             else:
                 # Route through command queue
                 from ..radio_poller import SetTunerStatus
+
                 q = self._server.command_queue if self._server is not None else None
                 if q is None:
                     raise RuntimeError("no command queue available")
@@ -1062,7 +1068,8 @@ class ControlHandler:
 
         tuner.start_collection(_on_detected)
         tap_handle = broadcaster._tap_registry.register(
-            "cw_auto_tune", tuner.feed_audio,
+            "cw_auto_tune",
+            tuner.feed_audio,
         )
         await broadcaster.ensure_relay()
 
@@ -1089,14 +1096,23 @@ class ControlHandler:
             q = self._server.command_queue
             q.put(SetFreq(freq + delta))
 
-        return {"detected": hz, "cw_pitch": cw_pitch, "delta": delta, "applied": abs(delta) > 5}
+        return {
+            "detected": hz,
+            "cw_pitch": cw_pitch,
+            "delta": delta,
+            "applied": abs(delta) > 5,
+        }
 
     # ------------------------------------------------------------------
     # Frequency / mode / band / VFO / RIT / split
     # ------------------------------------------------------------------
 
     def _enqueue_rc_frequency(
-        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+        self,
+        name: str,
+        params: dict[str, Any],
+        q: Any,
+        radio: "Radio | None",
     ) -> dict[str, Any] | None:
         match name:
             case "set_band":
@@ -1187,7 +1203,11 @@ class ControlHandler:
     # ------------------------------------------------------------------
 
     def _enqueue_rc_power(
-        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+        self,
+        name: str,
+        params: dict[str, Any],
+        q: Any,
+        radio: "Radio | None",
     ) -> dict[str, Any] | None:
         match name:
             case "ptt":
@@ -1236,7 +1256,11 @@ class ControlHandler:
     # ------------------------------------------------------------------
 
     def _enqueue_rc_dsp(
-        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+        self,
+        name: str,
+        params: dict[str, Any],
+        q: Any,
+        radio: "Radio | None",
     ) -> dict[str, Any] | None:
         match name:
             case "set_nb":
@@ -1383,7 +1407,11 @@ class ControlHandler:
     # ------------------------------------------------------------------
 
     def _enqueue_rc_audio(
-        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+        self,
+        name: str,
+        params: dict[str, Any],
+        q: Any,
+        radio: "Radio | None",
     ) -> dict[str, Any] | None:
         match name:
             case "set_rf_gain":
@@ -1498,7 +1526,11 @@ class ControlHandler:
     # ------------------------------------------------------------------
 
     def _enqueue_rc_scope(
-        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+        self,
+        name: str,
+        params: dict[str, Any],
+        q: Any,
+        radio: "Radio | None",
     ) -> dict[str, Any] | None:
         match name:
             case "switch_scope_receiver":
@@ -1577,7 +1609,11 @@ class ControlHandler:
     # ------------------------------------------------------------------
 
     def _enqueue_rc_antenna(
-        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+        self,
+        name: str,
+        params: dict[str, Any],
+        q: Any,
+        radio: "Radio | None",
     ) -> dict[str, Any] | None:
         match name:
             case "set_att" | "set_attenuator":
@@ -1628,7 +1664,11 @@ class ControlHandler:
     # ------------------------------------------------------------------
 
     def _enqueue_rc_system(
-        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+        self,
+        name: str,
+        params: dict[str, Any],
+        q: Any,
+        radio: "Radio | None",
     ) -> dict[str, Any] | None:
         match name:
             case "set_system_date":
@@ -1718,14 +1758,18 @@ class ControlHandler:
                 self._ensure_capability("scan", "scan_set_df_span")
                 span = int(params["span"])
                 if span not in range(0xA1, 0xA8):
-                    raise ValueError(f"scan_set_df_span: span must be 0xA1-0xA7, got {span:#x}")
+                    raise ValueError(
+                        f"scan_set_df_span: span must be 0xA1-0xA7, got {span:#x}"
+                    )
                 q.put(ScanSetDfSpan(span=span))
                 return {"span": span}
             case "scan_set_resume":
                 self._ensure_capability("scan", "scan_set_resume")
                 resume_mode = int(params["mode"])
                 if resume_mode not in range(0xD0, 0xD4):
-                    raise ValueError(f"scan_set_resume: mode must be 0xD0-0xD3, got {resume_mode:#x}")
+                    raise ValueError(
+                        f"scan_set_resume: mode must be 0xD0-0xD3, got {resume_mode:#x}"
+                    )
                 q.put(ScanSetResume(mode=resume_mode))
                 return {"mode": resume_mode}
             case "set_repeater_tone":
@@ -1782,7 +1826,11 @@ class ControlHandler:
     # ------------------------------------------------------------------
 
     def _enqueue_rc_memory(
-        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+        self,
+        name: str,
+        params: dict[str, Any],
+        q: Any,
+        radio: "Radio | None",
     ) -> dict[str, Any] | None:
         match name:
             case "set_memory_mode":
@@ -1833,6 +1881,7 @@ class ControlHandler:
                         "(missing MemoryCapable)"
                     )
                 from ...types import MemoryChannel
+
                 mem = MemoryChannel(**params)
                 q.put(SetMemoryContents(mem))
                 return {"channel": mem.channel}
@@ -1843,6 +1892,7 @@ class ControlHandler:
                         "(missing MemoryCapable)"
                     )
                 from ...types import BandStackRegister
+
                 bsr = BandStackRegister(**params)
                 q.put(SetBsr(bsr))
                 return {"band": bsr.band, "register": bsr.register}
@@ -1854,7 +1904,11 @@ class ControlHandler:
     # ------------------------------------------------------------------
 
     def _enqueue_rc_misc(
-        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+        self,
+        name: str,
+        params: dict[str, Any],
+        q: Any,
+        radio: "Radio | None",
     ) -> dict[str, Any] | None:
         match name:
             case "set_xfc_status":

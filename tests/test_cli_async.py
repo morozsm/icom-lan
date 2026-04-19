@@ -593,7 +593,9 @@ class TestRunErrorHandling:
         )
         # Mock create_radio to raise immediately instead of attempting real network connect
         mock_radio = MagicMock()
-        mock_radio.__aenter__ = AsyncMock(side_effect=ConnectionError("test connection failed"))
+        mock_radio.__aenter__ = AsyncMock(
+            side_effect=ConnectionError("test connection failed")
+        )
         mock_radio.__aexit__ = AsyncMock(return_value=None)
         with patch("icom_lan.cli.create_radio", return_value=mock_radio):
             rc = await _run(args)

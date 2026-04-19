@@ -383,12 +383,8 @@ class UsbAudioDriver:
         if mapping is None:
             return None
 
-        rx_dev = next(
-            (d for d in devices if d.index == mapping.rx_device_index), None
-        )
-        tx_dev = next(
-            (d for d in devices if d.index == mapping.tx_device_index), None
-        )
+        rx_dev = next((d for d in devices if d.index == mapping.rx_device_index), None)
+        tx_dev = next((d for d in devices if d.index == mapping.tx_device_index), None)
         if rx_dev is None or tx_dev is None:
             logger.warning(
                 "usb-audio: topology resolved indices [%d, %d] but devices "
@@ -399,8 +395,7 @@ class UsbAudioDriver:
             return None
 
         logger.info(
-            "usb-audio: topology-resolved devices for %s: "
-            "RX=[%d] %s, TX=[%d] %s",
+            "usb-audio: topology-resolved devices for %s: RX=[%d] %s, TX=[%d] %s",
             self._serial_port,
             rx_dev.index,
             rx_dev.name,

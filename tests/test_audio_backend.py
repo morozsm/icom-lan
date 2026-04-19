@@ -48,7 +48,9 @@ OUTPUT_ONLY_DEVICE = AudioDeviceInfo(
 
 @pytest.fixture()
 def fake_backend() -> FakeAudioBackend:
-    return FakeAudioBackend(devices=[DUPLEX_DEVICE, INPUT_ONLY_DEVICE, OUTPUT_ONLY_DEVICE])
+    return FakeAudioBackend(
+        devices=[DUPLEX_DEVICE, INPUT_ONLY_DEVICE, OUTPUT_ONLY_DEVICE]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +85,9 @@ class TestAudioDeviceInfo:
 
 
 class TestProtocolConformance:
-    def test_fake_backend_is_audio_backend(self, fake_backend: FakeAudioBackend) -> None:
+    def test_fake_backend_is_audio_backend(
+        self, fake_backend: FakeAudioBackend
+    ) -> None:
         assert isinstance(fake_backend, AudioBackend)
 
     def test_fake_rx_stream_is_rx_stream(self) -> None:
@@ -170,7 +174,9 @@ class TestFakeRxStreamLifecycle:
         await stream.stop()
 
     @pytest.mark.asyncio()
-    async def test_inject_after_stop_is_noop(self, fake_backend: FakeAudioBackend) -> None:
+    async def test_inject_after_stop_is_noop(
+        self, fake_backend: FakeAudioBackend
+    ) -> None:
         stream = fake_backend.open_rx(DUPLEX_DEVICE.id)
         received: list[bytes] = []
         await stream.start(received.append)
@@ -225,7 +231,9 @@ class TestFakeTxStreamLifecycle:
         await stream.stop()
 
     @pytest.mark.asyncio()
-    async def test_write_when_stopped_raises(self, fake_backend: FakeAudioBackend) -> None:
+    async def test_write_when_stopped_raises(
+        self, fake_backend: FakeAudioBackend
+    ) -> None:
         stream = fake_backend.open_tx(DUPLEX_DEVICE.id)
         with pytest.raises(RuntimeError, match="not running"):
             await stream.write(b"\x00")
@@ -260,7 +268,14 @@ class TestPortAudioBackendDeps:
 
             @staticmethod
             def query_devices() -> list[dict]:
-                return [{"index": 0, "name": "Test", "max_input_channels": 1, "max_output_channels": 1}]
+                return [
+                    {
+                        "index": 0,
+                        "name": "Test",
+                        "max_input_channels": 1,
+                        "max_output_channels": 1,
+                    }
+                ]
 
         class FakeNp:
             pass
@@ -283,8 +298,20 @@ class TestPortAudioBackendDeps:
             @staticmethod
             def query_devices() -> list[dict]:
                 return [
-                    {"index": 0, "name": "Mic", "max_input_channels": 2, "max_output_channels": 0, "default_samplerate": 44100},
-                    {"index": 1, "name": "Speaker", "max_input_channels": 0, "max_output_channels": 2, "default_samplerate": 48000},
+                    {
+                        "index": 0,
+                        "name": "Mic",
+                        "max_input_channels": 2,
+                        "max_output_channels": 0,
+                        "default_samplerate": 44100,
+                    },
+                    {
+                        "index": 1,
+                        "name": "Speaker",
+                        "max_input_channels": 0,
+                        "max_output_channels": 2,
+                        "default_samplerate": 48000,
+                    },
                 ]
 
         backend = PortAudioBackend(dependency_loader=lambda: (FakeSd(), object()))

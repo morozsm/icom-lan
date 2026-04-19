@@ -6,7 +6,11 @@ import numpy as np
 import pytest
 
 from icom_lan.audio.backend import AudioDeviceId, AudioDeviceInfo, FakeAudioBackend
-from icom_lan.audio.resample import PcmResampler, SampleRateNegotiation, negotiate_sample_rate
+from icom_lan.audio.resample import (
+    PcmResampler,
+    SampleRateNegotiation,
+    negotiate_sample_rate,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -163,11 +167,14 @@ def test_negotiate_no_common_rate():
 
 def test_negotiate_backend_without_check():
     """Backends without check_sample_rate always succeed at radio_rate."""
+
     class _MinimalBackend:
         def list_devices(self):
             return []
+
         def open_rx(self, *a, **kw):
             pass
+
         def open_tx(self, *a, **kw):
             pass
 

@@ -38,22 +38,42 @@ class TestCIVCommandProfiling:
     def test_profile_civ_frame_creation(self):
         """Profile time to create CI-V frames for common operations."""
         operations = [
-            ("frequency_get", lambda: build_civ_frame(
-                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET
-            )),
-            ("frequency_set", lambda: build_civ_frame(
-                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_SET, data=bcd_encode(14_200_000)
-            )),
-            ("mode_get", lambda: build_civ_frame(
-                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_GET
-            )),
-            ("mode_set", lambda: build_civ_frame(
-                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_SET, data=bytes([Mode.USB, 1])
-            )),
-            ("power_level", lambda: build_civ_frame(
-                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_LEVEL,
-                sub=_SUB_RF_POWER, data=b"\x10\x00"
-            )),
+            (
+                "frequency_get",
+                lambda: build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET),
+            ),
+            (
+                "frequency_set",
+                lambda: build_civ_frame(
+                    CONTROLLER_ADDR,
+                    IC_7610_ADDR,
+                    _CMD_FREQ_SET,
+                    data=bcd_encode(14_200_000),
+                ),
+            ),
+            (
+                "mode_get",
+                lambda: build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_GET),
+            ),
+            (
+                "mode_set",
+                lambda: build_civ_frame(
+                    CONTROLLER_ADDR,
+                    IC_7610_ADDR,
+                    _CMD_MODE_SET,
+                    data=bytes([Mode.USB, 1]),
+                ),
+            ),
+            (
+                "power_level",
+                lambda: build_civ_frame(
+                    CONTROLLER_ADDR,
+                    IC_7610_ADDR,
+                    _CMD_LEVEL,
+                    sub=_SUB_RF_POWER,
+                    data=b"\x10\x00",
+                ),
+            ),
         ]
 
         results = {}
@@ -73,9 +93,9 @@ class TestCIVCommandProfiling:
     def test_profile_bcd_encoding_latency(self):
         """Profile BCD encoding used in frequency commands."""
         frequencies = [
-            1_800_000,   # 160m
-            3_500_000,   # 80m
-            7_074_000,   # 40m
+            1_800_000,  # 160m
+            3_500_000,  # 80m
+            7_074_000,  # 40m
             14_200_000,  # 20m
             21_074_000,  # 15m
             28_074_000,  # 10m
@@ -91,7 +111,9 @@ class TestCIVCommandProfiling:
         latency_us_per_op = (elapsed_ms * 1000) / 6000
         print(f"  BCD encoding: {latency_us_per_op:.2f} µs/op")
 
-        assert latency_us_per_op < 20, f"BCD encoding too slow: {latency_us_per_op:.2f} µs"
+        assert latency_us_per_op < 20, (
+            f"BCD encoding too slow: {latency_us_per_op:.2f} µs"
+        )
 
     def test_profile_civ_frame_parsing(self):
         """Profile CI-V frame parsing latency."""
@@ -99,12 +121,13 @@ class TestCIVCommandProfiling:
         test_frames = [
             build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET),
             build_civ_frame(
-                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET,
-                data=bcd_encode(14_200_000)
+                CONTROLLER_ADDR,
+                IC_7610_ADDR,
+                _CMD_FREQ_GET,
+                data=bcd_encode(14_200_000),
             ),
             build_civ_frame(
-                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_GET,
-                data=bytes([Mode.USB, 1])
+                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_GET, data=bytes([Mode.USB, 1])
             ),
         ]
 
@@ -121,7 +144,9 @@ class TestCIVCommandProfiling:
         print(f"  Frame parsing: {latency_us_per_frame:.2f} µs/frame")
 
         # Frame parsing should be very fast
-        assert latency_us_per_frame < 10, f"Frame parsing too slow: {latency_us_per_frame:.2f} µs"
+        assert latency_us_per_frame < 10, (
+            f"Frame parsing too slow: {latency_us_per_frame:.2f} µs"
+        )
 
 
 class TestCommandPipelineLatency:
@@ -152,7 +177,9 @@ class TestCommandPipelineLatency:
         print(f"  Command queueing: {latency_us_per_cmd:.2f} µs/cmd")
 
         # Command queueing should be very fast (<100 µs)
-        assert latency_us_per_cmd < 100, f"Command queueing too slow: {latency_us_per_cmd:.2f} µs"
+        assert latency_us_per_cmd < 100, (
+            f"Command queueing too slow: {latency_us_per_cmd:.2f} µs"
+        )
 
     def test_frequency_command_roundtrip_latency(self):
         """Profile frequency get/set command creation."""
@@ -164,8 +191,7 @@ class TestCommandPipelineLatency:
             get_cmd = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET)
             # Create set command with frequency
             set_cmd = build_civ_frame(
-                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_SET,
-                data=bcd_encode(freq)
+                CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_SET, data=bcd_encode(freq)
             )
             # Simulate parsing response
             _ = len(get_cmd)
@@ -177,7 +203,9 @@ class TestCommandPipelineLatency:
         print(f"  Frequency command roundtrip: {latency_us_per_freq:.2f} µs/op")
 
         # Should complete in <50 µs per operation
-        assert latency_us_per_freq < 50, f"Frequency roundtrip too slow: {latency_us_per_freq:.2f} µs"
+        assert latency_us_per_freq < 50, (
+            f"Frequency roundtrip too slow: {latency_us_per_freq:.2f} µs"
+        )
 
 
 class TestOperationThroughput:
@@ -228,7 +256,9 @@ class TestLatencyDistribution:
         for _ in range(100):
             start = time.perf_counter()
             _ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET)
-            latencies_ms.append((time.perf_counter() - start) * 1_000_000)  # microseconds
+            latencies_ms.append(
+                (time.perf_counter() - start) * 1_000_000
+            )  # microseconds
 
         # Sort to compute percentiles
         latencies_ms.sort()
@@ -237,7 +267,9 @@ class TestLatencyDistribution:
         p95 = latencies_ms[95]
         p99 = latencies_ms[99]
 
-        print(f"  Frame creation latency: p50={p50:.2f}µs, p95={p95:.2f}µs, p99={p99:.2f}µs")
+        print(
+            f"  Frame creation latency: p50={p50:.2f}µs, p95={p95:.2f}µs, p99={p99:.2f}µs"
+        )
 
         # Latency should be consistently low
         assert p50 < 10, f"Median latency too high: {p50:.2f}µs"

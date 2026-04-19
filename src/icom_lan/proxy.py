@@ -121,6 +121,7 @@ async def run_proxy(
     for i, label in enumerate(labels):
         port = base_port + i
         relay = _RelayProtocol(radio_host, port, label)
+
         def _protocol_factory() -> _RelayProtocol:
             return relay
 

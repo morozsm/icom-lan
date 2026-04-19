@@ -174,7 +174,9 @@ async def test_poll_mode_uses_custom_mode_reader() -> None:
     async def custom_reader() -> tuple[str, int | None]:
         return "CWR", 2
 
-    result = await poll_mode(radio, cache, DEFAULT_STATE_CACHE_TTL, mode_reader=custom_reader)
+    result = await poll_mode(
+        radio, cache, DEFAULT_STATE_CACHE_TTL, mode_reader=custom_reader
+    )
 
     assert result == ("CWR", 2)
     assert radio.get_mode_calls == 0  # radio.get_mode not called

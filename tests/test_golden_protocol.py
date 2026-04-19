@@ -144,9 +144,9 @@ async def test_golden_protocol(fixture: dict) -> None:
             parse_line(raw)
         # Server translates parse errors to ENIMPL (-4).
         expected_wire = format_error(HamlibError.ENIMPL).decode()
-        assert (
-            fixture["expected_output"] == expected_wire
-        ), f"[{fixture['id']}] parse-error expected_output mismatch"
+        assert fixture["expected_output"] == expected_wire, (
+            f"[{fixture['id']}] parse-error expected_output mismatch"
+        )
         return
 
     # ── Branch 2: direct cmd dict (bypasses parse_line) ─────────────────────

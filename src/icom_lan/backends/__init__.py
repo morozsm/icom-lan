@@ -1,6 +1,11 @@
 """Backend-specific radio implementations and assembly helpers."""
 
-from .config import BackendConfig, LanBackendConfig, SerialBackendConfig, YaesuCatBackendConfig
+from .config import (
+    BackendConfig,
+    LanBackendConfig,
+    SerialBackendConfig,
+    YaesuCatBackendConfig,
+)
 from .factory import create_radio
 
 __all__ = [

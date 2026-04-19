@@ -44,6 +44,7 @@ def _err(code: HamlibError) -> RigctldResponse:
 # Protocol
 # ---------------------------------------------------------------------------
 
+
 @runtime_checkable
 class RigctldRouting(Protocol):
     """Vendor-specific rigctl level/func routing."""
@@ -95,7 +96,9 @@ class YaesuRouting:
     _CW_PITCH_BASE: int = 300
     _CW_PITCH_STEP: int = 10
 
-    def __init__(self, radio: "Radio", cache: "_FallbackRigState", max_power_w: float) -> None:
+    def __init__(
+        self, radio: "Radio", cache: "_FallbackRigState", max_power_w: float
+    ) -> None:
         self._radio = radio
         self._cache = cache
         self._max_power_w = max_power_w
@@ -109,7 +112,9 @@ class YaesuRouting:
             raw = await radio.get_s_meter()
             self._cache.update_s_meter(raw)
             if level == "STRENGTH":
-                return RigctldResponse(values=[str(round((raw / 255.0) * 114.0 - 54.0))])
+                return RigctldResponse(
+                    values=[str(round((raw / 255.0) * 114.0 - 54.0))]
+                )
             return RigctldResponse(values=[str(raw)])
 
         if level == "RFPOWER":
@@ -130,8 +135,11 @@ class YaesuRouting:
 
         # 0–100 → 0.0–1.0
         if level in ("MICGAIN", "MONITOR_GAIN", "COMP"):
-            m = {"MICGAIN": "get_mic_gain", "MONITOR_GAIN": "get_monitor_level",
-                 "COMP": "get_compressor_level"}[level]
+            m = {
+                "MICGAIN": "get_mic_gain",
+                "MONITOR_GAIN": "get_monitor_level",
+                "COMP": "get_compressor_level",
+            }[level]
             return RigctldResponse(values=[f"{await getattr(radio, m)() / 100.0:.6f}"])
 
         if level == "NB":
@@ -145,14 +153,19 @@ class YaesuRouting:
             return RigctldResponse(values=[str(await radio.get_if_shift())])
         if level == "CWPITCH":
             idx = await radio.get_cw_pitch()
-            return RigctldResponse(values=[str(self._CW_PITCH_BASE + idx * self._CW_PITCH_STEP)])
+            return RigctldResponse(
+                values=[str(self._CW_PITCH_BASE + idx * self._CW_PITCH_STEP)]
+            )
         if level == "KEYSPD":
             return RigctldResponse(values=[str(await radio.get_key_speed())])
 
         # Meters
         if level in ("COMP_METER", "ID_METER", "VD_METER"):
-            m = {"COMP_METER": "get_comp_meter", "ID_METER": "get_id_meter",
-                 "VD_METER": "get_vd_meter"}[level]
+            m = {
+                "COMP_METER": "get_comp_meter",
+                "ID_METER": "get_id_meter",
+                "VD_METER": "get_vd_meter",
+            }[level]
             return RigctldResponse(values=[f"{await getattr(radio, m)() / 255.0:.6f}"])
 
         if level == "PREAMP":
@@ -175,8 +188,11 @@ class YaesuRouting:
             return _ok()
 
         if level in ("MICGAIN", "MONITOR_GAIN", "COMP"):
-            m = {"MICGAIN": "set_mic_gain", "MONITOR_GAIN": "set_monitor_level",
-                 "COMP": "set_compressor_level"}[level]
+            m = {
+                "MICGAIN": "set_mic_gain",
+                "MONITOR_GAIN": "set_monitor_level",
+                "COMP": "set_compressor_level",
+            }[level]
             await getattr(radio, m)(max(0, min(100, round(value * 100))))
             return _ok()
 
@@ -193,8 +209,9 @@ class YaesuRouting:
             await radio.set_if_shift(round(value))
             return _ok()
         if level == "CWPITCH":
-            idx = max(0, min(75, round(
-                (value - self._CW_PITCH_BASE) / self._CW_PITCH_STEP)))
+            idx = max(
+                0, min(75, round((value - self._CW_PITCH_BASE) / self._CW_PITCH_STEP))
+            )
             await radio.set_cw_pitch(idx)
             return _ok()
         if level == "KEYSPD":
@@ -276,6 +293,7 @@ class YaesuRouting:
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def create_routing(
     radio: "Radio",

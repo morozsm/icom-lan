@@ -230,7 +230,9 @@ class RadioState:
     split: bool = False
     dual_watch: bool = False
     scanning: bool = False
-    scan_type: int = 0  # 0=none, 0x01=prog, 0x02=P2, 0x03=ΔF, 0x12=fine, 0x22=mem, 0x23=sel
+    scan_type: int = (
+        0  # 0=none, 0x01=prog, 0x02=P2, 0x03=ΔF, 0x12=fine, 0x22=mem, 0x23=sel
+    )
     scan_resume_mode: int = 0  # 0=OFF, 1=5s, 2=10s, 3=15s (low nibble of 0xD0-0xD3)
     tuning_step: int = 0
     overflow: bool = False
@@ -332,8 +334,7 @@ class RadioState:
             "rx_antenna_1": self.rx_antenna_1,
             "rx_antenna_2": self.rx_antenna_2,
             "tx_band_edges": [
-                {"start_hz": e.start_hz, "end_hz": e.end_hz}
-                for e in self.tx_band_edges
+                {"start_hz": e.start_hz, "end_hz": e.end_hz} for e in self.tx_band_edges
             ],
             "scope_controls": asdict(self.scope_controls),
             "main": _receiver_to_dict(self.main),
@@ -352,8 +353,16 @@ class RadioState:
         plain: dict[str, Any] = {
             k: v
             for k, v in d.items()
-            if k not in {"vfo_a", "vfo_b", "active_slot",
-                          "freq", "mode", "filter", "data_mode"}
+            if k
+            not in {
+                "vfo_a",
+                "vfo_b",
+                "active_slot",
+                "freq",
+                "mode",
+                "filter",
+                "data_mode",
+            }
         }
         rx = ReceiverState(**plain)
         if "vfo_a" in d and isinstance(d["vfo_a"], dict):

@@ -116,9 +116,12 @@ class TestCliBuildBackendConfig:
         p = _build_parser()
         args = p.parse_args(
             [
-                "--backend", "yaesu-cat",
-                "--serial-port", "/dev/ttyUSB0",
-                "--serial-baud", "9600",
+                "--backend",
+                "yaesu-cat",
+                "--serial-port",
+                "/dev/ttyUSB0",
+                "--serial-baud",
+                "9600",
                 "status",
             ]
         )
@@ -129,7 +132,9 @@ class TestCliBuildBackendConfig:
     async def test_yaesu_cat_missing_port_triggers_discovery(self):
         p = _build_parser()
         args = p.parse_args(["--backend", "yaesu-cat", "status"])
-        with patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])):
+        with patch(
+            "icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])
+        ):
             with pytest.raises(SystemExit):
                 await _build_backend_config(args)
 
@@ -138,9 +143,12 @@ class TestCliBuildBackendConfig:
         p = _build_parser()
         args = p.parse_args(
             [
-                "--backend", "serial",
-                "--serial-port", "/dev/ttyUSB0",
-                "--model", "FTX-1",
+                "--backend",
+                "serial",
+                "--serial-port",
+                "/dev/ttyUSB0",
+                "--model",
+                "FTX-1",
                 "status",
             ]
         )
@@ -152,10 +160,14 @@ class TestCliBuildBackendConfig:
         p = _build_parser()
         args = p.parse_args(
             [
-                "--backend", "yaesu-cat",
-                "--serial-port", "/dev/ttyUSB0",
-                "--rx-device", "FTX-1 Audio",
-                "--tx-device", "BlackHole 2ch",
+                "--backend",
+                "yaesu-cat",
+                "--serial-port",
+                "/dev/ttyUSB0",
+                "--rx-device",
+                "FTX-1 Audio",
+                "--tx-device",
+                "BlackHole 2ch",
                 "status",
             ]
         )

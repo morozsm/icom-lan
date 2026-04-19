@@ -146,7 +146,9 @@ def get_unselected_mode(
     return build_civ_frame(to_addr, from_addr, _CMD_SELECTED_MODE, data=bytes([0x01]))
 
 
-def parse_selected_mode_response(frame: CivFrame) -> tuple[int, Mode, int | None, int | None]:
+def parse_selected_mode_response(
+    frame: CivFrame,
+) -> tuple[int, Mode, int | None, int | None]:
     """Parse a 0x26 selected/unselected mode response.
 
     Returns:

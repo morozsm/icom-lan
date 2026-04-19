@@ -13,7 +13,7 @@ from icom_lan.commands import (
     CONTROLLER_ADDR,
     _CMD_FREQ_GET,
     build_civ_frame,
-    parse_civ_frame
+    parse_civ_frame,
 )
 from icom_lan.exceptions import CommandError, ConnectionError
 from icom_lan.types import AudioCodec
@@ -373,7 +373,9 @@ async def test_serial_scope_enable_disable_full_lifecycle_commands() -> None:
         civ = parse_civ_frame(frame)
         signatures.append((civ.command, civ.sub, civ.data))
 
-    assert len(signatures) >= 4, f"Expected at least 4 scope CI-V frames, got {len(signatures)}"
+    assert len(signatures) >= 4, (
+        f"Expected at least 4 scope CI-V frames, got {len(signatures)}"
+    )
     assert signatures[0] == (0x27, 0x10, b"\x01")
     assert signatures[1] == (0x27, 0x11, b"\x01")
     assert signatures[2] == (0x27, 0x11, b"\x00")

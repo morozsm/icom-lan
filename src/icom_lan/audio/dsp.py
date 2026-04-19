@@ -91,7 +91,7 @@ class RmsNormalizer:
         max_gain_db: float = 30.0,
         sample_rate: int = 48_000,
     ) -> None:
-        self._target_rms = _db_to_linear(target_db) / (2 ** 0.5)  # peak→rms
+        self._target_rms = _db_to_linear(target_db) / (2**0.5)  # peak→rms
         self._max_gain = 10 ** (max_gain_db / 20.0)
         # Single-pole coefficients (per-frame, not per-sample, since we
         # process whole 20ms frames at once)
@@ -104,7 +104,7 @@ class RmsNormalizer:
         import numpy as np
 
         samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float64)
-        rms = float(np.sqrt(np.mean(samples ** 2)))
+        rms = float(np.sqrt(np.mean(samples**2)))
 
         if rms < 1.0:
             # Near-silence — don't adjust gain

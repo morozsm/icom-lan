@@ -56,7 +56,16 @@ class TestProfileBasics:
         assert len(profile.cmd29_routes) == 0
 
     def test_modes(self, profile):
-        assert profile.modes == ("USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R")
+        assert profile.modes == (
+            "USB",
+            "LSB",
+            "CW",
+            "CW-R",
+            "AM",
+            "FM",
+            "RTTY",
+            "RTTY-R",
+        )
 
     def test_filters(self, profile):
         assert profile.filters == ("FIL1", "FIL2", "FIL3")

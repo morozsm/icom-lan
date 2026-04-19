@@ -46,89 +46,185 @@ def _decode_tone_freq(data: bytes) -> float:
 
 
 def get_repeater_tone(
-    to_addr: int, from_addr: int = CONTROLLER_ADDR,
-    receiver: int = RECEIVER_MAIN, cmd_map: CommandMap | None = None,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to get repeater tone status (0x16 0x42)."""
-    return _build_function_get(_SUB_REPEATER_TONE, to_addr=to_addr, from_addr=from_addr,
-        receiver=receiver, command29=True, cmd_map=cmd_map, cmd_name="get_repeater_tone")
+    return _build_function_get(
+        _SUB_REPEATER_TONE,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+        cmd_map=cmd_map,
+        cmd_name="get_repeater_tone",
+    )
 
 
 def set_repeater_tone(
-    on: bool, to_addr: int, from_addr: int = CONTROLLER_ADDR,
-    receiver: int = RECEIVER_MAIN, cmd_map: CommandMap | None = None,
+    on: bool,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to set repeater tone (0x16 0x42)."""
-    return _build_function_bool_set(_SUB_REPEATER_TONE, on, to_addr=to_addr, from_addr=from_addr,
-        receiver=receiver, command29=True, cmd_map=cmd_map, cmd_name="set_repeater_tone")
+    return _build_function_bool_set(
+        _SUB_REPEATER_TONE,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+        cmd_map=cmd_map,
+        cmd_name="set_repeater_tone",
+    )
 
 
 def get_repeater_tsql(
-    to_addr: int, from_addr: int = CONTROLLER_ADDR,
-    receiver: int = RECEIVER_MAIN, cmd_map: CommandMap | None = None,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to get repeater TSQL status (0x16 0x43)."""
-    return _build_function_get(_SUB_REPEATER_TSQL, to_addr=to_addr, from_addr=from_addr,
-        receiver=receiver, command29=True, cmd_map=cmd_map, cmd_name="get_repeater_tsql")
+    return _build_function_get(
+        _SUB_REPEATER_TSQL,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+        cmd_map=cmd_map,
+        cmd_name="get_repeater_tsql",
+    )
 
 
 def set_repeater_tsql(
-    on: bool, to_addr: int, from_addr: int = CONTROLLER_ADDR,
-    receiver: int = RECEIVER_MAIN, cmd_map: CommandMap | None = None,
+    on: bool,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to set repeater TSQL (0x16 0x43)."""
-    return _build_function_bool_set(_SUB_REPEATER_TSQL, on, to_addr=to_addr, from_addr=from_addr,
-        receiver=receiver, command29=True, cmd_map=cmd_map, cmd_name="set_repeater_tsql")
+    return _build_function_bool_set(
+        _SUB_REPEATER_TSQL,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+        cmd_map=cmd_map,
+        cmd_name="set_repeater_tsql",
+    )
 
 
 def get_tone_freq(
-    to_addr: int, from_addr: int = CONTROLLER_ADDR,
-    receiver: int = RECEIVER_MAIN, cmd_map: CommandMap | None = None,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to get tone frequency (0x1B 0x00)."""
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_tone_freq", to_addr=to_addr, from_addr=from_addr, command29=True, receiver=receiver)
-    return build_cmd29_frame(to_addr, from_addr, _CMD_TONE, sub=_SUB_TONE_FREQ, receiver=receiver)
+        return _build_from_map(
+            cmd_map,
+            "get_tone_freq",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            command29=True,
+            receiver=receiver,
+        )
+    return build_cmd29_frame(
+        to_addr, from_addr, _CMD_TONE, sub=_SUB_TONE_FREQ, receiver=receiver
+    )
 
 
 def set_tone_freq(
-    freq_hz: float, to_addr: int, from_addr: int = CONTROLLER_ADDR,
-    receiver: int = RECEIVER_MAIN, cmd_map: CommandMap | None = None,
+    freq_hz: float,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to set tone frequency (0x1B 0x00)."""
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "set_tone_freq", to_addr=to_addr, from_addr=from_addr,
-            command29=True, receiver=receiver, data=_encode_tone_freq(freq_hz))
-    return build_cmd29_frame(to_addr, from_addr, _CMD_TONE, sub=_SUB_TONE_FREQ,
-        data=_encode_tone_freq(freq_hz), receiver=receiver)
+        return _build_from_map(
+            cmd_map,
+            "set_tone_freq",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            command29=True,
+            receiver=receiver,
+            data=_encode_tone_freq(freq_hz),
+        )
+    return build_cmd29_frame(
+        to_addr,
+        from_addr,
+        _CMD_TONE,
+        sub=_SUB_TONE_FREQ,
+        data=_encode_tone_freq(freq_hz),
+        receiver=receiver,
+    )
 
 
 def get_tsql_freq(
-    to_addr: int, from_addr: int = CONTROLLER_ADDR,
-    receiver: int = RECEIVER_MAIN, cmd_map: CommandMap | None = None,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to get TSQL frequency (0x1B 0x01)."""
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_tsql_freq", to_addr=to_addr, from_addr=from_addr, command29=True, receiver=receiver)
-    return build_cmd29_frame(to_addr, from_addr, _CMD_TONE, sub=_SUB_TSQL_FREQ, receiver=receiver)
+        return _build_from_map(
+            cmd_map,
+            "get_tsql_freq",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            command29=True,
+            receiver=receiver,
+        )
+    return build_cmd29_frame(
+        to_addr, from_addr, _CMD_TONE, sub=_SUB_TSQL_FREQ, receiver=receiver
+    )
 
 
 def set_tsql_freq(
-    freq_hz: float, to_addr: int, from_addr: int = CONTROLLER_ADDR,
-    receiver: int = RECEIVER_MAIN, cmd_map: CommandMap | None = None,
+    freq_hz: float,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to set TSQL frequency (0x1B 0x01)."""
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "set_tsql_freq", to_addr=to_addr, from_addr=from_addr,
-            command29=True, receiver=receiver, data=_encode_tone_freq(freq_hz))
-    return build_cmd29_frame(to_addr, from_addr, _CMD_TONE, sub=_SUB_TSQL_FREQ,
-        data=_encode_tone_freq(freq_hz), receiver=receiver)
+        return _build_from_map(
+            cmd_map,
+            "set_tsql_freq",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            command29=True,
+            receiver=receiver,
+            data=_encode_tone_freq(freq_hz),
+        )
+    return build_cmd29_frame(
+        to_addr,
+        from_addr,
+        _CMD_TONE,
+        sub=_SUB_TSQL_FREQ,
+        data=_encode_tone_freq(freq_hz),
+        receiver=receiver,
+    )
 
 
 def parse_tone_freq_response(frame: CivFrame) -> tuple[int | None, float]:
     """Parse tone frequency response (0x1B 0x00)."""
     if frame.command != _CMD_TONE or frame.sub != _SUB_TONE_FREQ:
-        raise ValueError(f"Not a tone freq response: 0x{frame.command:02x} sub=0x{frame.sub!r}")
+        raise ValueError(
+            f"Not a tone freq response: 0x{frame.command:02x} sub=0x{frame.sub!r}"
+        )
     if len(frame.data) < 3:
         raise ValueError(f"Expected 3 bytes for tone freq, got {len(frame.data)}")
     return (frame.receiver, _decode_tone_freq(frame.data))
@@ -137,7 +233,9 @@ def parse_tone_freq_response(frame: CivFrame) -> tuple[int | None, float]:
 def parse_tsql_freq_response(frame: CivFrame) -> tuple[int | None, float]:
     """Parse TSQL frequency response (0x1B 0x01)."""
     if frame.command != _CMD_TONE or frame.sub != _SUB_TSQL_FREQ:
-        raise ValueError(f"Not a TSQL freq response: 0x{frame.command:02x} sub=0x{frame.sub!r}")
+        raise ValueError(
+            f"Not a TSQL freq response: 0x{frame.command:02x} sub=0x{frame.sub!r}"
+        )
     if len(frame.data) < 3:
         raise ValueError(f"Expected 3 bytes for TSQL freq, got {len(frame.data)}")
     return (frame.receiver, _decode_tone_freq(frame.data))

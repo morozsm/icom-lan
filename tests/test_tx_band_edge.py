@@ -24,6 +24,7 @@ _RADIO_ADDR = 0x98
 # Command constant
 # ---------------------------------------------------------------------------
 
+
 class TestCmdConstant:
     def test_cmd_tx_band_edge_value(self) -> None:
         assert _CMD_TX_BAND_EDGE == 0x1E
@@ -32,6 +33,7 @@ class TestCmdConstant:
 # ---------------------------------------------------------------------------
 # Frame builders
 # ---------------------------------------------------------------------------
+
 
 class TestGetTxBandCount:
     def test_frame_structure(self) -> None:
@@ -64,6 +66,7 @@ class TestGetTxBandEdge:
 # Response parsers
 # ---------------------------------------------------------------------------
 
+
 class TestParseTxBandCount:
     def test_single_digit(self) -> None:
         # BCD byte 0x09 = 9 bands
@@ -82,8 +85,8 @@ class TestParseTxBandEdge:
         """1.8 MHz - 2.0 MHz band edge."""
         from icom_lan.types import bcd_encode
 
-        start = bcd_encode(1_800_000)   # 1.8 MHz
-        end = bcd_encode(2_000_000)     # 2.0 MHz
+        start = bcd_encode(1_800_000)  # 1.8 MHz
+        end = bcd_encode(2_000_000)  # 2.0 MHz
         start_hz, end_hz = parse_tx_band_edge_response(start + end)
         assert start_hz == 1_800_000
         assert end_hz == 2_000_000
@@ -116,6 +119,7 @@ class TestParseTxBandEdge:
 # TxBandEdge dataclass
 # ---------------------------------------------------------------------------
 
+
 class TestTxBandEdge:
     def test_defaults(self) -> None:
         edge = TxBandEdge()
@@ -136,6 +140,7 @@ class TestTxBandEdge:
 # ---------------------------------------------------------------------------
 # RadioState integration
 # ---------------------------------------------------------------------------
+
 
 class TestRadioStateTxBandEdges:
     def test_default_empty(self) -> None:
@@ -161,6 +166,7 @@ class TestRadioStateTxBandEdges:
 # ---------------------------------------------------------------------------
 # CI-V RX parser integration
 # ---------------------------------------------------------------------------
+
 
 class TestCivRxTxBandEdge:
     """Test that _update_radio_state_from_frame handles 0x1E responses."""
@@ -243,6 +249,7 @@ class TestCivRxTxBandEdge:
 # ---------------------------------------------------------------------------
 # __init__.py re-export
 # ---------------------------------------------------------------------------
+
 
 class TestReExport:
     def test_tx_band_symbols_exported(self) -> None:

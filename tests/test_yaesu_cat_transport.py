@@ -288,9 +288,7 @@ class TestYaesuCatTransportEdgeCases:
         self, mock_serial_connection: Any
     ) -> None:
         """Multiple query() calls work in sequence."""
-        reader = FakeStreamReader(
-            [b"FA014074000;", b"MD02;", b"PC2005;"]
-        )
+        reader = FakeStreamReader([b"FA014074000;", b"MD02;", b"PC2005;"])
         writer = FakeStreamWriter()
         mock_serial_connection.open_serial_connection = AsyncMock(
             return_value=(reader, writer)

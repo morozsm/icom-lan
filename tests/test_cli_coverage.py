@@ -30,7 +30,12 @@ from icom_lan.cli import (
     _validate_audio_format_args,
     main,
 )
-from icom_lan.radio_protocol import AdvancedControlCapable, AudioCapable, PowerControlCapable, ScopeCapable
+from icom_lan.radio_protocol import (
+    AdvancedControlCapable,
+    AudioCapable,
+    PowerControlCapable,
+    ScopeCapable,
+)
 from icom_lan.scope import ScopeFrame
 
 
@@ -853,7 +858,12 @@ def test_main_branches(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
     with (
         patch("icom_lan.cli._build_parser", return_value=parser_run),
         patch("icom_lan.cli._run", side_effect=_raise_interrupt),
-        patch("icom_lan.cli.os._exit", side_effect=lambda c: captured_exit.append(c) or (_ for _ in ()).throw(SystemExit(c))),
+        patch(
+            "icom_lan.cli.os._exit",
+            side_effect=lambda c: (
+                captured_exit.append(c) or (_ for _ in ()).throw(SystemExit(c))
+            ),
+        ),
     ):
         with pytest.raises(SystemExit):
             main()

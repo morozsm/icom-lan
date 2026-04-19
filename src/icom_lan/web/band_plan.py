@@ -136,7 +136,9 @@ class BandPlanRegistry:
                 continue  # skip config files
             # For ham layer files, only load the one matching the region
             if path.name in _REGION_HAM_FILE.values() and path.name != ham_file:
-                logger.debug("band-plan: skipping %s (region=%s)", path.name, self._region)
+                logger.debug(
+                    "band-plan: skipping %s (region=%s)", path.name, self._region
+                )
                 continue
             try:
                 self._load_file(path)

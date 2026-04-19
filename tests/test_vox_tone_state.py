@@ -70,11 +70,14 @@ def _make_poller(*, with_state: bool = True) -> tuple[RadioPoller, RadioState]:
     radio.send_civ = AsyncMock()
     # Fill AdvancedControlCapable protocol
     from icom_lan.radio_protocol import AdvancedControlCapable as _ACC
+
     try:
         from typing import get_protocol_members as _gpm
+
         _proto_attrs = _gpm(_ACC)
     except ImportError:
         import typing as _t
+
         _proto_attrs = _t._get_protocol_attrs(_ACC)  # type: ignore[attr-defined]
     for _attr in _proto_attrs:
         if _attr not in vars(radio):

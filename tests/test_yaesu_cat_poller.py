@@ -39,16 +39,43 @@ def make_radio(
     radio = MagicMock()
     radio.radio_state = RadioState()
     radio.capabilities = {
-        "audio", "dual_rx", "af_level", "rf_gain", "squelch",
-        "attenuator", "preamp", "nb", "nr", "notch", "if_shift",
-        "contour", "filter_width", "tx", "split", "vox", "compressor",
-        "cw", "rit", "tuner", "meters", "repeater_tone", "tsql",
-        "data_mode", "scan", "dial_lock",
+        "audio",
+        "dual_rx",
+        "af_level",
+        "rf_gain",
+        "squelch",
+        "attenuator",
+        "preamp",
+        "nb",
+        "nr",
+        "notch",
+        "if_shift",
+        "contour",
+        "filter_width",
+        "tx",
+        "split",
+        "vox",
+        "compressor",
+        "cw",
+        "rit",
+        "tuner",
+        "meters",
+        "repeater_tone",
+        "tsql",
+        "data_mode",
+        "scan",
+        "dial_lock",
     }
 
-    radio.get_s_meter = AsyncMock(side_effect=lambda r=0: s_meter_main if r == 0 else s_meter_sub)
-    radio.get_freq = AsyncMock(side_effect=lambda r=0: freq_main if r == 0 else freq_sub)
-    radio.get_mode = AsyncMock(side_effect=lambda r=0: mode_main if r == 0 else mode_sub)
+    radio.get_s_meter = AsyncMock(
+        side_effect=lambda r=0: s_meter_main if r == 0 else s_meter_sub
+    )
+    radio.get_freq = AsyncMock(
+        side_effect=lambda r=0: freq_main if r == 0 else freq_sub
+    )
+    radio.get_mode = AsyncMock(
+        side_effect=lambda r=0: mode_main if r == 0 else mode_sub
+    )
     radio.get_ptt = AsyncMock(return_value=ptt)
     radio.get_agc = AsyncMock(return_value=agc)
     radio.get_af_level = AsyncMock(return_value=af_level)
@@ -719,7 +746,9 @@ async def test_slow_poll_skips_sub_levels_without_dual_rx() -> None:
     # Only receiver=0 calls should exist for all three SUB level methods
     for method_name in ("get_af_level", "get_rf_gain", "get_squelch"):
         for call in getattr(radio, method_name).call_args_list:
-            assert call.args == (0,) or call.args == (), f"SUB receiver was polled via {method_name}"
+            assert call.args == (0,) or call.args == (), (
+                f"SUB receiver was polled via {method_name}"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -731,8 +760,15 @@ def test_new_fields_in_to_dict() -> None:
     """All #551 fields must appear in RadioState.to_dict() output."""
     state = RadioState()
     d = state.to_dict()
-    for key in ("cw_spot", "rx_func_mode", "tx_func_mode", "break_in_delay",
-                "key_speed", "cw_pitch", "break_in"):
+    for key in (
+        "cw_spot",
+        "rx_func_mode",
+        "tx_func_mode",
+        "break_in_delay",
+        "key_speed",
+        "cw_pitch",
+        "break_in",
+    ):
         assert key in d, f"{key} missing from to_dict()"
     # ReceiverState fields live under main/sub
     assert "apf_on" in d["main"]

@@ -31,7 +31,14 @@ def _radio_details(radio: "Radio | None") -> tuple[bool, bool, bool | None]:
     return connected, ready, control_connected
 
 
-def _format_error(component: str, *, connected: bool, ready: bool, control_connected: bool | None, timeout: float | None = None) -> str:
+def _format_error(
+    component: str,
+    *,
+    connected: bool,
+    ready: bool,
+    control_connected: bool | None,
+    timeout: float | None = None,
+) -> str:
     details = [f"connected={connected}", f"radio_ready={ready}"]
     if control_connected is not None:
         details.append(f"control_connected={control_connected}")

@@ -393,7 +393,9 @@ class IcomRadio:
         timeout: float = 5.0,
     ) -> None:
         """Enable scope display and optional wave data output."""
-        self._run(self._radio.enable_scope(output=output, policy=policy, timeout=timeout))
+        self._run(
+            self._radio.enable_scope(output=output, policy=policy, timeout=timeout)
+        )
 
     def set_scope_mode(self, mode: int) -> None:
         """Set the scope mode."""

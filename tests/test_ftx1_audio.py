@@ -31,9 +31,7 @@ def mock_audio_driver():
 
 @pytest.fixture
 def radio(mock_audio_driver):
-    with patch(
-        "icom_lan.backends.yaesu_cat.radio.YaesuCatTransport"
-    ) as MockTransport:
+    with patch("icom_lan.backends.yaesu_cat.radio.YaesuCatTransport") as MockTransport:
         transport = MagicMock()
         transport.connected = True
         transport.close = AsyncMock()
@@ -64,11 +62,10 @@ def test_audio_seq_starts_at_zero(radio):
 
 def test_audio_driver_default_construction():
     """UsbAudioDriver is created with correct args when not injected."""
-    with patch(
-        "icom_lan.backends.yaesu_cat.radio.YaesuCatTransport"
-    ), patch(
-        "icom_lan.backends.yaesu_cat.radio.UsbAudioDriver"
-    ) as MockDriver:
+    with (
+        patch("icom_lan.backends.yaesu_cat.radio.YaesuCatTransport"),
+        patch("icom_lan.backends.yaesu_cat.radio.UsbAudioDriver") as MockDriver,
+    ):
         MockDriver.return_value = MagicMock()
         YaesuCatRadio(
             device="/dev/ttyUSB0",
@@ -249,7 +246,7 @@ async def test_stop_audio_tx_pcm(radio, mock_audio_driver):
 
 
 async def test_push_pcm_tx(radio, mock_audio_driver):
-    frame = b"\xAB" * 960
+    frame = b"\xab" * 960
     await radio.push_pcm_tx(frame)
     mock_audio_driver.push_tx_pcm.assert_called_once_with(frame)
 

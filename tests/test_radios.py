@@ -4,7 +4,13 @@ import logging
 
 import pytest
 
-from icom_lan.radios import RADIOS, SERIAL_RADIO_MAP, RadioModel, get_civ_addr, identify_radio
+from icom_lan.radios import (
+    RADIOS,
+    SERIAL_RADIO_MAP,
+    RadioModel,
+    get_civ_addr,
+    identify_radio,
+)
 
 
 class TestRadioModels:
@@ -65,9 +71,11 @@ class TestIdentifyRadio:
     def test_unknown_address(self) -> None:
         assert identify_radio(0xFF, b"\x00\x00") == "Unknown (0xFF)"
 
-    def test_model_id_mismatch_returns_name(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_model_id_mismatch_returns_name(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         with caplog.at_level(logging.DEBUG, logger="icom_lan.radios"):
-            result = identify_radio(0x98, b"\xFF\xFF")
+            result = identify_radio(0x98, b"\xff\xff")
         assert result == "IC-7610"
         assert "model id" in caplog.text.lower()
 

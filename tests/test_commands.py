@@ -27,7 +27,7 @@ from icom_lan.commands import (
     set_filter_width,
     set_freq,
     set_mode,
-    set_rf_power
+    set_rf_power,
 )
 from icom_lan.types import (
     AgcMode,
@@ -40,7 +40,9 @@ from icom_lan.types import (
 )
 from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
 
-_ORIGINAL_COMMANDS = {name: getattr(raw_commands, name) for name in raw_commands.__all__}
+_ORIGINAL_COMMANDS = {
+    name: getattr(raw_commands, name) for name in raw_commands.__all__
+}
 bind_default_addr_module(raw_commands, to_addr=IC_7610_ADDR)
 bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
 

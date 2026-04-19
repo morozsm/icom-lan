@@ -111,8 +111,6 @@ class YaesuCatRadio:
             self._code_to_mode[code] = name
             self._mode_to_code[name] = code
 
-
-
         # Compile response parsers once at init time (keyed by command name).
         # Commands with unsupported placeholders (e.g. {vfo}, {band}) are skipped.
         self._parsers: dict[str, CatCommandParser] = {}
@@ -190,6 +188,7 @@ class YaesuCatRadio:
         """AudioBus instance for pub/sub audio distribution."""
         if self._audio_bus is None:
             from ...audio_bus import AudioBus
+
             self._audio_bus = AudioBus(self)
         return self._audio_bus
 
@@ -441,9 +440,7 @@ class YaesuCatRadio:
                 f"Command {name!r} not found in profile {self._config.model!r}"
             )
         if not isinstance(spec, CatCommandSpec):
-            raise CommandError(
-                f"Command {name!r} is not a CAT command spec"
-            )
+            raise CommandError(f"Command {name!r} is not a CAT command spec")
         return spec
 
     def _require_connected(self) -> None:
@@ -632,9 +629,7 @@ class YaesuCatRadio:
         if self.has_write_command("set_data_mode"):
             await self._write("set_data_mode", state="1" if on else "0")
         else:
-            logger.warning(
-                "set_data_mode: no CAT command defined for %s", self.model
-            )
+            logger.warning("set_data_mode: no CAT command defined for %s", self.model)
 
     # -- Power switch (PS) -------------------------------------------------
 
@@ -1419,7 +1414,9 @@ class YaesuCatRadio:
         raise NotImplementedError("Filter shape (Icom) not supported on Yaesu radios")
 
     async def get_attenuator_level(self, receiver: int = 0) -> int:
-        raise NotImplementedError("Attenuator level (Icom) not supported on Yaesu radios")
+        raise NotImplementedError(
+            "Attenuator level (Icom) not supported on Yaesu radios"
+        )
 
     async def set_acc1_mod_level(self, level: int) -> None:
         raise NotImplementedError("ACC1 mod level (Icom) not supported on Yaesu radios")

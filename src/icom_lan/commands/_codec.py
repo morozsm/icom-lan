@@ -8,7 +8,6 @@ from __future__ import annotations
 from typing import Any, Sequence
 
 
-
 def _level_bcd_encode(value: int) -> bytes:
     """Encode a 0-255 level as 2-byte BCD (0x00 0x00 to 0x02 0x55).
 

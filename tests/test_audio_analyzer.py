@@ -15,7 +15,12 @@ def _make_pcm_silence(n_samples: int = 480) -> bytes:
     return b"\x00\x00" * n_samples
 
 
-def _make_pcm_tone(amplitude: int = 16384, n_samples: int = 480, freq_hz: float = 1000.0, sample_rate: int = 48000) -> bytes:
+def _make_pcm_tone(
+    amplitude: int = 16384,
+    n_samples: int = 480,
+    freq_hz: float = 1000.0,
+    sample_rate: int = 48000,
+) -> bytes:
     """Generate s16le mono sine tone."""
     buf = array.array("h", [0] * n_samples)
     for i in range(n_samples):

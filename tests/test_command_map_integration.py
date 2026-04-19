@@ -72,10 +72,16 @@ class TestGetterParity:
         assert commands.get_power_meter(cmd_map=cmd_map) == commands.get_power_meter()
 
     def test_get_transceiver_id(self, cmd_map):
-        assert commands.get_transceiver_id(cmd_map=cmd_map) == commands.get_transceiver_id()
+        assert (
+            commands.get_transceiver_id(cmd_map=cmd_map)
+            == commands.get_transceiver_id()
+        )
 
     def test_get_band_edge_freq(self, cmd_map):
-        assert commands.get_band_edge_freq(cmd_map=cmd_map) == commands.get_band_edge_freq()
+        assert (
+            commands.get_band_edge_freq(cmd_map=cmd_map)
+            == commands.get_band_edge_freq()
+        )
 
     def test_scope_on(self, cmd_map):
         assert commands.scope_on(cmd_map=cmd_map) == commands.scope_on()
@@ -91,7 +97,9 @@ class TestSetterParity:
     """Calling setters with IC-7610 cmd_map must match hardcoded output."""
 
     def test_set_frequency(self, cmd_map):
-        assert commands.set_freq(14_200_000, cmd_map=cmd_map) == commands.set_freq(14_200_000)
+        assert commands.set_freq(14_200_000, cmd_map=cmd_map) == commands.set_freq(
+            14_200_000
+        )
 
     def test_set_power(self, cmd_map):
         assert commands.set_rf_power(128, cmd_map=cmd_map) == commands.set_rf_power(128)
@@ -106,7 +114,9 @@ class TestSetterParity:
         assert commands.set_squelch(64, cmd_map=cmd_map) == commands.set_squelch(64)
 
     def test_set_tuning_step(self, cmd_map):
-        assert commands.set_tuning_step(3, cmd_map=cmd_map) == commands.set_tuning_step(3)
+        assert commands.set_tuning_step(3, cmd_map=cmd_map) == commands.set_tuning_step(
+            3
+        )
 
     def test_ptt_on(self, cmd_map):
         assert commands.ptt_on(cmd_map=cmd_map) == commands.ptt_on()
@@ -137,7 +147,10 @@ class TestHelperCallerParity:
     """Functions delegating to _build_* helpers must match with cmd_map."""
 
     def test_get_apf_type_level(self, cmd_map):
-        assert commands.get_apf_type_level(cmd_map=cmd_map) == commands.get_apf_type_level()
+        assert (
+            commands.get_apf_type_level(cmd_map=cmd_map)
+            == commands.get_apf_type_level()
+        )
 
     def test_get_nr_level(self, cmd_map):
         assert commands.get_nr_level(cmd_map=cmd_map) == commands.get_nr_level()
@@ -170,10 +183,16 @@ class TestHelperCallerParity:
         assert commands.get_ref_adjust(cmd_map=cmd_map) == commands.get_ref_adjust()
 
     def test_get_s_meter_sql_status(self, cmd_map):
-        assert commands.get_s_meter_sql_status(cmd_map=cmd_map) == commands.get_s_meter_sql_status()
+        assert (
+            commands.get_s_meter_sql_status(cmd_map=cmd_map)
+            == commands.get_s_meter_sql_status()
+        )
 
     def test_get_agc_time_constant(self, cmd_map):
-        assert commands.get_agc_time_constant(cmd_map=cmd_map) == commands.get_agc_time_constant()
+        assert (
+            commands.get_agc_time_constant(cmd_map=cmd_map)
+            == commands.get_agc_time_constant()
+        )
 
 
 # ── cmd29-aware functions ───────────────────────────────────────
@@ -195,7 +214,10 @@ class TestCmd29Parity:
         assert commands.get_af_mute(cmd_map=cmd_map) == commands.get_af_mute()
 
     def test_get_audio_peak_filter(self, cmd_map):
-        assert commands.get_audio_peak_filter(cmd_map=cmd_map) == commands.get_audio_peak_filter()
+        assert (
+            commands.get_audio_peak_filter(cmd_map=cmd_map)
+            == commands.get_audio_peak_filter()
+        )
 
     def test_get_auto_notch(self, cmd_map):
         assert commands.get_auto_notch(cmd_map=cmd_map) == commands.get_auto_notch()
@@ -204,10 +226,16 @@ class TestCmd29Parity:
         assert commands.get_manual_notch(cmd_map=cmd_map) == commands.get_manual_notch()
 
     def test_get_twin_peak_filter(self, cmd_map):
-        assert commands.get_twin_peak_filter(cmd_map=cmd_map) == commands.get_twin_peak_filter()
+        assert (
+            commands.get_twin_peak_filter(cmd_map=cmd_map)
+            == commands.get_twin_peak_filter()
+        )
 
     def test_get_various_squelch(self, cmd_map):
-        assert commands.get_various_squelch(cmd_map=cmd_map) == commands.get_various_squelch()
+        assert (
+            commands.get_various_squelch(cmd_map=cmd_map)
+            == commands.get_various_squelch()
+        )
 
 
 # ── Custom CommandMap (different wire bytes) ────────────────────

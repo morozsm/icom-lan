@@ -175,8 +175,10 @@ class TestHandleRtcOffer:
         fake_aiortc.RTCPeerConnection.return_value = mock_pc
         fake_aiortc.RTCSessionDescription.return_value = MagicMock()
 
-        with patch("icom_lan.web.rtc.webrtc_available", return_value=True), \
-             patch.dict("sys.modules", {"aiortc": fake_aiortc}):
+        with (
+            patch("icom_lan.web.rtc.webrtc_available", return_value=True),
+            patch.dict("sys.modules", {"aiortc": fake_aiortc}),
+        ):
             result = await handle_rtc_offer("v=0\r\n", "offer", radio)
 
         assert result["status"] == "ok"
@@ -281,8 +283,10 @@ class TestRtcOfferEndpoint:
         reader.feed_eof()
         headers = {"content-length": str(len(raw))}
 
-        with patch("icom_lan.web.server.webrtc_available", return_value=True), \
-             patch("icom_lan.web.rtc.webrtc_available", return_value=True):
+        with (
+            patch("icom_lan.web.server.webrtc_available", return_value=True),
+            patch("icom_lan.web.rtc.webrtc_available", return_value=True),
+        ):
             await srv._handle_rtc_offer(writer, headers, reader)  # noqa: SLF001
 
         status, body = _parse_response(writer)
@@ -306,8 +310,10 @@ class TestRtcOfferEndpoint:
         headers = {"content-length": str(len(raw))}
 
         sdp_err = {"status": "error", "code": "sdp_error", "message": "bad"}
-        with patch("icom_lan.web.server.webrtc_available", return_value=True), \
-             patch("icom_lan.web.server.handle_rtc_offer", return_value=sdp_err):
+        with (
+            patch("icom_lan.web.server.webrtc_available", return_value=True),
+            patch("icom_lan.web.server.handle_rtc_offer", return_value=sdp_err),
+        ):
             await srv._handle_rtc_offer(writer, headers, reader)  # noqa: SLF001
 
         status, body = _parse_response(writer)
@@ -369,11 +375,14 @@ class TestCapabilityExposure:
         srv = WebServer(radio=None)
         writer = _FakeWriter()
 
-        with patch("icom_lan.web.server.rtc_capability_info", return_value={
-            "available": False,
-            "reason": "aiortc not installed",
-            "supportedDirections": [],
-        }):
+        with patch(
+            "icom_lan.web.server.rtc_capability_info",
+            return_value={
+                "available": False,
+                "reason": "aiortc not installed",
+                "supportedDirections": [],
+            },
+        ):
             await srv._serve_capabilities(writer)  # noqa: SLF001
 
         _, body = _parse_response(writer)

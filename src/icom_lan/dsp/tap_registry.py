@@ -52,14 +52,24 @@ class TapRegistry:
         """Register a named tap. Returns an opaque handle for :meth:`unregister`."""
         tap_id = _alloc_id()
         self._taps[tap_id] = (name, callback)
-        logger.debug("tap-registry: registered '%s' (id=%d, total=%d)", name, tap_id, len(self._taps))
+        logger.debug(
+            "tap-registry: registered '%s' (id=%d, total=%d)",
+            name,
+            tap_id,
+            len(self._taps),
+        )
         return TapHandle(_id=tap_id, name=name)
 
     def unregister(self, handle: TapHandle) -> None:
         """Remove a tap by handle. No-op if already unregistered."""
         removed = self._taps.pop(handle._id, None)
         if removed is not None:
-            logger.debug("tap-registry: unregistered '%s' (id=%d, total=%d)", removed[0], handle._id, len(self._taps))
+            logger.debug(
+                "tap-registry: unregistered '%s' (id=%d, total=%d)",
+                removed[0],
+                handle._id,
+                len(self._taps),
+            )
 
     def feed(self, pcm: bytes) -> None:
         """Fan out PCM data to all registered taps.
@@ -70,7 +80,12 @@ class TapRegistry:
             try:
                 callback(pcm)
             except Exception:
-                logger.warning("tap-registry: error in tap '%s' (id=%d)", name, tap_id, exc_info=True)
+                logger.warning(
+                    "tap-registry: error in tap '%s' (id=%d)",
+                    name,
+                    tap_id,
+                    exc_info=True,
+                )
 
     @property
     def active(self) -> bool:

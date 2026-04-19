@@ -18,6 +18,7 @@ from icom_lan.types import AudioCodec
 # Fake audio driver — mimics UsbAudioDriver public API without hardware deps
 # ---------------------------------------------------------------------------
 
+
 class FakeAudioDriver:
     """In-memory stand-in for UsbAudioDriver."""
 
@@ -94,13 +95,16 @@ class FakeAudioDriver:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def fake_driver() -> FakeAudioDriver:
     return FakeAudioDriver()
 
 
 @pytest.fixture
-def radio(fake_driver: FakeAudioDriver, monkeypatch: pytest.MonkeyPatch) -> YaesuCatRadio:
+def radio(
+    fake_driver: FakeAudioDriver, monkeypatch: pytest.MonkeyPatch
+) -> YaesuCatRadio:
     """Create a YaesuCatRadio with faked transport + audio driver."""
     # Patch transport so connect() doesn't try to open a real serial port
     monkeypatch.setattr(
@@ -126,6 +130,7 @@ def radio(fake_driver: FakeAudioDriver, monkeypatch: pytest.MonkeyPatch) -> Yaes
 # audio_codec property
 # ---------------------------------------------------------------------------
 
+
 class TestAudioCodecProperty:
     def test_returns_pcm_16bit_mono(self, radio: YaesuCatRadio) -> None:
         assert radio.audio_codec == AudioCodec.PCM_1CH_16BIT
@@ -137,6 +142,7 @@ class TestAudioCodecProperty:
 # ---------------------------------------------------------------------------
 # get_audio_stats
 # ---------------------------------------------------------------------------
+
 
 class TestGetAudioStats:
     @pytest.mark.asyncio
@@ -180,6 +186,7 @@ class TestGetAudioStats:
 # RX audio flow
 # ---------------------------------------------------------------------------
 
+
 class TestRxAudio:
     @pytest.mark.asyncio
     async def test_start_rx_opus_wraps_pcm_in_audio_packet(
@@ -219,8 +226,8 @@ class TestRxAudio:
         await radio.connect()
         await radio.start_audio_rx_pcm(received.append)
 
-        fake_driver.inject_rx_frame(b"\xAB" * 960)
-        assert received == [b"\xAB" * 960]
+        fake_driver.inject_rx_frame(b"\xab" * 960)
+        assert received == [b"\xab" * 960]
         await radio.stop_audio_rx_pcm()
 
     @pytest.mark.asyncio
@@ -247,6 +254,7 @@ class TestRxAudio:
 # ---------------------------------------------------------------------------
 # TX audio flow
 # ---------------------------------------------------------------------------
+
 
 class TestTxAudio:
     @pytest.mark.asyncio
@@ -297,6 +305,7 @@ class TestTxAudio:
 # Validation
 # ---------------------------------------------------------------------------
 
+
 class TestValidation:
     @pytest.mark.asyncio
     async def test_jitter_depth_negative_raises(self, radio: YaesuCatRadio) -> None:
@@ -341,6 +350,7 @@ class TestValidation:
 # AudioBus lazy init
 # ---------------------------------------------------------------------------
 
+
 class TestAudioBus:
     def test_audio_bus_lazy_init(self, radio: YaesuCatRadio) -> None:
         bus1 = radio.audio_bus
@@ -354,6 +364,7 @@ class TestAudioBus:
 # ---------------------------------------------------------------------------
 # Disconnect stops audio
 # ---------------------------------------------------------------------------
+
 
 class TestDisconnect:
     @pytest.mark.asyncio

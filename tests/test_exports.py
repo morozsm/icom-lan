@@ -84,5 +84,7 @@ def test_internal_symbols_still_importable() -> None:
         "HEADER_SIZE",
     ]
     for name in internal_symbols:
-        assert hasattr(icom_lan, name), f"{name} should still be importable from icom_lan"
+        assert hasattr(icom_lan, name), (
+            f"{name} should still be importable from icom_lan"
+        )
         assert name not in icom_lan.__all__, f"{name} should NOT be in __all__"

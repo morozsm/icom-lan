@@ -19,6 +19,7 @@ from ..commands import parse_ack_nak, scope_off as _scope_off_cmd
 from ..exceptions import AudioFormatError, CommandError, ConnectionError
 from ..radio import CoreRadio
 from ..types import AudioCodec, ScopeCompletionPolicy, get_audio_capabilities
+
 if TYPE_CHECKING:
     from .icom7610.drivers.serial_civ_link import SerialCivLink
     from .icom7610.drivers.serial_session import SerialSessionDriver
@@ -491,10 +492,7 @@ class _IcomSerialRadioBase(CoreRadio):
 
     def _start_civ_data_watchdog(self) -> None:
         _existing_watchdog = getattr(self, "_civ_data_watchdog_task", None)
-        if (
-            _existing_watchdog is not None
-            and not _existing_watchdog.done()
-        ):
+        if _existing_watchdog is not None and not _existing_watchdog.done():
             return
         self._civ_data_watchdog_task = asyncio.create_task(
             self._serial_civ_watchdog_loop(),

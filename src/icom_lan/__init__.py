@@ -58,7 +58,13 @@ from .profiles import RadioProfile, get_radio_profile, resolve_radio_profile
 from .radios import RADIOS, RadioModel, get_civ_addr, IC_7610_ADDR
 from .ic705 import prepare_ic705_data_profile, restore_ic705_data_profile
 from .profiles_runtime import OperatingProfile, apply_profile, PRESETS
-from .backends import BackendConfig, LanBackendConfig, SerialBackendConfig, YaesuCatBackendConfig, create_radio
+from .backends import (
+    BackendConfig,
+    LanBackendConfig,
+    SerialBackendConfig,
+    YaesuCatBackendConfig,
+    create_radio,
+)
 from .commands import (
     CONTROLLER_ADDR,
     RECEIVER_MAIN,

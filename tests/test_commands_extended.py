@@ -17,7 +17,7 @@ from icom_lan.commands import (
     stop_cw,
     power_on,
     power_off,
-    parse_ack_nak
+    parse_ack_nak,
 )
 from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
 

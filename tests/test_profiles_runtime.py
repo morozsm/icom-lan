@@ -15,6 +15,7 @@ from icom_lan.types import ScopeCompletionPolicy
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _full_radio() -> AsyncMock:
     """Mock radio that supports every setter used by apply_profile."""
     radio = AsyncMock()
@@ -33,6 +34,7 @@ def _minimal_radio() -> AsyncMock:
 # ---------------------------------------------------------------------------
 # OperatingProfile dataclass
 # ---------------------------------------------------------------------------
+
 
 class TestOperatingProfile:
     def test_all_fields_default_to_none_or_safe_value(self) -> None:
@@ -92,6 +94,7 @@ class TestOperatingProfile:
 # apply_profile — full-capability radio
 # ---------------------------------------------------------------------------
 
+
 class TestApplyProfileFull:
     @pytest.fixture()
     def radio(self) -> AsyncMock:
@@ -148,9 +151,13 @@ class TestApplyProfileFull:
 
     @pytest.mark.asyncio()
     async def test_applies_mod_inputs(self, radio: AsyncMock) -> None:
-        await apply_profile(radio, OperatingProfile(
-            data_off_mod_input=3, data1_mod_input=5,
-        ))
+        await apply_profile(
+            radio,
+            OperatingProfile(
+                data_off_mod_input=3,
+                data1_mod_input=5,
+            ),
+        )
         radio.set_data_off_mod_input.assert_awaited_with(3)
         radio.set_data1_mod_input.assert_awaited_with(5)
 
@@ -166,9 +173,14 @@ class TestApplyProfileFull:
 
     @pytest.mark.asyncio()
     async def test_scope_enabled(self, radio: AsyncMock) -> None:
-        await apply_profile(radio, OperatingProfile(
-            scope_enabled=True, scope_mode=0, scope_span=7,
-        ))
+        await apply_profile(
+            radio,
+            OperatingProfile(
+                scope_enabled=True,
+                scope_mode=0,
+                scope_span=7,
+            ),
+        )
         radio.enable_scope.assert_awaited_once()
         radio.set_scope_mode.assert_awaited_with(0)
         radio.set_scope_span.assert_awaited_with(7)
@@ -234,6 +246,7 @@ class TestApplyProfileFull:
 # apply_profile — minimal radio (only set_freq)
 # ---------------------------------------------------------------------------
 
+
 class TestApplyProfileMinimal:
     @pytest.mark.asyncio()
     async def test_only_supported_setter_called(self) -> None:
@@ -271,6 +284,7 @@ class TestApplyProfileMinimal:
 # ---------------------------------------------------------------------------
 # Presets
 # ---------------------------------------------------------------------------
+
 
 class TestPresets:
     def test_presets_are_operating_profiles(self) -> None:
@@ -317,6 +331,7 @@ class TestPresets:
 # Backward compatibility — ic705.py delegates to apply_profile
 # ---------------------------------------------------------------------------
 
+
 class TestIC705BackwardCompat:
     @pytest.mark.asyncio()
     async def test_prepare_ic705_data_profile_returns_snapshot(self) -> None:
@@ -343,7 +358,9 @@ class TestIC705BackwardCompat:
     async def test_prepare_ic705_vox_not_disabled_when_flag_false(self) -> None:
         radio = _full_radio()
         await prepare_ic705_data_profile(
-            radio, frequency_hz=145_500_000, disable_vox=False,
+            radio,
+            frequency_hz=145_500_000,
+            disable_vox=False,
         )
         radio.set_vox.assert_not_awaited()
 
@@ -385,9 +402,11 @@ class TestIC705BackwardCompat:
 # Exports
 # ---------------------------------------------------------------------------
 
+
 class TestExports:
     def test_importable_from_top_level(self) -> None:
         from icom_lan import OperatingProfile, apply_profile, PRESETS  # noqa: F811
+
         assert OperatingProfile is not None
         assert apply_profile is not None
         assert PRESETS is not None
@@ -395,6 +414,7 @@ class TestExports:
     def test_importable_but_not_in_all(self) -> None:
         """Runtime profile symbols are importable but not part of the public API surface."""
         import icom_lan
+
         assert hasattr(icom_lan, "OperatingProfile")
         assert hasattr(icom_lan, "apply_profile")
         assert hasattr(icom_lan, "PRESETS")

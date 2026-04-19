@@ -26,7 +26,9 @@ def fast_connect():  # noqa: D103
       queries with 12ms gaps (~3.5s per connect); tests read state via direct GETs or
       preset mock fields, so the pre-fetch adds no value.
     """
-    with patch("asyncio.sleep", _fast_sleep), \
-         patch("icom_lan._control_phase.wait_for_radio_startup_ready", new=AsyncMock()), \
-         patch("icom_lan.radio.CoreRadio._fetch_initial_state", new=AsyncMock()):
+    with (
+        patch("asyncio.sleep", _fast_sleep),
+        patch("icom_lan._control_phase.wait_for_radio_startup_ready", new=AsyncMock()),
+        patch("icom_lan.radio.CoreRadio._fetch_initial_state", new=AsyncMock()),
+    ):
         yield

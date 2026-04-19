@@ -121,7 +121,9 @@ async def test_start_aborts_before_listening_when_radio_not_ready() -> None:
     cfg = RigctldConfig(host="127.0.0.1", port=0)
     srv = RigctldServer(radio, cfg, _protocol=_make_proto(), _handler=_make_handler())
 
-    with patch("icom_lan.rigctld.server.asyncio.start_server", new=AsyncMock()) as start_server:
+    with patch(
+        "icom_lan.rigctld.server.asyncio.start_server", new=AsyncMock()
+    ) as start_server:
         with pytest.raises(RuntimeError, match="startup aborted"):
             await srv.start()
     start_server.assert_not_awaited()

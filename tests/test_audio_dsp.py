@@ -18,6 +18,7 @@ from icom_lan.audio.dsp import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _silence(n: int = 960) -> bytes:
     return b"\x00" * (n * 2)
 
@@ -29,7 +30,7 @@ def _tone(amplitude: int = 16000, n: int = 960, freq: float = 1000.0) -> bytes:
 
 def _rms(pcm: bytes) -> float:
     samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float64)
-    return float(np.sqrt(np.mean(samples ** 2)))
+    return float(np.sqrt(np.mean(samples**2)))
 
 
 def _peak(pcm: bytes) -> int:
@@ -174,10 +175,12 @@ def test_pipeline_single_stage():
 
 def test_pipeline_chain_gate_then_limiter():
     """Gate + Limiter: loud signal passes gate, gets limited."""
-    pipeline = DspPipeline([
-        NoiseGate(threshold_db=-60),
-        Limiter(ceiling_db=-6),
-    ])
+    pipeline = DspPipeline(
+        [
+            NoiseGate(threshold_db=-60),
+            Limiter(ceiling_db=-6),
+        ]
+    )
     loud = _tone(amplitude=30000)
     out = pipeline.process(loud)
     ceiling = _db_to_linear(-6)
@@ -186,11 +189,13 @@ def test_pipeline_chain_gate_then_limiter():
 
 def test_pipeline_full_chain():
     """Gate → Normalizer → Limiter full chain."""
-    pipeline = DspPipeline([
-        NoiseGate(threshold_db=-50),
-        RmsNormalizer(target_db=-20),
-        Limiter(ceiling_db=-1),
-    ])
+    pipeline = DspPipeline(
+        [
+            NoiseGate(threshold_db=-50),
+            RmsNormalizer(target_db=-20),
+            Limiter(ceiling_db=-1),
+        ]
+    )
     tone = _tone(amplitude=16000)
     out = pipeline.process(tone)
     # Should produce valid audio, not silence, and be limited

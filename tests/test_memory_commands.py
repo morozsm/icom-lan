@@ -58,12 +58,14 @@ class TestMemoryCapableProtocol:
     def test_class_missing_method_is_not_memory_capable(self) -> None:
         class IncompleteRadio:
             async def set_memory_mode(self, channel: int) -> None: ...
+
             # missing memory_write, etc.
 
         assert not isinstance(IncompleteRadio(), MemoryCapable)
 
     def test_protocol_in_all(self) -> None:
         from icom_lan import radio_protocol
+
         assert "MemoryCapable" in radio_protocol.__all__
 
 
@@ -381,6 +383,7 @@ class TestHandlerMemoryDispatch:
 
         server = MagicMock()
         from icom_lan.web.radio_poller import CommandQueue
+
         server.command_queue = CommandQueue()
 
         handler = ControlHandler(
@@ -400,6 +403,7 @@ class TestHandlerMemoryDispatch:
         cmds = q.drain()
         assert len(cmds) == 1
         from icom_lan.web.radio_poller import SetMemoryMode
+
         assert isinstance(cmds[0], SetMemoryMode)
         assert cmds[0].channel == 5
 
@@ -411,6 +415,7 @@ class TestHandlerMemoryDispatch:
         cmds = q.drain()
         assert len(cmds) == 1
         from icom_lan.web.radio_poller import MemoryWrite
+
         assert isinstance(cmds[0], MemoryWrite)
 
     @pytest.mark.asyncio
@@ -421,6 +426,7 @@ class TestHandlerMemoryDispatch:
         cmds = q.drain()
         assert len(cmds) == 1
         from icom_lan.web.radio_poller import MemoryToVfo
+
         assert isinstance(cmds[0], MemoryToVfo)
         assert cmds[0].channel == 42
 
@@ -432,6 +438,7 @@ class TestHandlerMemoryDispatch:
         cmds = q.drain()
         assert len(cmds) == 1
         from icom_lan.web.radio_poller import MemoryClear
+
         assert isinstance(cmds[0], MemoryClear)
         assert cmds[0].channel == 10
 
@@ -453,6 +460,7 @@ class TestHandlerMemoryDispatch:
         cmds = q.drain()
         assert len(cmds) == 1
         from icom_lan.web.radio_poller import SetMemoryContents
+
         assert isinstance(cmds[0], SetMemoryContents)
         assert cmds[0].mem.channel == 1
         assert cmds[0].mem.frequency_hz == 14_074_000
@@ -472,6 +480,7 @@ class TestHandlerMemoryDispatch:
         cmds = q.drain()
         assert len(cmds) == 1
         from icom_lan.web.radio_poller import SetBsr
+
         assert isinstance(cmds[0], SetBsr)
         assert cmds[0].bsr.band == 5
 

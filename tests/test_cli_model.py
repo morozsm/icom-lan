@@ -25,19 +25,25 @@ RIGS_DIR = Path(__file__).resolve().parents[1] / "rigs"
 class TestModelResolution:
     """--model resolves radio_addr from rig TOML profiles."""
 
-    async def test_model_ic7300_resolves_radio_addr(self, parser: argparse.ArgumentParser) -> None:
+    async def test_model_ic7300_resolves_radio_addr(
+        self, parser: argparse.ArgumentParser
+    ) -> None:
         ns = _parse(parser, ["--host", "1.2.3.4", "--model", "IC-7300", "status"])
         cfg = await _build_backend_config(ns)
         assert cfg.radio_addr == 0x94
         assert cfg.model == "IC-7300"
 
-    async def test_model_ic7610_resolves_radio_addr(self, parser: argparse.ArgumentParser) -> None:
+    async def test_model_ic7610_resolves_radio_addr(
+        self, parser: argparse.ArgumentParser
+    ) -> None:
         ns = _parse(parser, ["--host", "1.2.3.4", "--model", "IC-7610", "status"])
         cfg = await _build_backend_config(ns)
         assert cfg.radio_addr == 0x98
         assert cfg.model == "IC-7610"
 
-    async def test_model_case_insensitive(self, parser: argparse.ArgumentParser) -> None:
+    async def test_model_case_insensitive(
+        self, parser: argparse.ArgumentParser
+    ) -> None:
         ns = _parse(parser, ["--host", "1.2.3.4", "--model", "ic-7300", "status"])
         cfg = await _build_backend_config(ns)
         assert cfg.radio_addr == 0x94
@@ -48,7 +54,9 @@ class TestModelResolution:
         with pytest.raises(ValueError, match="Unknown model 'IC-FAKE'"):
             await _build_backend_config(ns)
 
-    async def test_model_unknown_lists_available(self, parser: argparse.ArgumentParser) -> None:
+    async def test_model_unknown_lists_available(
+        self, parser: argparse.ArgumentParser
+    ) -> None:
         ns = _parse(parser, ["--host", "1.2.3.4", "--model", "IC-FAKE", "status"])
         with pytest.raises(ValueError, match="IC-7300"):
             await _build_backend_config(ns)
@@ -62,8 +70,21 @@ class TestRadioAddrOverride:
         cfg = await _build_backend_config(ns)
         assert cfg.radio_addr == 0xA0
 
-    async def test_radio_addr_overrides_model(self, parser: argparse.ArgumentParser) -> None:
-        ns = _parse(parser, ["--host", "1.2.3.4", "--model", "IC-7300", "--radio-addr", "0xA0", "status"])
+    async def test_radio_addr_overrides_model(
+        self, parser: argparse.ArgumentParser
+    ) -> None:
+        ns = _parse(
+            parser,
+            [
+                "--host",
+                "1.2.3.4",
+                "--model",
+                "IC-7300",
+                "--radio-addr",
+                "0xA0",
+                "status",
+            ],
+        )
         cfg = await _build_backend_config(ns)
         assert cfg.radio_addr == 0xA0
         assert cfg.model == "IC-7300"
@@ -77,7 +98,9 @@ class TestRadioAddrOverride:
 class TestDefaults:
     """No --model, no --radio-addr → backward compatible defaults."""
 
-    async def test_no_flags_radio_addr_none(self, parser: argparse.ArgumentParser) -> None:
+    async def test_no_flags_radio_addr_none(
+        self, parser: argparse.ArgumentParser
+    ) -> None:
         ns = _parse(parser, ["--host", "1.2.3.4", "status"])
         cfg = await _build_backend_config(ns)
         assert cfg.radio_addr is None
@@ -95,19 +118,35 @@ class TestSerialBackend:
     async def test_model_with_serial(self, parser: argparse.ArgumentParser) -> None:
         ns = _parse(
             parser,
-            ["--backend", "serial", "--serial-port", "/dev/ttyUSB0",
-             "--model", "IC-7300", "status"],
+            [
+                "--backend",
+                "serial",
+                "--serial-port",
+                "/dev/ttyUSB0",
+                "--model",
+                "IC-7300",
+                "status",
+            ],
         )
         cfg = await _build_backend_config(ns)
         assert cfg.radio_addr == 0x94
         assert cfg.model == "IC-7300"
         assert cfg.backend == "serial"
 
-    async def test_radio_addr_with_serial(self, parser: argparse.ArgumentParser) -> None:
+    async def test_radio_addr_with_serial(
+        self, parser: argparse.ArgumentParser
+    ) -> None:
         ns = _parse(
             parser,
-            ["--backend", "serial", "--serial-port", "/dev/ttyUSB0",
-             "--radio-addr", "0x94", "status"],
+            [
+                "--backend",
+                "serial",
+                "--serial-port",
+                "/dev/ttyUSB0",
+                "--radio-addr",
+                "0x94",
+                "status",
+            ],
         )
         cfg = await _build_backend_config(ns)
         assert cfg.radio_addr == 0x94

@@ -126,16 +126,54 @@ def _make_mock_sd_mixed(
 ) -> MagicMock:
     """Create a mock sounddevice with both "USB Audio CODEC" and "USB Audio Device" pairs."""
     devices: list[dict[str, Any]] = [
-        {"name": "Built-in Speaker", "index": 0, "max_input_channels": 0, "max_output_channels": 2, "default_samplerate": 48000.0},
+        {
+            "name": "Built-in Speaker",
+            "index": 0,
+            "max_input_channels": 0,
+            "max_output_channels": 2,
+            "default_samplerate": 48000.0,
+        },
     ]
     for i in range(usb_device_count):
         base_idx = len(devices)
-        devices.append({"name": "USB Audio Device", "index": base_idx, "max_input_channels": 0, "max_output_channels": 2, "default_samplerate": 48000.0})
-        devices.append({"name": "USB Audio Device", "index": base_idx + 1, "max_input_channels": 2, "max_output_channels": 0, "default_samplerate": 48000.0})
+        devices.append(
+            {
+                "name": "USB Audio Device",
+                "index": base_idx,
+                "max_input_channels": 0,
+                "max_output_channels": 2,
+                "default_samplerate": 48000.0,
+            }
+        )
+        devices.append(
+            {
+                "name": "USB Audio Device",
+                "index": base_idx + 1,
+                "max_input_channels": 2,
+                "max_output_channels": 0,
+                "default_samplerate": 48000.0,
+            }
+        )
     for i in range(usb_codec_count):
         base_idx = len(devices)
-        devices.append({"name": "USB Audio CODEC", "index": base_idx, "max_input_channels": 0, "max_output_channels": 2, "default_samplerate": 48000.0})
-        devices.append({"name": "USB Audio CODEC", "index": base_idx + 1, "max_input_channels": 2, "max_output_channels": 0, "default_samplerate": 48000.0})
+        devices.append(
+            {
+                "name": "USB Audio CODEC",
+                "index": base_idx,
+                "max_input_channels": 0,
+                "max_output_channels": 2,
+                "default_samplerate": 48000.0,
+            }
+        )
+        devices.append(
+            {
+                "name": "USB Audio CODEC",
+                "index": base_idx + 1,
+                "max_input_channels": 2,
+                "max_output_channels": 0,
+                "default_samplerate": 48000.0,
+            }
+        )
     sd = MagicMock()
     sd.query_devices.return_value = devices
     sd.default.device = [-1, -1]

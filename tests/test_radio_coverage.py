@@ -35,10 +35,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
-    CONTROLLER_ADDR,
-    build_civ_frame
-)
+from icom_lan.commands import CONTROLLER_ADDR, build_civ_frame
 from icom_lan.exceptions import CommandError, ConnectionError, TimeoutError
 from icom_lan.radio import IcomRadio
 from icom_lan.scope import ScopeFrame
@@ -369,7 +366,9 @@ async def test_push_audio_tx_alias_calls_push_audio_tx_opus(radio: IcomRadio) ->
 
 def test_get_pcm_transcoder_creates_new_on_cache_miss(radio: IcomRadio) -> None:
     """_get_pcm_transcoder() creates a fresh transcoder on first call."""
-    with patch("icom_lan._audio_runtime_mixin.create_pcm_opus_transcoder") as mock_create:
+    with patch(
+        "icom_lan._audio_runtime_mixin.create_pcm_opus_transcoder"
+    ) as mock_create:
         mock_create.return_value = MagicMock()
         tc = radio._get_pcm_transcoder(sample_rate=48000, channels=1, frame_ms=20)
         mock_create.assert_called_once()
@@ -378,7 +377,9 @@ def test_get_pcm_transcoder_creates_new_on_cache_miss(radio: IcomRadio) -> None:
 
 def test_get_pcm_transcoder_returns_cached_on_same_params(radio: IcomRadio) -> None:
     """Second call with same params returns cached transcoder."""
-    with patch("icom_lan._audio_runtime_mixin.create_pcm_opus_transcoder") as mock_create:
+    with patch(
+        "icom_lan._audio_runtime_mixin.create_pcm_opus_transcoder"
+    ) as mock_create:
         mock_create.return_value = MagicMock()
         tc1 = radio._get_pcm_transcoder(sample_rate=48000, channels=1, frame_ms=20)
         tc2 = radio._get_pcm_transcoder(sample_rate=48000, channels=1, frame_ms=20)
@@ -1268,7 +1269,9 @@ async def test_disconnect_sends_token_remove_before_ctrl_close(
         patch.object(radio._civ_runtime, "stop_data_watchdog", new=AsyncMock()),
         patch.object(radio._civ_runtime, "stop_worker", new=AsyncMock()),
         patch.object(radio._civ_runtime, "stop_pump", new=AsyncMock()),
-        patch.object(radio._control_phase, "_send_token", new=AsyncMock()) as send_token,
+        patch.object(
+            radio._control_phase, "_send_token", new=AsyncMock()
+        ) as send_token,
     ):
         await radio.disconnect()
 
@@ -1776,7 +1779,9 @@ async def test_ensure_audio_transport_creates_transport(radio: IcomRadio) -> Non
     fake_transport.connect = AsyncMock()
 
     with (
-        patch("icom_lan._audio_runtime_mixin.IcomTransport", return_value=fake_transport),
+        patch(
+            "icom_lan._audio_runtime_mixin.IcomTransport", return_value=fake_transport
+        ),
         patch.object(radio, "_send_audio_open_close", new=AsyncMock()),
         patch("icom_lan._audio_runtime_mixin.AudioStream"),
     ):
@@ -1808,7 +1813,9 @@ async def test_ensure_audio_transport_handles_connect_failure(radio: IcomRadio) 
     fake_transport = MagicMock()
     fake_transport.connect = AsyncMock(side_effect=OSError("port busy"))
 
-    with patch("icom_lan._audio_runtime_mixin.IcomTransport", return_value=fake_transport):
+    with patch(
+        "icom_lan._audio_runtime_mixin.IcomTransport", return_value=fake_transport
+    ):
         with pytest.raises(ConnectionError, match="Failed to connect audio port"):
             await radio._ensure_audio_transport()
 

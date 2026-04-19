@@ -53,7 +53,9 @@ class _DiscoveryProtocol(asyncio.DatagramProtocol):
         try:
             response = self._responder.build_response(addr[0])
         except Exception:
-            logger.warning("discovery: failed to build response for %s", addr[0], exc_info=True)
+            logger.warning(
+                "discovery: failed to build response for %s", addr[0], exc_info=True
+            )
             return
         if self.transport is not None:
             self.transport.sendto(response, addr)

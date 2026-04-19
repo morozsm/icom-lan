@@ -66,10 +66,10 @@ def parse_powerstat(frame: CivFrame) -> bool:
             f"Expected power control response (0x18), got 0x{frame.command:02X}"
         )
     if len(frame.data) != 1:
-        raise ValueError(
-            f"Expected 1 byte power status, got {len(frame.data)} bytes"
-        )
+        raise ValueError(f"Expected 1 byte power status, got {len(frame.data)} bytes")
     val = frame.data[0]
     if val not in (0x00, 0x01):
-        raise ValueError(f"Invalid power status value: 0x{val:02X} (expected 0x00 or 0x01)")
+        raise ValueError(
+            f"Invalid power status value: 0x{val:02X} (expected 0x00 or 0x01)"
+        )
     return val == 0x01

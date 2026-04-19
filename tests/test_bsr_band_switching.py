@@ -30,12 +30,11 @@ from icom_lan.web.radio_poller import (
 # _civ_expects_response tests
 # ---------------------------------------------------------------------------
 
+
 class TestCivExpectsResponseBSR:
     """Ensure 1A 01 <band> <register> is treated as a response-expected GET."""
 
-    def _make_frame(
-        self, cmd: int, sub: int | None, data: bytes
-    ) -> SimpleNamespace:
+    def _make_frame(self, cmd: int, sub: int | None, data: bytes) -> SimpleNamespace:
         return SimpleNamespace(command=cmd, sub=sub, data=data)
 
     def test_bsr_read_expects_response(self) -> None:
@@ -65,6 +64,7 @@ class TestCivExpectsResponseBSR:
 # ---------------------------------------------------------------------------
 # Helpers for RadioPoller tests
 # ---------------------------------------------------------------------------
+
 
 def _make_radio(model: str = "IC-7610", active: str = "MAIN") -> MagicMock:
     profile = resolve_radio_profile(model=model)
@@ -96,7 +96,9 @@ def _make_poller(
         radio,
         StateCache(),
         CommandQueue(),
-        on_state_event=(lambda name, data: events.append((name, data))) if events is not None else None,
+        on_state_event=(lambda name, data: events.append((name, data)))
+        if events is not None
+        else None,
         radio_state=state,
     )
     return poller
@@ -120,6 +122,7 @@ def _bsr_response_frame(
 # ---------------------------------------------------------------------------
 # SetBand handler tests
 # ---------------------------------------------------------------------------
+
 
 class TestSetBandBSRRecall:
     """Test BSR recall path in SetBand command handler."""
@@ -227,7 +230,10 @@ class TestSetBandFallback:
         """BSR response with insufficient data should trigger fallback."""
         radio = _make_radio(model="IC-7300")
         short_resp = SimpleNamespace(
-            to_addr=0xE0, from_addr=0x94, command=0x1A, sub=0x01,
+            to_addr=0xE0,
+            from_addr=0x94,
+            command=0x1A,
+            sub=0x01,
             data=b"\x05\x01\x00",  # only 3 bytes, need >= 8
             receiver=None,
         )
@@ -270,6 +276,7 @@ class TestSetBandFallback:
 # Rig profile BSR code tests
 # ---------------------------------------------------------------------------
 
+
 class TestRigProfileBSRCodes:
     """Verify BSR codes are defined in rig profiles."""
 
@@ -282,7 +289,9 @@ class TestRigProfileBSRCodes:
             for bi in fr.bands:
                 if bi.bsr_code is not None:
                     bands_with_bsr.append(bi.name)
-        assert len(bands_with_bsr) >= 10, f"{model} should have BSR codes for >=10 bands"
+        assert len(bands_with_bsr) >= 10, (
+            f"{model} should have BSR codes for >=10 bands"
+        )
 
     @pytest.mark.parametrize("model", ["IC-7300", "IC-7610"])
     def test_bsr_codes_unique_per_profile(self, model: str) -> None:
@@ -307,7 +316,9 @@ class TestRigProfileBSRCodes:
             ("IC-7610", "20m", 5),
         ],
     )
-    def test_specific_bsr_codes(self, model: str, band_name: str, expected_bsr: int) -> None:
+    def test_specific_bsr_codes(
+        self, model: str, band_name: str, expected_bsr: int
+    ) -> None:
         """Verify specific BSR codes match CI-V spec."""
         profile = resolve_radio_profile(model=model)
         for fr in profile.freq_ranges:

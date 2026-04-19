@@ -40,6 +40,7 @@ def runtime_capabilities(radio: "Radio | None") -> set[str]:
             # so the frontend shows the audio controls.
             try:
                 from ..backends.yaesu_cat.radio import YaesuCatRadio
+
                 if not isinstance(radio, YaesuCatRadio):
                     caps.discard("audio")
             except ImportError:

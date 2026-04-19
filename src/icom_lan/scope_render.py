@@ -29,6 +29,7 @@ class _ThemeSpec(TypedDict):
     label_color: tuple[int, int, int]
     colormap: list[tuple[int, int, int]]
 
+
 __all__ = [
     "THEMES",
     "amplitude_to_color",

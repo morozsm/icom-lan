@@ -294,7 +294,6 @@ from .._poller_types import (  # noqa: E402
 )
 
 
-
 # ------------------------------------------------------------------
 # RadioPoller
 # ------------------------------------------------------------------
@@ -498,19 +497,21 @@ class RadioPoller:
     # Scope sub-commands that require a receiver prefix byte in READ queries.
     # Without the prefix, IC-7610 silently ignores the query.
     # 0x12 (receiver select), 0x13 (single/dual), 0x1B (during TX) do NOT need it.
-    _SCOPE_RECEIVER_PREFIX_SUBS = frozenset({
-        0x14,  # mode (center/fixed/scroll)
-        0x15,  # span
-        0x16,  # edge number
-        0x17,  # hold
-        0x19,  # ref level
-        0x1A,  # sweep speed
-        # 0x1C (center type) does NOT take receiver prefix — sending 0x00
-        # as prefix is misinterpreted as SET center_type=0 (Filter center).
-        0x1D,  # VBW
-        0x1E,  # fixed edge frequencies
-        0x1F,  # RBW
-    })
+    _SCOPE_RECEIVER_PREFIX_SUBS = frozenset(
+        {
+            0x14,  # mode (center/fixed/scroll)
+            0x15,  # span
+            0x16,  # edge number
+            0x17,  # hold
+            0x19,  # ref level
+            0x1A,  # sweep speed
+            # 0x1C (center type) does NOT take receiver prefix — sending 0x00
+            # as prefix is misinterpreted as SET center_type=0 (Filter center).
+            0x1D,  # VBW
+            0x1E,  # fixed edge frequencies
+            0x1F,  # RBW
+        }
+    )
 
     async def _send_one_state_query(
         self,
@@ -782,7 +783,9 @@ class RadioPoller:
                 _fw_target = (
                     self._radio_state.sub
                     if self._radio_state and rx != 0
-                    else self._radio_state.main if self._radio_state else None
+                    else self._radio_state.main
+                    if self._radio_state
+                    else None
                 )
                 mode_name = getattr(_fw_target, "mode", None)
                 data_mode = int(getattr(_fw_target, "data_mode", 0) or 0)
@@ -822,16 +825,16 @@ class RadioPoller:
                 # CI-V 1A 03 SET format: <FIL_number> <width_index_BCD>
                 # FIL number: 01=FIL1, 02=FIL2, 03=FIL3
                 logger.info(
-                    "set_filter_width: mode=%s, width=%d Hz, index=%d, "
-                    "bcd=0x%s, rx=%d",
-                    mode_name, width, payload_value,
-                    bcd_index_byte.hex(), rx,
+                    "set_filter_width: mode=%s, width=%d Hz, index=%d, bcd=0x%s, rx=%d",
+                    mode_name,
+                    width,
+                    payload_value,
+                    bcd_index_byte.hex(),
+                    rx,
                 )
                 # CI-V 1A 03: 1-byte BCD index, cmd29-wrapped for receiver
                 if self._profile.supports_cmd29(0x1A, 0x03):
-                    await self._civ(
-                        0x29, data=bytes([rx, 0x1A, 0x03]) + bcd_index_byte
-                    )
+                    await self._civ(0x29, data=bytes([rx, 0x1A, 0x03]) + bcd_index_byte)
                 else:
                     await self._civ(0x1A, sub=0x03, data=bcd_index_byte)
                 if self._radio_state:
@@ -1075,14 +1078,18 @@ class RadioPoller:
                 self._ensure_receiver_supported(rx, operation="set_apf")
                 await _r.set_audio_peak_filter(mode, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.apf_type_level = mode
                     self.bump_revision()
             case SetTwinPeak(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_twin_peak")
                 await _r.set_twin_peak_filter(on, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.twin_peak_filter = on
                     self.bump_revision()
             case SetDriveGain(level=level):
@@ -1329,9 +1336,7 @@ class RadioPoller:
                     if CAP_SCOPE in self._caps and CAP_DUAL_RX in self._caps:
                         scope_rx = 1 if is_sub else 0
                         try:
-                            await self._civ(
-                                0x27, sub=0x12, data=bytes([scope_rx])
-                            )
+                            await self._civ(0x27, sub=0x12, data=bytes([scope_rx]))
                             logger.info(
                                 "radio-poller: scope receiver → %s "
                                 "(follows select_vfo)",
@@ -1361,7 +1366,9 @@ class RadioPoller:
                     # CI-V packet queue overflow (scope data + fetch).
                     if not self._initial_fetch_done.is_set():
                         if not self._scope_enable_deferred:
-                            logger.info("radio-poller: deferring scope enable until initial fetch completes")
+                            logger.info(
+                                "radio-poller: deferring scope enable until initial fetch completes"
+                            )
                             self._scope_enable_deferred = True
                         self._queue.put(EnableScope(policy=policy))
                     else:
@@ -1531,7 +1538,9 @@ class RadioPoller:
                 if CAP_REPEATER_TONE in self._caps:
                     await radio.set_tone_freq(freq, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.tone_freq = freq
                     self.bump_revision()
             case SetTsqlFreq(freq_hz=freq, receiver=rx):
@@ -1539,7 +1548,9 @@ class RadioPoller:
                 if CAP_TSQL in self._caps:
                     await radio.set_tsql_freq(freq, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.tsql_freq = freq
                     self.bump_revision()
             case SetMainSubTracking(on=on):
@@ -1608,7 +1619,9 @@ class RadioPoller:
                 if CAP_REPEATER_TONE in self._caps:
                     await radio.set_repeater_tone(on, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.repeater_tone = on
                     self.bump_revision()
             case SetRepeaterTsql(on=on, receiver=rx):
@@ -1616,7 +1629,9 @@ class RadioPoller:
                 if CAP_TSQL in self._caps:
                     await radio.set_repeater_tsql(on, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.repeater_tsql = on
                     self.bump_revision()
             case SetRxAntenna(antenna=antenna, on=on):
@@ -1676,7 +1691,9 @@ class RadioPoller:
             case SetAfMute(on=on, receiver=rx):
                 await _r.set_af_mute(on, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.af_mute = on
                     self.bump_revision()
             case SetTuningStep(step=step):

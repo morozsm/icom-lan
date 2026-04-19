@@ -34,12 +34,30 @@ if TYPE_CHECKING:
 
 
 _SCOPE_SPAN_PRESETS_HZ: tuple[int, ...] = (
-    2_500, 5_000, 10_000, 25_000, 50_000, 100_000, 250_000, 500_000,
+    2_500,
+    5_000,
+    10_000,
+    25_000,
+    50_000,
+    100_000,
+    250_000,
+    500_000,
 )
 _SCOPE_FIXED_EDGE_RANGE_STARTS_HZ: tuple[int, ...] = (
-    50_000_000, 28_000_000, 24_890_000, 21_000_000, 18_068_000,
-    14_000_000, 10_100_000, 7_000_000, 5_250_000, 3_500_000,
-    1_800_000, 472_000, 135_000, 10_000,
+    50_000_000,
+    28_000_000,
+    24_890_000,
+    21_000_000,
+    18_068_000,
+    14_000_000,
+    10_100_000,
+    7_000_000,
+    5_250_000,
+    3_500_000,
+    1_800_000,
+    472_000,
+    135_000,
+    10_000,
 )
 
 
@@ -61,7 +79,13 @@ def _scope_payload(value: bytes, receiver: int | None = None) -> bytes:
     return bytes([_validate_scope_receiver(receiver)]) + value
 
 
-def _scope_query(sub: int, *, to_addr: int, from_addr: int = CONTROLLER_ADDR, receiver: int | None = None) -> bytes:
+def _scope_query(
+    sub: int,
+    *,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int | None = None,
+) -> bytes:
     data = None if receiver is None else bytes([_validate_scope_receiver(receiver)])
     return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=sub, data=data)
 
@@ -69,18 +93,27 @@ def _scope_query(sub: int, *, to_addr: int, from_addr: int = CONTROLLER_ADDR, re
 def _parse_scope_frame(frame: CivFrame, sub: int) -> bytes:
     if frame.command != _CMD_SCOPE or frame.sub != sub:
         got = 0 if frame.sub is None else frame.sub
-        raise ValueError(f"Not a scope response: command 0x{frame.command:02x} sub 0x{got:02x}")
+        raise ValueError(
+            f"Not a scope response: command 0x{frame.command:02x} sub 0x{got:02x}"
+        )
     if not frame.data:
         raise ValueError("Scope response has no payload")
     return frame.data
 
 
-def _split_scope_receiver_prefix(data: bytes, *, expected_lengths: tuple[int, ...]) -> tuple[int | None, bytes]:
-    if len(data) in {length + 1 for length in expected_lengths} and data[0] in (0x00, 0x01):
+def _split_scope_receiver_prefix(
+    data: bytes, *, expected_lengths: tuple[int, ...]
+) -> tuple[int | None, bytes]:
+    if len(data) in {length + 1 for length in expected_lengths} and data[0] in (
+        0x00,
+        0x01,
+    ):
         return data[0], data[1:]
     if len(data) not in expected_lengths:
         expected = " or ".join(str(length) for length in expected_lengths)
-        raise ValueError(f"Unexpected scope payload length: expected {expected} byte(s), got {len(data)}")
+        raise ValueError(
+            f"Unexpected scope payload length: expected {expected} byte(s), got {len(data)}"
+        )
     return None, data
 
 
@@ -91,7 +124,9 @@ def _decode_scope_bool(frame: CivFrame, sub: int) -> bool:
     return data[0] != 0x00
 
 
-def _decode_scope_value(frame: CivFrame, sub: int, *, minimum: int, maximum: int) -> tuple[int | None, int]:
+def _decode_scope_value(
+    frame: CivFrame, sub: int, *, minimum: int, maximum: int
+) -> tuple[int | None, int]:
     data = _parse_scope_frame(frame, sub)
     receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(1,))
     value = payload[0]
@@ -99,7 +134,9 @@ def _decode_scope_value(frame: CivFrame, sub: int, *, minimum: int, maximum: int
     return receiver, value
 
 
-def _decode_scope_bcd_value(frame: CivFrame, sub: int, *, minimum: int, maximum: int) -> tuple[int | None, int]:
+def _decode_scope_bcd_value(
+    frame: CivFrame, sub: int, *, minimum: int, maximum: int
+) -> tuple[int | None, int]:
     data = _parse_scope_frame(frame, sub)
     receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(1,))
     value = _bcd_decode_value(payload)
@@ -113,7 +150,9 @@ def _resolve_scope_fixed_edge_range(start_hz: int) -> int:
     for index, band_start in enumerate(_SCOPE_FIXED_EDGE_RANGE_STARTS_HZ, start=1):
         if start_hz >= band_start:
             return index
-    raise ValueError(f"scope fixed edge start_hz {start_hz} is outside known IC-7610 bands")
+    raise ValueError(
+        f"scope fixed edge start_hz {start_hz} is outside known IC-7610 bands"
+    )
 
 
 def _scope_ref_encode(ref: float) -> bytes:
@@ -131,11 +170,11 @@ def _scope_ref_encode(ref: float) -> bytes:
         raise ValueError(f"scope ref must be -30.0 to +10.0 dB, got {ref}")
     is_negative = ref < 0
     tenths = int(round(abs(ref) * 10))
-    tens_db = tenths // 100       # 10 dB digit (0-3)
-    ones_db = (tenths // 10) % 10 # 1 dB digit (0-9)
-    frac_db = tenths % 10         # 0.1 dB digit (0 or 5)
+    tens_db = tenths // 100  # 10 dB digit (0-3)
+    ones_db = (tenths // 10) % 10  # 1 dB digit (0-9)
+    frac_db = tenths % 10  # 0.1 dB digit (0 or 5)
     b0 = (tens_db << 4) | ones_db
-    b1 = (frac_db << 4)           # low nibble fixed 0
+    b1 = frac_db << 4  # low nibble fixed 0
     sign = 0x01 if is_negative else 0x00
     return bytes([b0, b1, sign])
 
@@ -143,205 +182,608 @@ def _scope_ref_encode(ref: float) -> bytes:
 # --- Public API ---
 
 
-def scope_on(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def scope_on(
+    to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "scope_on", to_addr=to_addr, from_addr=from_addr, data=b"\x01")
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x01")
+        return _build_from_map(
+            cmd_map, "scope_on", to_addr=to_addr, from_addr=from_addr, data=b"\x01"
+        )
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x01"
+    )
 
 
-def scope_off(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def scope_off(
+    to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "scope_off", to_addr=to_addr, from_addr=from_addr, data=b"\x00")
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x00")
+        return _build_from_map(
+            cmd_map, "scope_off", to_addr=to_addr, from_addr=from_addr, data=b"\x00"
+        )
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x00"
+    )
 
 
-def scope_data_output(on: bool, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def scope_data_output(
+    on: bool,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "scope_data_output", to_addr=to_addr, from_addr=from_addr, data=b"\x01" if on else b"\x00")
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_DATA_OUTPUT, data=b"\x01" if on else b"\x00")
+        return _build_from_map(
+            cmd_map,
+            "scope_data_output",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=b"\x01" if on else b"\x00",
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_DATA_OUTPUT,
+        data=b"\x01" if on else b"\x00",
+    )
 
 
-def scope_data_output_on(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def scope_data_output_on(
+    to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "scope_data_output", to_addr=to_addr, from_addr=from_addr, data=b"\x01")
+        return _build_from_map(
+            cmd_map,
+            "scope_data_output",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=b"\x01",
+        )
     return scope_data_output(True, to_addr=to_addr, from_addr=from_addr)
 
 
-def scope_data_output_off(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def scope_data_output_off(
+    to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "scope_data_output", to_addr=to_addr, from_addr=from_addr, data=b"\x00")
+        return _build_from_map(
+            cmd_map,
+            "scope_data_output",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=b"\x00",
+        )
     return scope_data_output(False, to_addr=to_addr, from_addr=from_addr)
 
 
-def get_scope_main_sub(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def get_scope_main_sub(
+    to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_main_sub", to_addr=to_addr, from_addr=from_addr)
+        return _build_from_map(
+            cmd_map, "get_scope_main_sub", to_addr=to_addr, from_addr=from_addr
+        )
     return _scope_query(_SUB_SCOPE_MAIN_SUB, to_addr=to_addr, from_addr=from_addr)
 
 
-def scope_main_sub(receiver: int, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def scope_main_sub(
+    receiver: int,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_main_sub", to_addr=to_addr, from_addr=from_addr, data=bytes([_validate_scope_receiver(receiver)]))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_MAIN_SUB, data=bytes([_validate_scope_receiver(receiver)]))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_main_sub",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([_validate_scope_receiver(receiver)]),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_MAIN_SUB,
+        data=bytes([_validate_scope_receiver(receiver)]),
+    )
 
 
-def get_scope_single_dual(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def get_scope_single_dual(
+    to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_single_dual", to_addr=to_addr, from_addr=from_addr)
+        return _build_from_map(
+            cmd_map, "get_scope_single_dual", to_addr=to_addr, from_addr=from_addr
+        )
     return _scope_query(_SUB_SCOPE_SINGLE_DUAL, to_addr=to_addr, from_addr=from_addr)
 
 
-def scope_single_dual(dual: bool, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_single_dual(
+    dual: bool,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_single_dual", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(b"\x01" if dual else b"\x00", receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_SINGLE_DUAL, data=_scope_payload(b"\x01" if dual else b"\x00", receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_single_dual",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(b"\x01" if dual else b"\x00", receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_SINGLE_DUAL,
+        data=_scope_payload(b"\x01" if dual else b"\x00", receiver),
+    )
 
 
-def get_scope_mode(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def get_scope_mode(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_mode", to_addr=to_addr, from_addr=from_addr)
-    return _scope_query(_SUB_SCOPE_MODE, to_addr=to_addr, from_addr=from_addr, receiver=receiver)
+        return _build_from_map(
+            cmd_map, "get_scope_mode", to_addr=to_addr, from_addr=from_addr
+        )
+    return _scope_query(
+        _SUB_SCOPE_MODE, to_addr=to_addr, from_addr=from_addr, receiver=receiver
+    )
 
 
-def scope_set_mode(mode: int, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_set_mode(
+    mode: int,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     _validate_scope_range("scope mode", mode, 0, 3)
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_mode", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(bytes([mode]), receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_MODE, data=_scope_payload(bytes([mode]), receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_mode",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(bytes([mode]), receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_MODE,
+        data=_scope_payload(bytes([mode]), receiver),
+    )
 
 
-def get_scope_span(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def get_scope_span(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_span", to_addr=to_addr, from_addr=from_addr)
-    return _scope_query(_SUB_SCOPE_SPAN, to_addr=to_addr, from_addr=from_addr, receiver=receiver)
+        return _build_from_map(
+            cmd_map, "get_scope_span", to_addr=to_addr, from_addr=from_addr
+        )
+    return _scope_query(
+        _SUB_SCOPE_SPAN, to_addr=to_addr, from_addr=from_addr, receiver=receiver
+    )
 
 
-def scope_set_span(span: int, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_set_span(
+    span: int,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     _validate_scope_range("scope span", span, 0, 7)
     span_hz = _SCOPE_SPAN_PRESETS_HZ[span]
     span_bcd = bcd_encode(span_hz)
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_span", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(span_bcd, receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_SPAN, data=_scope_payload(span_bcd, receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_span",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(span_bcd, receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_SPAN,
+        data=_scope_payload(span_bcd, receiver),
+    )
 
 
-def get_scope_edge(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def get_scope_edge(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_edge", to_addr=to_addr, from_addr=from_addr)
-    return _scope_query(_SUB_SCOPE_EDGE, to_addr=to_addr, from_addr=from_addr, receiver=receiver)
+        return _build_from_map(
+            cmd_map, "get_scope_edge", to_addr=to_addr, from_addr=from_addr
+        )
+    return _scope_query(
+        _SUB_SCOPE_EDGE, to_addr=to_addr, from_addr=from_addr, receiver=receiver
+    )
 
 
-def scope_set_edge(edge: int, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_set_edge(
+    edge: int,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     _validate_scope_range("scope edge", edge, 1, 4)
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_edge", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(bytes([edge]), receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_EDGE, data=_scope_payload(bytes([edge]), receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_edge",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(bytes([edge]), receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_EDGE,
+        data=_scope_payload(bytes([edge]), receiver),
+    )
 
 
-def get_scope_hold(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def get_scope_hold(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_hold", to_addr=to_addr, from_addr=from_addr)
-    return _scope_query(_SUB_SCOPE_HOLD, to_addr=to_addr, from_addr=from_addr, receiver=receiver)
+        return _build_from_map(
+            cmd_map, "get_scope_hold", to_addr=to_addr, from_addr=from_addr
+        )
+    return _scope_query(
+        _SUB_SCOPE_HOLD, to_addr=to_addr, from_addr=from_addr, receiver=receiver
+    )
 
 
-def scope_set_hold(on: bool, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_set_hold(
+    on: bool,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_hold", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(b"\x01" if on else b"\x00", receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_HOLD, data=_scope_payload(b"\x01" if on else b"\x00", receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_hold",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(b"\x01" if on else b"\x00", receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_HOLD,
+        data=_scope_payload(b"\x01" if on else b"\x00", receiver),
+    )
 
 
-def get_scope_ref(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def get_scope_ref(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_ref", to_addr=to_addr, from_addr=from_addr)
-    return _scope_query(_SUB_SCOPE_REF, to_addr=to_addr, from_addr=from_addr, receiver=receiver)
+        return _build_from_map(
+            cmd_map, "get_scope_ref", to_addr=to_addr, from_addr=from_addr
+        )
+    return _scope_query(
+        _SUB_SCOPE_REF, to_addr=to_addr, from_addr=from_addr, receiver=receiver
+    )
 
 
-def scope_set_ref(ref: float, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_set_ref(
+    ref: float,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_ref", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(_scope_ref_encode(ref), receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_REF, data=_scope_payload(_scope_ref_encode(ref), receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_ref",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(_scope_ref_encode(ref), receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_REF,
+        data=_scope_payload(_scope_ref_encode(ref), receiver),
+    )
 
 
-def get_scope_speed(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def get_scope_speed(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_speed", to_addr=to_addr, from_addr=from_addr)
-    return _scope_query(_SUB_SCOPE_SPEED, to_addr=to_addr, from_addr=from_addr, receiver=receiver)
+        return _build_from_map(
+            cmd_map, "get_scope_speed", to_addr=to_addr, from_addr=from_addr
+        )
+    return _scope_query(
+        _SUB_SCOPE_SPEED, to_addr=to_addr, from_addr=from_addr, receiver=receiver
+    )
 
 
-def scope_set_speed(speed: int, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_set_speed(
+    speed: int,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     _validate_scope_range("scope speed", speed, 0, 2)
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_speed", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(bytes([speed]), receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_SPEED, data=_scope_payload(bytes([speed]), receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_speed",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(bytes([speed]), receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_SPEED,
+        data=_scope_payload(bytes([speed]), receiver),
+    )
 
 
-def get_scope_during_tx(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def get_scope_during_tx(
+    to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_during_tx", to_addr=to_addr, from_addr=from_addr)
+        return _build_from_map(
+            cmd_map, "get_scope_during_tx", to_addr=to_addr, from_addr=from_addr
+        )
     return _scope_query(_SUB_SCOPE_DURING_TX, to_addr=to_addr, from_addr=from_addr)
 
 
-def scope_set_during_tx(on: bool, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def scope_set_during_tx(
+    on: bool,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_during_tx", to_addr=to_addr, from_addr=from_addr, data=b"\x01" if on else b"\x00")
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_DURING_TX, data=b"\x01" if on else b"\x00")
+        return _build_from_map(
+            cmd_map,
+            "get_scope_during_tx",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=b"\x01" if on else b"\x00",
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_DURING_TX,
+        data=b"\x01" if on else b"\x00",
+    )
 
 
-def get_scope_center_type(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def get_scope_center_type(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_center_type", to_addr=to_addr, from_addr=from_addr)
-    return _scope_query(_SUB_SCOPE_CENTER_TYPE, to_addr=to_addr, from_addr=from_addr, receiver=receiver)
+        return _build_from_map(
+            cmd_map, "get_scope_center_type", to_addr=to_addr, from_addr=from_addr
+        )
+    return _scope_query(
+        _SUB_SCOPE_CENTER_TYPE, to_addr=to_addr, from_addr=from_addr, receiver=receiver
+    )
 
 
-def scope_set_center_type(center_type: int, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_set_center_type(
+    center_type: int,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     _validate_scope_range("scope center type", center_type, 0, 2)
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_center_type", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(bytes([center_type]), receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_CENTER_TYPE, data=_scope_payload(bytes([center_type]), receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_center_type",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(bytes([center_type]), receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_CENTER_TYPE,
+        data=_scope_payload(bytes([center_type]), receiver),
+    )
 
 
-def get_scope_vbw(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def get_scope_vbw(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_vbw", to_addr=to_addr, from_addr=from_addr)
-    return _scope_query(_SUB_SCOPE_VBW, to_addr=to_addr, from_addr=from_addr, receiver=receiver)
+        return _build_from_map(
+            cmd_map, "get_scope_vbw", to_addr=to_addr, from_addr=from_addr
+        )
+    return _scope_query(
+        _SUB_SCOPE_VBW, to_addr=to_addr, from_addr=from_addr, receiver=receiver
+    )
 
 
-def scope_set_vbw(narrow: bool, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_set_vbw(
+    narrow: bool,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_vbw", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(b"\x01" if narrow else b"\x00", receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_VBW, data=_scope_payload(b"\x01" if narrow else b"\x00", receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_vbw",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(b"\x01" if narrow else b"\x00", receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_VBW,
+        data=_scope_payload(b"\x01" if narrow else b"\x00", receiver),
+    )
 
 
-def get_scope_fixed_edge(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def get_scope_fixed_edge(
+    to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_fixed_edge", to_addr=to_addr, from_addr=from_addr)
+        return _build_from_map(
+            cmd_map, "get_scope_fixed_edge", to_addr=to_addr, from_addr=from_addr
+        )
     return _scope_query(_SUB_SCOPE_FIXED_EDGE, to_addr=to_addr, from_addr=from_addr)
 
 
-def scope_set_fixed_edge(*, edge: int, start_hz: int, end_hz: int, to_addr: int, range_index: int | None = None, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None) -> bytes:
+def scope_set_fixed_edge(
+    *,
+    edge: int,
+    start_hz: int,
+    end_hz: int,
+    to_addr: int,
+    range_index: int | None = None,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     _validate_scope_range("scope fixed edge", edge, 1, 4)
     if start_hz < 0:
         raise ValueError(f"scope fixed edge start_hz must be >= 0, got {start_hz}")
     if end_hz <= start_hz:
-        raise ValueError(f"scope fixed edge end_hz must be greater than start_hz, got {start_hz}..{end_hz}")
-    resolved_range = _resolve_scope_fixed_edge_range(start_hz) if range_index is None else _validate_scope_range("scope fixed edge range", range_index, 1, 99)
-    payload = bcd_encode_value(resolved_range, byte_count=1) + bcd_encode_value(edge, byte_count=1) + bcd_encode(start_hz) + bcd_encode(end_hz)
+        raise ValueError(
+            f"scope fixed edge end_hz must be greater than start_hz, got {start_hz}..{end_hz}"
+        )
+    resolved_range = (
+        _resolve_scope_fixed_edge_range(start_hz)
+        if range_index is None
+        else _validate_scope_range("scope fixed edge range", range_index, 1, 99)
+    )
+    payload = (
+        bcd_encode_value(resolved_range, byte_count=1)
+        + bcd_encode_value(edge, byte_count=1)
+        + bcd_encode(start_hz)
+        + bcd_encode(end_hz)
+    )
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_fixed_edge", to_addr=to_addr, from_addr=from_addr, data=payload)
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_FIXED_EDGE, data=payload)
+        return _build_from_map(
+            cmd_map,
+            "get_scope_fixed_edge",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=payload,
+        )
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_FIXED_EDGE, data=payload
+    )
 
 
-def get_scope_rbw(to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def get_scope_rbw(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_rbw", to_addr=to_addr, from_addr=from_addr)
-    return _scope_query(_SUB_SCOPE_RBW, to_addr=to_addr, from_addr=from_addr, receiver=receiver)
+        return _build_from_map(
+            cmd_map, "get_scope_rbw", to_addr=to_addr, from_addr=from_addr
+        )
+    return _scope_query(
+        _SUB_SCOPE_RBW, to_addr=to_addr, from_addr=from_addr, receiver=receiver
+    )
 
 
-def scope_set_rbw(rbw: int, to_addr: int, from_addr: int = CONTROLLER_ADDR, cmd_map: CommandMap | None = None, *, receiver: int | None = None) -> bytes:
+def scope_set_rbw(
+    rbw: int,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
+) -> bytes:
     _validate_scope_range("scope rbw", rbw, 0, 2)
     if cmd_map is not None:
-        return _build_from_map(cmd_map, "get_scope_rbw", to_addr=to_addr, from_addr=from_addr, data=_scope_payload(bytes([rbw]), receiver))
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_RBW, data=_scope_payload(bytes([rbw]), receiver))
+        return _build_from_map(
+            cmd_map,
+            "get_scope_rbw",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_scope_payload(bytes([rbw]), receiver),
+        )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_RBW,
+        data=_scope_payload(bytes([rbw]), receiver),
+    )
 
 
 # --- Parse functions ---

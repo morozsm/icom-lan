@@ -51,13 +51,22 @@ class TestFormatCommand:
         assert format_command("VX{state};", state="0") == "VX0;"
 
     def test_sign_positive(self):
-        assert format_command("IS00{sign}{offset:04d};", sign="+", offset=600) == "IS00+0600;"
+        assert (
+            format_command("IS00{sign}{offset:04d};", sign="+", offset=600)
+            == "IS00+0600;"
+        )
 
     def test_sign_negative(self):
-        assert format_command("IS00{sign}{offset:04d};", sign="-", offset=1200) == "IS00-1200;"
+        assert (
+            format_command("IS00{sign}{offset:04d};", sign="-", offset=1200)
+            == "IS00-1200;"
+        )
 
     def test_offset(self):
-        assert format_command("CF001{sign}{offset:04d};", sign="+", offset=500) == "CF001+0500;"
+        assert (
+            format_command("CF001{sign}{offset:04d};", sign="+", offset=500)
+            == "CF001+0500;"
+        )
 
     def test_unknown_placeholder_raises(self):
         with pytest.raises(CatFormatError) as exc_info:

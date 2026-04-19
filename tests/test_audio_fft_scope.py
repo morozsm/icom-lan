@@ -13,7 +13,9 @@ from icom_lan.scope import ScopeFrame
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
-def _make_pcm_tone(freq_hz: float, duration_s: float, sample_rate: int = 48000) -> bytes:
+def _make_pcm_tone(
+    freq_hz: float, duration_s: float, sample_rate: int = 48000
+) -> bytes:
     """Generate PCM16 mono sine wave at given frequency."""
     t = np.arange(int(sample_rate * duration_s)) / sample_rate
     samples = (np.sin(2 * np.pi * freq_hz * t) * 16000).astype(np.int16)
@@ -221,8 +223,7 @@ class TestAudioFftScopeSignalDetection:
         # Generate two-tone signal
         t = np.arange(int(fft_size * 2)) / sample_rate
         signal = (
-            np.sin(2 * np.pi * 800 * t) * 10000
-            + np.sin(2 * np.pi * 2000 * t) * 10000
+            np.sin(2 * np.pi * 800 * t) * 10000 + np.sin(2 * np.pi * 2000 * t) * 10000
         ).astype(np.int16)
         scope.feed_audio(signal.tobytes())
 
@@ -239,7 +240,9 @@ class TestAudioFftScopeSignalDetection:
         noise = int(np.median(pixels))
 
         assert peak_800 > noise + 15, f"800Hz peak {peak_800} not above noise {noise}"
-        assert peak_2000 > noise + 15, f"2000Hz peak {peak_2000} not above noise {noise}"
+        assert peak_2000 > noise + 15, (
+            f"2000Hz peak {peak_2000} not above noise {noise}"
+        )
 
 
 # ── Frame rate limiting ─────────────────────────────────────────────────────
@@ -263,7 +266,9 @@ class TestAudioFftScopeFrameRate:
         # At 10 fps, processing ~0.5s of audio should yield few frames
         # (actual count depends on monotonic clock, but should be limited)
         # Main check: it doesn't produce 100 frames
-        assert len(frames) < 50, f"Too many frames: {len(frames)} (expected <50 at 10fps)"
+        assert len(frames) < 50, (
+            f"Too many frames: {len(frames)} (expected <50 at 10fps)"
+        )
 
 
 # ── Averaging ───────────────────────────────────────────────────────────────
@@ -437,7 +442,9 @@ class TestAudioFftScopeModeBandwidth:
         """USB mode max_hz=3600 → ~153 bins (±76 bins × 23.4 Hz/bin)."""
         fft_size = 2048
         sample_rate = 48000
-        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope = AudioFftScope(
+            fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate
+        )
         scope.set_center_freq(14_074_000)
         scope.set_mode_bandwidth(3600)
         frame = self._get_frame(scope, fft_size)
@@ -451,7 +458,9 @@ class TestAudioFftScopeModeBandwidth:
         """AM mode max_hz=10000 → ~427 bins."""
         fft_size = 2048
         sample_rate = 48000
-        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope = AudioFftScope(
+            fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate
+        )
         scope.set_center_freq(7_200_000)
         scope.set_mode_bandwidth(10000)
         frame = self._get_frame(scope, fft_size)
@@ -468,7 +477,9 @@ class TestAudioFftScopeModeBandwidth:
         center = 14_074_000
         max_hz = 3600
 
-        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope = AudioFftScope(
+            fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate
+        )
         scope.set_center_freq(center)
         scope.set_mode_bandwidth(max_hz)
         frame = self._get_frame(scope, fft_size)
@@ -486,7 +497,9 @@ class TestAudioFftScopeModeBandwidth:
         sample_rate = 48000
         center = 14_074_000
 
-        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope = AudioFftScope(
+            fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate
+        )
         scope.set_center_freq(center)
         frame = self._get_frame(scope, fft_size)
 
@@ -497,7 +510,9 @@ class TestAudioFftScopeModeBandwidth:
         """Changing bandwidth mid-stream produces frames with new bin count."""
         fft_size = 2048
         sample_rate = 48000
-        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope = AudioFftScope(
+            fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate
+        )
         scope.set_center_freq(14_074_000)
 
         frames: list[ScopeFrame] = []
@@ -534,7 +549,9 @@ class TestAudioFftScopeModeBandwidth:
         """Changing bandwidth clears averaging buffer to avoid bin-count mismatch."""
         fft_size = 2048
         sample_rate = 48000
-        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=4, sample_rate=sample_rate)
+        scope = AudioFftScope(
+            fft_size=fft_size, fps=100, avg_count=4, sample_rate=sample_rate
+        )
         scope.set_center_freq(14_074_000)
 
         frames: list[ScopeFrame] = []

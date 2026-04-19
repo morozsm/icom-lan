@@ -52,13 +52,19 @@ async def prepare_ic705_data_profile(
         split=False,
         vfo="A",
         data_mode=True,
-        data_off_mod_input=int(data_off_mod_input) if data_off_mod_input is not None else None,
+        data_off_mod_input=int(data_off_mod_input)
+        if data_off_mod_input is not None
+        else None,
         data1_mod_input=int(data1_mod_input) if data1_mod_input is not None else None,
         squelch_level=int(squelch_level) if squelch_level is not None else None,
         equalize_vfo=True,
         scope_enabled=True if enable_scope else None,
-        scope_mode=int(scope_mode) if (enable_scope and scope_mode is not None) else None,
-        scope_span=int(scope_span) if (enable_scope and scope_span is not None) else None,
+        scope_mode=int(scope_mode)
+        if (enable_scope and scope_mode is not None)
+        else None,
+        scope_span=int(scope_span)
+        if (enable_scope and scope_span is not None)
+        else None,
         scope_output=scope_output,
         scope_policy=scope_policy,
         scope_timeout=scope_timeout,

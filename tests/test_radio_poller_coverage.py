@@ -125,13 +125,21 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     # instance attributes so isinstance() succeeds on Python 3.12+ where
     # __getattr__-based attribute access no longer satisfies runtime-checkable
     # protocol isinstance checks.
-    from icom_lan.radio_protocol import AdvancedControlCapable as _ACC, ScopeCapable as _SC
+    from icom_lan.radio_protocol import (
+        AdvancedControlCapable as _ACC,
+        ScopeCapable as _SC,
+    )
+
     try:
         from typing import get_protocol_members as _gpm  # Python 3.13+
+
         _proto_attrs = _gpm(_ACC) | _gpm(_SC)
     except ImportError:
         import typing as _typing
-        _proto_attrs = _typing._get_protocol_attrs(_ACC) | _typing._get_protocol_attrs(_SC)  # type: ignore[attr-defined]
+
+        _proto_attrs = _typing._get_protocol_attrs(_ACC) | _typing._get_protocol_attrs(
+            _SC
+        )  # type: ignore[attr-defined]
     for _attr in _proto_attrs:
         if _attr not in vars(radio):
             setattr(radio, _attr, AsyncMock())
@@ -223,13 +231,21 @@ async def test_execute_event_emitting_commands_and_vfo_paths() -> None:
 
     await poller._execute(SelectVfo("SUB"))  # noqa: SLF001
     assert radio._radio_state.active == "SUB"
-    radio.send_civ.assert_any_await(0x07, sub=None, data=bytes([0xD1]), wait_response=False)
+    radio.send_civ.assert_any_await(
+        0x07, sub=None, data=bytes([0xD1]), wait_response=False
+    )
     # Scope follows the selected receiver (0x27 0x12 0x01 = SUB).
-    radio.send_civ.assert_any_await(0x27, sub=0x12, data=bytes([0x01]), wait_response=False)
+    radio.send_civ.assert_any_await(
+        0x27, sub=0x12, data=bytes([0x01]), wait_response=False
+    )
     await poller._execute(SelectVfo("MAIN"))  # noqa: SLF001
     assert radio._radio_state.active == "MAIN"
-    radio.send_civ.assert_any_await(0x07, sub=None, data=bytes([0xD0]), wait_response=False)
-    radio.send_civ.assert_any_await(0x27, sub=0x12, data=bytes([0x00]), wait_response=False)
+    radio.send_civ.assert_any_await(
+        0x07, sub=None, data=bytes([0xD0]), wait_response=False
+    )
+    radio.send_civ.assert_any_await(
+        0x27, sub=0x12, data=bytes([0x00]), wait_response=False
+    )
     # Re-clicking the active receiver is a no-op CI-V-wise but still emits
     # the state event so UI listeners can refresh.
     civ_calls_before = radio.send_civ.await_count
@@ -456,12 +472,8 @@ async def test_run_backoff_and_query_error_paths() -> None:
     assert poller._send_query.await_count >= 2  # restore probe + normal query
 
     poller2 = RadioPoller(_make_radio(), StateCache(), CommandQueue())
-    poller2._send_query = AsyncMock(
-        side_effect=RuntimeError("query failed")
-    )  # noqa: SLF001
-    poller2._queue.wait = AsyncMock(
-        side_effect=asyncio.CancelledError()
-    )  # noqa: SLF001
+    poller2._send_query = AsyncMock(side_effect=RuntimeError("query failed"))  # noqa: SLF001
+    poller2._queue.wait = AsyncMock(side_effect=asyncio.CancelledError())  # noqa: SLF001
     with patch("icom_lan.web.radio_poller.asyncio.sleep", new=AsyncMock()):
         await poller2._run()  # noqa: SLF001
 
@@ -524,9 +536,7 @@ def test_state_queries_include_operator_toggle_reads_for_ic7610() -> None:
         (0x16, 0x58, None),
         (0x1A, 0x04, 0x00),
         (0x1A, 0x04, 0x01),
-    }.issubset(
-        set(poller._STATE_QUERIES)
-    )  # noqa: SLF001
+    }.issubset(set(poller._STATE_QUERIES))  # noqa: SLF001
 
 
 def test_state_queries_include_transceiver_status_reads_for_ic7610() -> None:
@@ -538,9 +548,7 @@ def test_state_queries_include_transceiver_status_reads_for_ic7610() -> None:
         (0x21, 0x00, None),
         (0x21, 0x01, None),
         (0x21, 0x02, None),
-    }.issubset(
-        set(poller._STATE_QUERIES)
-    )  # noqa: SLF001
+    }.issubset(set(poller._STATE_QUERIES))  # noqa: SLF001
 
 
 def test_fast_cmds_include_comp_meter_for_ic7610() -> None:

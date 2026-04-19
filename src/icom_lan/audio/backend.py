@@ -529,7 +529,11 @@ class FakeAudioBackend:
     ) -> None:
         self._devices: list[AudioDeviceInfo] = devices or []
         self._supported_rates: set[int] = supported_sample_rates or {
-            8_000, 16_000, 44_100, 48_000, 96_000,
+            8_000,
+            16_000,
+            44_100,
+            48_000,
+            96_000,
         }
         self.rx_streams: list[FakeRxStream] = []
         self.tx_streams: list[FakeTxStream] = []

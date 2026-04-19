@@ -183,7 +183,9 @@ class _QueueRecorder:
         self.items.append(item)
 
 
-def _handler(radio: object | None = None, server: object | None = None) -> ControlHandler:
+def _handler(
+    radio: object | None = None, server: object | None = None
+) -> ControlHandler:
     ws = SimpleNamespace(send_text=AsyncMock(), recv=AsyncMock())
     return ControlHandler(ws, radio, "9.9.9", "IC-7610", server=server)
 
@@ -351,7 +353,9 @@ async def test_set_audio_peak_filter_off() -> None:
 async def test_set_audio_peak_filter_sub_receiver() -> None:
     srv, q = _server()
     h = _handler(radio=_capable_radio(), server=srv)
-    result = await h._enqueue_command("set_audio_peak_filter", {"on": True, "receiver": 1})
+    result = await h._enqueue_command(
+        "set_audio_peak_filter", {"on": True, "receiver": 1}
+    )
     assert result == {"on": True, "receiver": 1}
     assert q.items[0].receiver == 1
 
@@ -385,7 +389,9 @@ async def test_set_digisel_shift_happy_path() -> None:
 async def test_set_digisel_shift_sub_receiver() -> None:
     srv, q = _server()
     h = _handler(radio=_capable_radio(), server=srv)
-    result = await h._enqueue_command("set_digisel_shift", {"level": 255, "receiver": 1})
+    result = await h._enqueue_command(
+        "set_digisel_shift", {"level": 255, "receiver": 1}
+    )
     assert result == {"level": 255, "receiver": 1}
     assert q.items[0].receiver == 1
 

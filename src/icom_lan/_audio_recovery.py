@@ -134,4 +134,3 @@ class AudioRecoveryRuntime:
 
         if self._host._on_audio_recovery is not None:
             self._host._on_audio_recovery(AudioRecoveryState.RECOVERED)
-

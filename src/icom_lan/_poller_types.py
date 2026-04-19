@@ -319,7 +319,9 @@ class SetDriveGain:
 
 @dataclass(frozen=True, slots=True)
 class ScanStart:
-    scan_type: int = 0x01  # 0x01=programmed, 0x02=P2, 0x03=ΔF, 0x12=fine, 0x22=mem, 0x23=sel_mem
+    scan_type: int = (
+        0x01  # 0x01=programmed, 0x02=P2, 0x03=ΔF, 0x12=fine, 0x22=mem, 0x23=sel_mem
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -356,6 +358,7 @@ class SetVox:
 @dataclass(frozen=True, slots=True)
 class SetTunerStatus:
     """0=OFF, 1=ON, 2=tune."""
+
     value: int
 
 
@@ -500,18 +503,21 @@ class SetScopeHold:
 @dataclass(frozen=True, slots=True)
 class SetScopeEdge:
     """Select fixed-edge number (1-4)."""
+
     edge: int
 
 
 @dataclass(frozen=True, slots=True)
 class SetScopeVbw:
     """Set scope VBW (Video Bandwidth): narrow=True for narrow."""
+
     narrow: bool
 
 
 @dataclass(frozen=True, slots=True)
 class SetScopeRbw:
     """Set scope RBW (Resolution Bandwidth): 0=wide, 1=mid, 2=narrow."""
+
     rbw: int
 
 
@@ -795,6 +801,7 @@ class QuickSplitTrigger:
 @dataclass(frozen=True, slots=True)
 class Speak:
     """Trigger voice synthesizer: 0=all, 1=freq+S, 2=mode."""
+
     mode: int = 0
 
 

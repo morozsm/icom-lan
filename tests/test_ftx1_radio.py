@@ -339,9 +339,7 @@ async def test_command_not_in_profile_raises(connected_radio):
 @pytest.mark.asyncio
 async def test_transport_timeout_propagates(connected_radio):
     """CatTimeoutError from transport bubbles up unchanged."""
-    connected_radio._transport.query = AsyncMock(
-        side_effect=CatTimeoutError("timeout")
-    )
+    connected_radio._transport.query = AsyncMock(side_effect=CatTimeoutError("timeout"))
     with pytest.raises(CatTimeoutError):
         await connected_radio.get_freq()
 
@@ -357,6 +355,7 @@ async def test_parse_error_propagates(connected_radio):
 def test_radio_state_initially_default(radio):
     """radio_state is a RadioState with default values."""
     from icom_lan.radio_state import RadioState
+
     assert isinstance(radio.radio_state, RadioState)
     assert radio.radio_state.ptt is False
     assert radio.radio_state.main.freq == 0
@@ -703,7 +702,6 @@ async def test_get_mic_gain(connected_radio):
 async def test_get_processor(connected_radio):
     connected_radio._transport.query = AsyncMock(return_value="PR01")
     assert await connected_radio.get_processor() is True
-
 
 
 # Monitor (ML) — FTX-1 does not support ML command via CAT (returns ?;)

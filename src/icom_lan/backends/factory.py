@@ -6,7 +6,12 @@ import logging
 
 from ..radio import IcomRadio  # noqa: TID251
 from ..radio_protocol import Radio
-from .config import BackendConfig, LanBackendConfig, SerialBackendConfig, YaesuCatBackendConfig
+from .config import (
+    BackendConfig,
+    LanBackendConfig,
+    SerialBackendConfig,
+    YaesuCatBackendConfig,
+)
 from .ic7300.serial import Ic7300SerialRadio
 from .ic705.serial import Ic705SerialRadio
 from .ic9700.serial import Ic9700SerialRadio
@@ -77,7 +82,8 @@ def create_radio(config: BackendConfig) -> Radio:
         else:
             # Default to IC-7610 for compatibility
             logging.getLogger(__name__).warning(
-                "Unknown model %r, defaulting to IC-7610", model,
+                "Unknown model %r, defaulting to IC-7610",
+                model,
             )
             serial_class = Icom7610SerialRadio
 
@@ -102,7 +108,9 @@ def create_radio(config: BackendConfig) -> Radio:
             "Unsupported config instance for backend "
             f"{backend!r}; use typed backend config dataclasses."
         )
-    raise ValueError("Unsupported backend. Expected backend 'lan', 'serial', or 'yaesu-cat'.")
+    raise ValueError(
+        "Unsupported backend. Expected backend 'lan', 'serial', or 'yaesu-cat'."
+    )
 
 
 __all__ = ["create_radio"]

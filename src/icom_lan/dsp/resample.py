@@ -67,7 +67,5 @@ def resample_if_needed(
     # Fallback: linear interpolation with numpy.
     out_len = int(len(samples) * to_rate / from_rate)
     indices = np.linspace(0, len(samples) - 1, out_len, dtype=np.float64)
-    resampled = np.interp(indices, np.arange(len(samples)), samples).astype(
-        np.float32
-    )
+    resampled = np.interp(indices, np.arange(len(samples)), samples).astype(np.float32)
     return resampled, to_rate

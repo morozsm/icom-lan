@@ -65,31 +65,101 @@ _BANDS: list[tuple[str, int, int]] = [
 # ── Language code → name (common ones) ──
 
 _LANG_NAMES: dict[str, str] = {
-    "A": "Arabic", "AB": "Abkhaz", "AF": "Afar", "AH": "Amharic",
-    "AL": "Albanian", "AM": "Amoy", "AR": "Armenian", "AZ": "Azeri",
-    "BE": "Bengali", "BG": "Bulgarian", "BM": "Burmese", "BR": "Brazilian",
-    "BU": "Byelorussian", "C": "Chinese", "CA": "Cantonese", "CB": "Cham",
-    "CR": "Creole", "CZ": "Czech", "D": "German", "DA": "Danish",
-    "DI": "Dinka", "DR": "Dari", "DZ": "Dzongkha", "E": "English",
-    "ES": "Estonian", "F": "French", "FA": "Faroese", "FI": "Finnish",
-    "FJ": "Fijian", "FU": "Fulani", "G": "Greek", "GE": "Georgian",
-    "HA": "Hausa", "HB": "Hebrew", "HI": "Hindi", "HU": "Hungarian",
-    "I": "Italian", "IC": "Icelandic", "IN": "Indonesian", "J": "Japanese",
-    "JV": "Javanese", "K": "Korean", "KA": "Kazakh", "KH": "Khmer",
-    "KN": "Kannada", "KR": "Karen", "KU": "Kurdish", "KZ": "Kirghiz",
-    "LA": "Lao", "LT": "Lithuanian", "LV": "Latvian", "M": "Mandarin",
-    "ML": "Malay", "MN": "Mongolian", "MO": "Moldavian", "MY": "Malayalam",
-    "NE": "Nepali", "NL": "Dutch", "NO": "Norwegian", "OR": "Oriya",
-    "P": "Portuguese", "PA": "Pashto", "PJ": "Punjabi", "PL": "Polish",
-    "R": "Russian", "RO": "Romanian", "S": "Spanish", "SC": "Serbo-Croat",
-    "SD": "Sindhi", "SI": "Sinhalese", "SK": "Slovak", "SL": "Slovenian",
-    "SO": "Somali", "SW": "Swahili", "T": "Thai", "TA": "Tamil",
-    "TB": "Tibetan", "TG": "Tagalog", "TI": "Tigrinya", "TJ": "Tajik",
-    "TK": "Turkmen", "TU": "Turkish", "TW": "Taiwanese", "UR": "Urdu",
-    "UZ": "Uzbek", "VN": "Vietnamese", "W": "Wolof", "YO": "Yoruba",
+    "A": "Arabic",
+    "AB": "Abkhaz",
+    "AF": "Afar",
+    "AH": "Amharic",
+    "AL": "Albanian",
+    "AM": "Amoy",
+    "AR": "Armenian",
+    "AZ": "Azeri",
+    "BE": "Bengali",
+    "BG": "Bulgarian",
+    "BM": "Burmese",
+    "BR": "Brazilian",
+    "BU": "Byelorussian",
+    "C": "Chinese",
+    "CA": "Cantonese",
+    "CB": "Cham",
+    "CR": "Creole",
+    "CZ": "Czech",
+    "D": "German",
+    "DA": "Danish",
+    "DI": "Dinka",
+    "DR": "Dari",
+    "DZ": "Dzongkha",
+    "E": "English",
+    "ES": "Estonian",
+    "F": "French",
+    "FA": "Faroese",
+    "FI": "Finnish",
+    "FJ": "Fijian",
+    "FU": "Fulani",
+    "G": "Greek",
+    "GE": "Georgian",
+    "HA": "Hausa",
+    "HB": "Hebrew",
+    "HI": "Hindi",
+    "HU": "Hungarian",
+    "I": "Italian",
+    "IC": "Icelandic",
+    "IN": "Indonesian",
+    "J": "Japanese",
+    "JV": "Javanese",
+    "K": "Korean",
+    "KA": "Kazakh",
+    "KH": "Khmer",
+    "KN": "Kannada",
+    "KR": "Karen",
+    "KU": "Kurdish",
+    "KZ": "Kirghiz",
+    "LA": "Lao",
+    "LT": "Lithuanian",
+    "LV": "Latvian",
+    "M": "Mandarin",
+    "ML": "Malay",
+    "MN": "Mongolian",
+    "MO": "Moldavian",
+    "MY": "Malayalam",
+    "NE": "Nepali",
+    "NL": "Dutch",
+    "NO": "Norwegian",
+    "OR": "Oriya",
+    "P": "Portuguese",
+    "PA": "Pashto",
+    "PJ": "Punjabi",
+    "PL": "Polish",
+    "R": "Russian",
+    "RO": "Romanian",
+    "S": "Spanish",
+    "SC": "Serbo-Croat",
+    "SD": "Sindhi",
+    "SI": "Sinhalese",
+    "SK": "Slovak",
+    "SL": "Slovenian",
+    "SO": "Somali",
+    "SW": "Swahili",
+    "T": "Thai",
+    "TA": "Tamil",
+    "TB": "Tibetan",
+    "TG": "Tagalog",
+    "TI": "Tigrinya",
+    "TJ": "Tajik",
+    "TK": "Turkmen",
+    "TU": "Turkish",
+    "TW": "Taiwanese",
+    "UR": "Urdu",
+    "UZ": "Uzbek",
+    "VN": "Vietnamese",
+    "W": "Wolof",
+    "YO": "Yoruba",
     # Special codes
-    "-CW": "Morse", "-EC": "Carrier", "-HF": "HFDL", "-MX": "Music",
-    "-TS": "Time Signal", "-TY": "Digital/RTTY",
+    "-CW": "Morse",
+    "-EC": "Carrier",
+    "-HF": "HFDL",
+    "-MX": "Music",
+    "-TS": "Time Signal",
+    "-TY": "Digital/RTTY",
 }
 
 
@@ -266,32 +336,45 @@ def _parse_fcc_pipe(raw: str) -> list[dict[str, Any]]:
         owner = parts[26].strip() if len(parts) > 26 else ""
         power_str = parts[14].strip() if len(parts) > 14 else ""
 
-        results.append({
-            "freq_khz": freq_khz,
-            "freq_hz": int(freq_khz * 1000),
-            "station": call,
-            "city": city,
-            "state": state,
-            "country": "USA",
-            "language": "E",
-            "language_name": "English",
-            "target": f"{city}, {state}",
-            "remarks": f"{power_str} — {owner}" if owner else power_str,
-            "band": "MW" if freq_khz < 1700 else "FM",
-            "time_str": "local",
-            "days": "",
-            "on_air": True,
-            "source": "FCC",
-        })
+        results.append(
+            {
+                "freq_khz": freq_khz,
+                "freq_hz": int(freq_khz * 1000),
+                "station": call,
+                "city": city,
+                "state": state,
+                "country": "USA",
+                "language": "E",
+                "language_name": "English",
+                "target": f"{city}, {state}",
+                "remarks": f"{power_str} — {owner}" if owner else power_str,
+                "band": "MW" if freq_khz < 1700 else "FM",
+                "time_str": "local",
+                "days": "",
+                "on_air": True,
+                "source": "FCC",
+            }
+        )
     return results
 
 
 def _curl_download(url: str) -> str:
     """Download via curl subprocess (more reliable for FCC)."""
     import subprocess
+
     result = subprocess.run(
-        ["curl", "-sL", "--max-time", "15", "-H", "User-Agent: Mozilla/5.0 (icom-lan)", url],
-        capture_output=True, text=True, timeout=20,
+        [
+            "curl",
+            "-sL",
+            "--max-time",
+            "15",
+            "-H",
+            "User-Agent: Mozilla/5.0 (icom-lan)",
+            url,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
     )
     return result.stdout
 
@@ -611,7 +694,8 @@ class EiBiProvider:
         if query:
             q = query.lower()
             results = [
-                s for s in results
+                s
+                for s in results
                 if q in s.station.lower()
                 or q in s.language_name.lower()
                 or q in s.country.lower()
@@ -697,6 +781,7 @@ class EiBiProvider:
     def get_bands(self) -> list[dict[str, Any]]:
         """Return list of bands with station counts."""
         from collections import Counter
+
         band_counts: Counter[str] = Counter()
         for s in self._stations:
             band_counts[s.band] += 1
@@ -708,7 +793,11 @@ class EiBiProvider:
                 on_air_counts[s.band] += 1
 
         return [
-            {"band": name, "total": band_counts.get(name, 0), "on_air": on_air_counts.get(name, 0)}
+            {
+                "band": name,
+                "total": band_counts.get(name, 0),
+                "on_air": on_air_counts.get(name, 0),
+            }
             for name, _, _ in _BANDS
             if band_counts.get(name, 0) > 0
         ]

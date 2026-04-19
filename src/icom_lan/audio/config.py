@@ -80,8 +80,12 @@ class AudioConfig:
         """Return a new config with CLI overrides applied (CLI > config > defaults)."""
         b = BridgeConfig(
             device=bridge_device if bridge_device is not None else self.bridge.device,
-            tx_device=bridge_tx_device if bridge_tx_device is not None else self.bridge.tx_device,
-            rx_only=bridge_rx_only if bridge_rx_only is not None else self.bridge.rx_only,
+            tx_device=bridge_tx_device
+            if bridge_tx_device is not None
+            else self.bridge.tx_device,
+            rx_only=bridge_rx_only
+            if bridge_rx_only is not None
+            else self.bridge.rx_only,
             label=bridge_label if bridge_label is not None else self.bridge.label,
             reconnect=BridgeReconnectConfig(
                 max_retries=(
@@ -97,8 +101,12 @@ class AudioConfig:
             ),
         )
         u = UsbConfig(
-            rx_device=usb_rx_device if usb_rx_device is not None else self.usb.rx_device,
-            tx_device=usb_tx_device if usb_tx_device is not None else self.usb.tx_device,
+            rx_device=usb_rx_device
+            if usb_rx_device is not None
+            else self.usb.rx_device,
+            tx_device=usb_tx_device
+            if usb_tx_device is not None
+            else self.usb.tx_device,
             last_rx_uid=self.usb.last_rx_uid,
             last_tx_uid=self.usb.last_tx_uid,
         )
@@ -148,6 +156,7 @@ def load_audio_config(path: Path | str | None = None) -> AudioConfig:
             data = tomllib.load(f)
     except Exception as exc:
         import sys as _sys
+
         logger.warning("Failed to parse %s", config_path, exc_info=True)
         print(
             f"Warning: failed to parse {config_path}: {exc} — using defaults",

@@ -48,6 +48,7 @@ class AudioObjectPropertyAddress(ctypes.Structure):
 # Low-level helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_coreaudio() -> ctypes.CDLL:
     """Load the CoreAudio framework, raising *OSError* on failure."""
     path = ctypes.util.find_library("CoreAudio")
@@ -148,6 +149,7 @@ def _get_string_property(ca: ctypes.CDLL, device_id: int, selector: int) -> str 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def get_device_uid_map() -> dict[str, str]:
     """Return ``{device_name: device_uid}`` for all CoreAudio devices.
