@@ -136,6 +136,14 @@
     ...(txCapable ? [{ id: 'tx', label: 'TX' }] : []),
   ]);
 
+  // Reset to ESSENTIALS if the active chip disappears from the list
+  // (e.g., capability refresh after reconnecting to a non-TX radio).
+  $effect(() => {
+    if (!mobileChips.some((c) => c.id === activeChipId)) {
+      activeChipId = 'essentials';
+    }
+  });
+
   // ── Tuning strip ──
   let availableSteps = $derived(getStepsForMode(mode.currentMode));
   let tuningStep = $state(1000); // Hz

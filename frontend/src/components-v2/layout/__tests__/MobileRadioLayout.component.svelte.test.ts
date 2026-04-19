@@ -215,6 +215,34 @@ describe('MobileRadioLayout TX gating', () => {
     // And the TX-only PTT is not mounted on cold-open (ESSENTIALS active by default).
     expect(t.querySelector('.m-ptt-btn')).toBeNull();
   });
+
+  it('auto-resets active chip to ESSENTIALS when TX capability drops at runtime (#839)', () => {
+    // Back the hasTx mock with a reactive $state so the component's $derived
+    // txCapable re-evaluates when we flip capability mid-session.
+    const txState = $state({ on: true });
+    vi.mocked(hasTx).mockImplementation(() => txState.on);
+
+    const t = mountMobile();
+    // Select TX chip while TX-capable.
+    const txChip = Array.from(t.querySelectorAll<HTMLButtonElement>('.m-chip')).find(
+      (b) => b.textContent?.trim() === 'TX',
+    );
+    expect(txChip, 'TX chip should be present when hasTx=true').toBeDefined();
+    txChip!.click();
+    flushSync();
+    expect(t.querySelector('#m-chip-panel-tx')).not.toBeNull();
+
+    // Simulate capability refresh: TX disappears.
+    txState.on = false;
+    flushSync();
+
+    // Guard $effect must reset activeChipId back to ESSENTIALS, so no panel goes blank.
+    expect(t.querySelector('#m-chip-panel-tx')).toBeNull();
+    expect(t.querySelector('#m-chip-panel-essentials')).not.toBeNull();
+    // ESSENTIALS chip should now be the active one in the chip bar.
+    const active = t.querySelector('.m-chip-bar .m-chip-active');
+    expect(active?.textContent?.trim()).toBe('ESSENTIALS');
+  });
 });
 
 describe('MobileRadioLayout chip-scroll IA (#839)', () => {
