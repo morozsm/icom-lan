@@ -3,11 +3,13 @@
   import { hasAudioFft, hasDualReceiver, getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
   import {
     toTxProps, toRitXitProps, toVfoOpsProps, toMeterProps,
-    toRfFrontEndProps, toAgcProps, toDspProps, toFilterProps,
+    toDspProps, toFilterProps,
   } from '../../wiring/state-adapter';
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
+  import AmberIndStrip from './AmberIndStrip.svelte';
+  import type { IndToken } from './AmberIndStrip.svelte';
   import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
 
   // Band lookup by frequency (LCD-specific)
@@ -46,17 +48,12 @@
   let ritXit = $derived(toRitXitProps(radioState, null));
   let vfoOps = $derived(toVfoOpsProps(radioState, null));
   let meter = $derived(toMeterProps(radioState));
-  let rf = $derived(toRfFrontEndProps(radioState, null));
-  let agc = $derived(toAgcProps(radioState, null));
   let dsp = $derived(toDspProps(radioState, null));
   let filterProps = $derived(toFilterProps(radioState, caps));
 
   // ── LCD-specific derivations (no adapter equivalent) ──
   let rx = $derived(radioState?.active === 'SUB' ? radioState?.sub : radioState?.main);
-  let freqHz = $derived(rx?.freqHz ?? 0);
-  let bandLabel = $derived(freqToBand(freqHz));
   let mode = $derived(rx?.mode ?? '---');
-  let filter = $derived(rx?.filter ?? '');
   let subSValue = $derived(radioState?.sub?.sMeter ?? 0);
 
   type MeterSource = 'S' | 'PO' | 'SWR' | 'ALC' | 'COMP';
@@ -83,20 +80,11 @@
     userMeterSource = METER_SOURCES[(idx + 1) % METER_SOURCES.length];
   }
 
-  // LCD-specific: NB/NR active includes level > 0
-  let nbActive = $derived(dsp.nbActive || dsp.nbLevel > 0);
-  let nrActive = $derived(dsp.nrMode > 0 || dsp.nrLevel > 0);
+  // LCD-specific derivations
   let notchActive = $derived(dsp.notchMode === 'manual');
   let lockActive = $derived(radioState?.dialLock ?? false);
-  let contourActive = $derived((rx?.contour ?? 0) > 0);
   let contourLevel = $derived(rx?.contour ?? 0);
-  let anfActive = $derived(rx?.autoNotch ?? false);
   let dataActive = $derived(!!rx?.dataMode);
-  let activeVfo = $derived(radioState?.active === 'SUB' ? 'B' : 'A');
-
-  let subRx = $derived(radioState?.active === 'SUB' ? radioState?.main : radioState?.sub);
-  let subFreqHz = $derived(subRx?.freqHz ?? 0);
-  let subMode = $derived(subRx?.mode ?? '');
 
   let fftPixels = $state<Uint8Array | null>(null);
   let fftBandwidth = $state<number | undefined>(undefined);
@@ -108,9 +96,127 @@
     0: 'OFF', 1: 'FAST', 2: 'MID', 3: 'SLOW',
     4: 'A-F', 5: 'A-M', 6: 'A-S',
   };
-  function agcLabel(m: number): string {
-    return AGC_LABELS[m] ?? `${m}`;
+
+  // ── Indicator token arrays ──
+  // globalTokens: radio-wide status indicators for the top global strip
+  let globalTokens = $derived<IndToken[]>([
+    {
+      id: 'tx', label: 'TX', active: tx.txActive,
+      variant: tx.txActive ? 'tx' : undefined,
+    },
+    ...(hasCapability('vox') ? [{ id: 'vox' as const, label: 'VOX', active: tx.voxActive }] : []),
+    ...(hasCapability('compressor') ? [{
+      id: 'proc' as const,
+      label: tx.compActive ? `PROC ${tx.compLevel}` : 'PROC',
+      active: tx.compActive,
+    }] : []),
+    ...(hasCapability('tuner') ? [{
+      id: 'atu' as const,
+      label: tx.atuTuning ? 'TUNE' : 'ATU',
+      active: tx.atuActive,
+      variant: tx.atuTuning ? ('tuning' as const) : undefined,
+    }] : []),
+    ...(hasCapability('split') ? [{ id: 'split' as const, label: 'SPLIT', active: vfoOps.splitActive }] : []),
+    ...(hasCapability('dial_lock') ? [{ id: 'lock' as const, label: 'LOCK', active: lockActive }] : []),
+    ...(dataActive ? [{ id: 'data' as const, label: 'DATA', active: true }] : []),
+    ...(hasCapability('ip_plus') ? [{
+      id: 'ipPlus' as const, label: 'IP+', active: radioState?.main?.ipplus ?? false,
+    }] : []),
+  ]);
+
+  // Helper: AGC label from raw AGC mode number
+  function agcLabelFor(agcMode: number): string {
+    return AGC_LABELS[agcMode] ?? `${agcMode}`;
   }
+
+  // vfoATokens: per-receiver indicators for VFO A (main)
+  let vfoATokens = $derived<IndToken[]>([
+    ...(hasCapability('attenuator') ? [{
+      id: 'att' as const, label: 'ATT', active: (radioState?.main?.att ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('preamp') ? [{
+      id: 'pre' as const,
+      label: (radioState?.main?.preamp ?? 0) === 0 ? 'IPO'
+           : (radioState?.main?.preamp ?? 0) === 1 ? 'AMP1' : 'AMP2',
+      active: true,
+    }] : []),
+    ...(hasCapability('digisel') ? [{
+      id: 'digisel' as const, label: 'DIGI-SEL', active: radioState?.main?.digisel ?? false,
+    }] : []),
+    ...(hasCapability('nb') ? [{
+      id: 'nb' as const,
+      label: (radioState?.main?.nb ?? false) || (radioState?.main?.nbLevel ?? 0) > 0
+        ? `NB ${radioState?.main?.nbLevel ?? 0}` : 'NB',
+      active: (radioState?.main?.nb ?? false) || (radioState?.main?.nbLevel ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('nr') ? [{
+      id: 'nr' as const,
+      label: (radioState?.main?.nr ?? false) || (radioState?.main?.nrLevel ?? 0) > 0
+        ? `NR ${radioState?.main?.nrLevel ?? 0}` : 'NR',
+      active: (radioState?.main?.nr ?? false) || (radioState?.main?.nrLevel ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('contour') ? [{
+      id: 'cont' as const, label: 'CONT',
+      active: (radioState?.main?.contour ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('notch') ? [
+      { id: 'notch' as const, label: 'NOTCH', active: radioState?.main?.manualNotch ?? false },
+      { id: 'anf' as const, label: 'ANF', active: radioState?.main?.autoNotch ?? false },
+    ] : []),
+    { id: 'agc' as const, label: `AGC ${agcLabelFor(radioState?.main?.agc ?? 2)}`, active: true },
+    ...(hasCapability('rf_gain') ? [{
+      id: 'rfg' as const, label: 'RFG', active: (radioState?.main?.rfGain ?? 255) < 255,
+    }] : []),
+    ...(hasCapability('squelch') ? [{
+      id: 'sql' as const, label: 'SQL', active: (radioState?.main?.squelch ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('rit') ? [{
+      id: 'rit' as const, label: 'RIT', active: ritXit.ritActive,
+    }] : []),
+  ]);
+
+  // vfoBTokens: per-receiver indicators for VFO B (sub)
+  let vfoBTokens = $derived<IndToken[]>([
+    ...(hasCapability('attenuator') ? [{
+      id: 'att' as const, label: 'ATT', active: (radioState?.sub?.att ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('preamp') ? [{
+      id: 'pre' as const,
+      label: (radioState?.sub?.preamp ?? 0) === 0 ? 'IPO'
+           : (radioState?.sub?.preamp ?? 0) === 1 ? 'AMP1' : 'AMP2',
+      active: true,
+    }] : []),
+    ...(hasCapability('digisel') ? [{
+      id: 'digisel' as const, label: 'DIGI-SEL', active: radioState?.sub?.digisel ?? false,
+    }] : []),
+    ...(hasCapability('nb') ? [{
+      id: 'nb' as const,
+      label: (radioState?.sub?.nb ?? false) || (radioState?.sub?.nbLevel ?? 0) > 0
+        ? `NB ${radioState?.sub?.nbLevel ?? 0}` : 'NB',
+      active: (radioState?.sub?.nb ?? false) || (radioState?.sub?.nbLevel ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('nr') ? [{
+      id: 'nr' as const,
+      label: (radioState?.sub?.nr ?? false) || (radioState?.sub?.nrLevel ?? 0) > 0
+        ? `NR ${radioState?.sub?.nrLevel ?? 0}` : 'NR',
+      active: (radioState?.sub?.nr ?? false) || (radioState?.sub?.nrLevel ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('contour') ? [{
+      id: 'cont' as const, label: 'CONT',
+      active: (radioState?.sub?.contour ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('notch') ? [
+      { id: 'notch' as const, label: 'NOTCH', active: radioState?.sub?.manualNotch ?? false },
+      { id: 'anf' as const, label: 'ANF', active: radioState?.sub?.autoNotch ?? false },
+    ] : []),
+    { id: 'agc' as const, label: `AGC ${agcLabelFor(radioState?.sub?.agc ?? 2)}`, active: true },
+    ...(hasCapability('rf_gain') ? [{
+      id: 'rfg' as const, label: 'RFG', active: (radioState?.sub?.rfGain ?? 255) < 255,
+    }] : []),
+    ...(hasCapability('squelch') ? [{
+      id: 'sql' as const, label: 'SQL', active: (radioState?.sub?.squelch ?? 0) > 0,
+    }] : []),
+  ]);
 
   // Scope WS connection — reactive to capabilities (may load after mount)
   $effect(() => {
@@ -165,6 +271,11 @@
   <div class="lcd-screen" class:dual={hasDualReceiver()}>
     <div class="lcd-scanlines"></div>
 
+    <!-- ═══ Global indicator strip (TX/VOX/PROC/ATU/SPLIT/LOCK/DATA/IP+) ═══ -->
+    <div style:grid-area="global">
+      <AmberIndStrip zone="global" tokens={globalTokens} />
+    </div>
+
     <!-- ═══ VFO A cockpit (main receiver — always left/full column) ═══ -->
     <div
       class="lcd-vfo-col lcd-vfo-a"
@@ -202,6 +313,9 @@
           <span class="rit-value">{ritXit.ritOffset >= 0 ? '+' : ''}{ritXit.ritOffset} Hz</span>
         </div>
       {/if}
+
+      <!-- Per-VFO indicator strip for VFO A (main receiver) -->
+      <AmberIndStrip zone="perVfo" tokens={vfoATokens} />
     </div>
 
     <!-- ═══ VFO B cockpit (sub receiver — equal peer on dual-RX) ═══ -->
@@ -235,6 +349,9 @@
             <AmberSmeter value={subSValue} source="S" />
           {/if}
         </div>
+
+        <!-- Per-VFO indicator strip for VFO B (sub receiver) -->
+        <AmberIndStrip zone="perVfo" tokens={vfoBTokens} />
       </div>
     {/if}
 
@@ -260,38 +377,8 @@
       {/if}
     </div>
 
-    <!-- ═══ Aux row: indicators (status tokens) — full-width ═══ -->
-    <div class="lcd-ind-row" style:grid-area="aux">
-      <span class="lcd-ind" class:active={tx.txActive} class:ind-tx={tx.txActive}>TX</span>
-      {#if hasCapability('vox')}<span class="lcd-ind" class:active={tx.voxActive}>VOX</span>{/if}
-      {#if hasCapability('compressor')}<span class="lcd-ind" class:active={tx.compActive}>PROC{tx.compActive ? ` ${tx.compLevel}` : ''}</span>{/if}
-
-      <span class="ind-sep"></span>
-
-      {#if hasCapability('attenuator')}<span class="lcd-ind" class:active={rf.att > 0}>ATT</span>{/if}
-      {#if hasCapability('preamp')}<span class="lcd-ind active">{rf.pre === 0 ? 'IPO' : rf.pre === 1 ? 'AMP1' : 'AMP2'}</span>{/if}
-      {#if hasCapability('digisel')}<span class="lcd-ind" class:active={rf.digiSel}>DIGI-SEL</span>{/if}
-      {#if hasCapability('ip_plus')}<span class="lcd-ind" class:active={rf.ipPlus}>IP+</span>{/if}
-      {#if hasCapability('tuner')}<span class="lcd-ind" class:active={tx.atuActive} class:ind-tuning={tx.atuTuning}>{tx.atuTuning ? 'TUNE' : 'ATU'}</span>{/if}
-
-      <span class="ind-sep"></span>
-
-      {#if hasCapability('nb')}<span class="lcd-ind" class:active={nbActive}>NB{nbActive ? ` ${dsp.nbLevel}` : ''}</span>{/if}
-      {#if hasCapability('nr')}<span class="lcd-ind" class:active={nrActive}>NR{nrActive ? ` ${dsp.nrLevel}` : ''}</span>{/if}
-      {#if hasCapability('contour')}<span class="lcd-ind" class:active={contourActive}>CONT</span>{/if}
-      {#if hasCapability('notch')}<span class="lcd-ind" class:active={notchActive}>NOTCH</span>{/if}
-      {#if hasCapability('notch')}<span class="lcd-ind" class:active={anfActive}>ANF</span>{/if}
-      <span class="lcd-ind active">AGC {agcLabel(agc.agcMode)}</span>
-
-      <span class="ind-sep"></span>
-
-      {#if hasCapability('rf_gain')}<span class="lcd-ind" class:active={rf.rfGain < 255}>RFG</span>{/if}
-      {#if hasCapability('squelch')}<span class="lcd-ind" class:active={rf.squelch > 0}>SQL</span>{/if}
-      {#if hasCapability('rit')}<span class="lcd-ind" class:active={ritXit.ritActive}>RIT</span>{/if}
-      {#if hasCapability('split')}<span class="lcd-ind" class:active={vfoOps.splitActive}>SPLIT</span>{/if}
-      {#if dataActive}<span class="lcd-ind active">DATA</span>{/if}
-      {#if hasCapability('dial_lock')}<span class="lcd-ind" class:active={lockActive}>LOCK</span>{/if}
-    </div>
+    <!-- ═══ Aux row — reserved for future use (telemetry, memory) ═══ -->
+    <div style:grid-area="aux"></div>
 
   </div>
 </div>
@@ -327,19 +414,21 @@
       0 0 8px rgba(0, 0, 0, 0.5);
     min-height: 0;
 
-    /* ── Grid scaffold (issue #891 dual-cockpit) ──
-       Single-RX: 1 column, 3 rows (vfo-a / scope / aux).
-       Dual-RX: 2 equal columns, 3 rows (vfo-a vfo-b / scope scope / aux aux).
-       Indicators (status tokens) live in the full-width aux row. */
+    /* ── Grid scaffold (issue #892 per-VFO zones) ──
+       Single-RX: 1 column, 4 rows (global / vfo-a / scope / aux).
+       Dual-RX: 2 equal columns, 4 rows (global / vfo-a vfo-b / scope scope / aux aux).
+       Global indicators at top; per-VFO indicators inside each cockpit column. */
     display: grid;
     gap: 6px;
     align-content: start;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows:
+      auto               /* global indicator strip */
       auto               /* vfo-a cockpit */
       minmax(0, 120px)   /* scope */
-      auto;              /* aux (indicators) */
+      auto;              /* aux (reserved) */
     grid-template-areas:
+      "global"
       "vfo-a"
       "scope"
       "aux";
@@ -348,13 +437,15 @@
   .lcd-screen.dual {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-rows:
+      auto               /* global indicator strip full-width */
       auto               /* vfo-a + vfo-b cockpits */
       minmax(0, 120px)   /* scope full-width */
-      auto;              /* aux (indicators) full-width */
+      auto;              /* aux (reserved) full-width */
     grid-template-areas:
-      "vfo-a vfo-b"
-      "scope scope"
-      "aux   aux";
+      "global global"
+      "vfo-a  vfo-b"
+      "scope  scope"
+      "aux    aux";
   }
 
   .lcd-scanlines {
@@ -531,57 +622,6 @@
     font-weight: bold;
     font-size: 16px;
     color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.6));
-  }
-
-  /* ── Indicators ── */
-  .lcd-ind-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-    position: relative;
-    z-index: 2;
-    padding: 2px 0;
-    flex-shrink: 1;
-    overflow: hidden;
-  }
-
-  .ind-sep {
-    width: 1px;
-    height: 16px;
-    background: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.15));
-    margin: 0 4px;
-    flex-shrink: 0;
-  }
-
-  .lcd-ind {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: rgba(26, 16, 0, var(--lcd-alpha-inactive));
-    border: 1.5px solid rgba(26, 16, 0, var(--lcd-alpha-ghost));
-    border-radius: 3px;
-    padding: 1px 6px;
-    user-select: none;
-  }
-
-  .lcd-ind.active {
-    color: rgba(26, 16, 0, var(--lcd-alpha-active));
-    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
-  }
-
-  .lcd-ind.ind-tx {
-    color: #5A0800;
-    border-color: rgba(90, 8, 0, 0.5);
-    font-size: 15px;
-  }
-  .lcd-ind.ind-tuning {
-    animation: lcd-blink 0.6s steps(1) infinite;
-  }
-  @keyframes lcd-blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0.15; }
   }
 
   /* ── Filter / AF Scope row (full-width grid cell) ── */
