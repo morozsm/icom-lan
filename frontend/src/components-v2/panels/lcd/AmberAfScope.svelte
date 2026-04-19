@@ -22,8 +22,9 @@
     notchFreq?: number;
     /** Auto notch active */
     autoNotch?: boolean;
-    /** Layout sizing mode: 'compact' = fixed strip height; 'fill' = stretch to container */
-    mode?: 'compact' | 'fill';
+    /** Layout sizing mode: 'compact' = fixed strip height; 'fill' = stretch to container;
+     *  'dominant' = fill height + overlays a dimmed running-max trace */
+    mode?: 'compact' | 'fill' | 'dominant';
     /** Audio sample rate */
     sampleRate?: number;
     /** Actual Hz width of the received FFT data (defaults to sampleRate) */
@@ -77,6 +78,11 @@
   let smoothed: Float32Array | null = null;
   const ATTACK = 0.55;
   const DECAY = 0.25;
+
+  // Running-max trace for dominant mode — tracks per-bin peak with slow linear decay.
+  // Decay rate: ~255/(30fps * 3s) → normalised 1/(30*3) ≈ 0.011 per frame → ~3s fade.
+  let runningMax: Float32Array | null = null;
+  const MAX_DECAY = 1 / (30 * 3);
 
   // Trapezoid animation — adaptive lerp toward target filterWidth
   // Big jumps (fast knob turning) → fast animation to keep up
@@ -289,10 +295,15 @@
       smoothed = new Float32Array(numBars);
     }
 
+    // Allocate running-max buffer only in dominant mode
+    const isDominant = mode === 'dominant';
+    if (isDominant && (!runningMax || runningMax.length !== numBars)) {
+      runningMax = new Float32Array(numBars);
+    }
+
     // Only show FFT bins within the passband (0 → passbandHz)
     const halfBandwidth = effectiveBandwidth / 2;
     const passbandFrac = Math.min(1, passbandHz / halfBandwidth);
-
 
     for (let i = 0; i < numBars; i++) {
       const x = startX + i * step;
@@ -324,6 +335,11 @@
 
       const amp = smoothed[i];
 
+      // Update running-max: decay first, then take max with current smoothed value
+      if (isDominant && runningMax) {
+        runningMax[i] = Math.max(Math.max(0, runningMax[i] - MAX_DECAY), amp);
+      }
+
       // Max bar height = clipped by trapezoid at this X
       const distFromCenter = Math.abs(barCenterX - cx);
       let maxBarH: number;
@@ -345,6 +361,34 @@
       const alpha = (0.35 + amp * 0.5) * alphaActive;
       ctx.fillStyle = `${INK_A} ${alpha})`;
       ctx.fillRect(x, snapY, barW, snapH);
+    }
+
+    // ── Running-max overlay (dominant mode only) ──
+    // Render as a dimmed stroke on top of the FFT bars
+    if (isDominant && runningMax) {
+      ctx.strokeStyle = `${INK_A} ${alphaGhost * 3})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < numBars; i++) {
+        const x = startX + i * step + barW / 2;
+        const barCenterX = x;
+        const distFromCenter = Math.abs(barCenterX - cx);
+        let maxBarH: number;
+        if (distFromCenter <= topHalfW) {
+          maxBarH = trapH;
+        } else if (distFromCenter <= topHalfW + slopeExtra) {
+          maxBarH = trapH * (1 - (distFromCenter - topHalfW) / slopeExtra);
+        } else {
+          if (started) { ctx.stroke(); ctx.beginPath(); started = false; }
+          continue;
+        }
+        const peakH = Math.min(runningMax[i] * trapH * 0.85, maxBarH);
+        const peakY = h - peakH;
+        if (!started) { ctx.moveTo(x, peakY); started = true; }
+        else { ctx.lineTo(x, peakY); }
+      }
+      if (started) ctx.stroke();
     }
   }
 

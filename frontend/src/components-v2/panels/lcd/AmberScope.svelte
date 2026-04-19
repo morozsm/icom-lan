@@ -43,7 +43,7 @@
   // Active receiver data (single-RX — use active receiver; dual-RX handled in #897)
   let rx = $derived(radioState?.active === 'SUB' ? radioState?.sub : radioState?.main);
   let mainFreqHz = $derived(rx?.freqHz ?? 0);
-  let mode = $derived(rx?.mode ?? '---');
+  let rxMode = $derived(rx?.mode ?? '---');
   let mainBand = $derived(freqToBand(mainFreqHz));
 
   // Filter width label (e.g. "2.4 kHz")
@@ -91,7 +91,7 @@
         {#if mainBand}
           <span class="vfo-band-box">{mainBand}</span>
         {/if}
-        <span class="vfo-mode-box">{mode}</span>
+        <span class="vfo-mode-box">{rxMode}</span>
         {#if filterWidthLabel}
           <span class="vfo-filter-box">{filterWidthLabel}</span>
         {/if}
@@ -108,8 +108,7 @@
           filterWidthMax={filterProps.filterWidthMax}
           ifShift={filterProps.ifShift}
           bandwidth={fftBandwidth}
-          {mode}
-          compact
+          mode="dominant"
         />
       {/if}
     </div>
