@@ -8,6 +8,7 @@
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
+  import AmberFilterGhost from './AmberFilterGhost.svelte';
   import AmberIndStrip from './AmberIndStrip.svelte';
   import type { IndToken } from './AmberIndStrip.svelte';
   import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
@@ -380,6 +381,14 @@
             mode="fill"
           />
         </div>
+      {:else}
+        <!-- Ghost fallback (#919 — mirrors AmberScope #900 integration).
+             Prevents the 1fr scope row from rendering as empty amber
+             when the radio has no AF-FFT capability. -->
+        <AmberFilterGhost
+          filterWidth={filterProps.filterWidth}
+          filterWidthMax={filterProps.filterWidthMax}
+        />
       {/if}
     </div>
 
