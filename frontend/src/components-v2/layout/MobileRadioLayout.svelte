@@ -20,6 +20,8 @@
   import ScanPanel from '../panels/ScanPanel.svelte';
   import CwPanel from '../panels/CwPanel.svelte';
   import DockMeterPanel from '../panels/DockMeterPanel.svelte';
+  import EssentialsPanel from '../panels/EssentialsPanel.svelte';
+  import MobileChipBar from './mobile-chip-bar.svelte';
   import KeyboardHandler from './KeyboardHandler.svelte';
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import {
@@ -101,6 +103,16 @@
     width: receiverDeckWidth,
     overrides: {},
   }));
+
+  // ── Mobile IA chip navigation ──
+  const MOBILE_CHIPS = $derived([
+    { id: 'essentials', label: 'ESSENTIALS' },
+    { id: 'band', label: 'BAND' },
+    { id: 'scan', label: 'SCAN' },
+    { id: 'rf', label: 'RF' },
+    ...(txCapable ? [{ id: 'tx', label: 'TX' }] : []),
+  ]);
+  let activeChip = $state<string>('essentials');
 
   // ── Modals ──
   let settingsOpen = $state(false);
@@ -475,20 +487,39 @@
       </section>
     {/if}
 
-    <!-- Band -->
-    <section class="m-section">
-      <CollapsiblePanel title="BAND" panelId="m-band" collapsible={true}>
+    <!-- ═══ CHIP-SCROLL NAV ═══ -->
+    <MobileChipBar chips={MOBILE_CHIPS} active={activeChip} onSelect={(id) => (activeChip = id)} />
+
+    <!-- ═══ ACTIVE CHIP CONTENT ═══ -->
+    <section class="m-chip-content">
+      {#if activeChip === 'essentials'}
+        <EssentialsPanel
+          {vfoOps}
+          {mode}
+          quickModes={QUICK_MODES}
+          {filter}
+          {rxAudio}
+          {dsp}
+          onSplitToggle={vfoHandlers.onSplitToggle}
+          onSwap={vfoHandlers.onSwap}
+          onEqual={vfoHandlers.onEqual}
+          onModeChange={modeHandlers.onModeChange}
+          onMoreModes={() => (modeModalOpen = true)}
+          onFilterChange={(idx) => filterHandlers.onFilterChange?.(idx)}
+          onMoreFilters={() => (filterModalOpen = true)}
+          onMonitorModeChange={rxAudioHandlers.onMonitorModeChange}
+          onAfLevelChange={rxAudioHandlers.onAfLevelChange}
+          onNbToggle={dspHandlers.onNbToggle}
+          onNrModeChange={dspHandlers.onNrModeChange}
+          onNotchModeChange={dspHandlers.onNotchModeChange}
+        />
+      {:else if activeChip === 'band'}
         <BandSelector
           currentFreq={band.currentFreq}
           onBandSelect={bandHandlers.onBandSelect}
           onPresetSelect={presetHandlers.onPresetSelect}
         />
-      </CollapsiblePanel>
-    </section>
-
-    <!-- Scan -->
-    <section class="m-section">
-      <CollapsiblePanel title="SCAN" panelId="m-scan" collapsible={true}>
+      {:else if activeChip === 'scan'}
         <ScanPanel
           scanning={scan.scanning}
           scanType={scan.scanType}
@@ -498,120 +529,7 @@
           onDfSpanChange={scanHandlers.onDfSpanChange}
           onResumeChange={scanHandlers.onResumeChange}
         />
-      </CollapsiblePanel>
-    </section>
-
-    <!-- Mode (quick: LSB USB CW AM + More) -->
-    <section class="m-section">
-      <CollapsiblePanel title="MODE" panelId="m-mode" collapsible={true}>
-        <div class="m-quick-grid">
-          {#each QUICK_MODES as m}
-            <HardwareButton
-              active={mode.currentMode === m}
-              indicator="edge-left"
-              color="cyan"
-              onclick={() => modeHandlers.onModeChange(m)}
-            >
-              {m}
-            </HardwareButton>
-          {/each}
-          <HardwareButton
-            indicator="edge-left"
-            color="muted"
-            onclick={() => (modeModalOpen = true)}
-          >
-            More…
-          </HardwareButton>
-        </div>
-      </CollapsiblePanel>
-    </section>
-
-    <!-- Filter (quick: FIL1 FIL2 FIL3 + More) -->
-    <section class="m-section">
-      <CollapsiblePanel title="FILTER" panelId="m-filter" collapsible={true}>
-        <div class="m-quick-grid">
-          {#each (filter.filterLabels ?? ['FIL1', 'FIL2', 'FIL3']) as label, idx}
-            <HardwareButton
-              active={filter.currentFilter === idx + 1}
-              indicator="edge-left"
-              color="cyan"
-              onclick={() => filterHandlers.onFilterChange?.(idx + 1)}
-            >
-              {label}
-            </HardwareButton>
-          {/each}
-          <HardwareButton
-            indicator="edge-left"
-            color="muted"
-            onclick={() => (filterModalOpen = true)}
-          >
-            More…
-          </HardwareButton>
-        </div>
-      </CollapsiblePanel>
-    </section>
-
-    <!-- Audio (AF + monitor mode + DSP toggles) -->
-    <section class="m-section">
-      <CollapsiblePanel title="AUDIO" panelId="m-audio" collapsible={true}>
-        <div class="m-audio-content">
-          <div class="m-audio-buttons">
-            {#each ['local', 'live', 'mute'] as opt}
-              <HardwareButton
-                active={rxAudio.monitorMode === opt}
-                indicator="edge-left"
-                color={opt === 'mute' ? 'red' : 'cyan'}
-                onclick={() => rxAudioHandlers.onMonitorModeChange(opt)}
-              >
-                {opt === 'local' ? 'LOCAL' : opt === 'live' ? 'LIVE' : 'MUTE'}
-              </HardwareButton>
-            {/each}
-          </div>
-          <ValueControl
-            label="AF Level"
-            value={rxAudio.afLevel}
-            min={0}
-            max={255}
-            step={1}
-            renderer="hbar"
-            displayFn={rawToPercentDisplay}
-            accentColor="var(--v2-accent-cyan-alt)"
-            onChange={rxAudioHandlers.onAfLevelChange}
-            variant="hardware-illuminated"
-          />
-          <div class="m-dsp-toggles">
-            <HardwareButton
-              active={dsp.nbActive}
-              indicator="edge-left"
-              color={dsp.nbActive ? 'green' : 'muted'}
-              onclick={() => dspHandlers.onNbToggle(!dsp.nbActive)}
-            >
-              NB
-            </HardwareButton>
-            <HardwareButton
-              active={dsp.nrMode > 0}
-              indicator="edge-left"
-              color={dsp.nrMode > 0 ? 'green' : 'muted'}
-              onclick={() => dspHandlers.onNrModeChange(dsp.nrMode > 0 ? 0 : 1)}
-            >
-              NR
-            </HardwareButton>
-            <HardwareButton
-              active={dsp.notchMode !== 'off'}
-              indicator="edge-left"
-              color={dsp.notchMode !== 'off' ? 'green' : 'muted'}
-              onclick={() => dspHandlers.onNotchModeChange(dsp.notchMode !== 'off' ? 'off' : 'auto')}
-            >
-              NOTCH
-            </HardwareButton>
-          </div>
-        </div>
-      </CollapsiblePanel>
-    </section>
-
-    <!-- RF Front End (ATT / PRE / DIGI-SEL / IP+) -->
-    <section class="m-section">
-      <CollapsiblePanel title="RF" panelId="m-rf-quick" collapsible={true}>
+      {:else if activeChip === 'rf'}
         <RfFrontEnd
           rfGain={rfFrontEnd.rfGain}
           squelch={rfFrontEnd.squelch}
@@ -626,81 +544,67 @@
           onDigiSelToggle={rfHandlers.onDigiSelToggle}
           onIpPlusToggle={rfHandlers.onIpPlusToggle}
         />
-      </CollapsiblePanel>
-    </section>
-
-    <!-- TX (compact: PTT + Power readout + ATU) -->
-    {#if txCapable}
-      <section class="m-section">
-        <CollapsiblePanel title="TX" panelId="m-tx" collapsible={true}>
-          <div class="m-tx-compact">
-            <!-- Power readout (tap → power modal) -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="m-tx-info" onclick={() => (powerModalOpen = true)}>
-              <span class="m-tx-power-value">{formatPower(tx.rfPower)}</span>
-              {#if tx.txActive || pttActive}
-                <span class="m-tx-swr-value">SWR {meter.swr > 0 ? (meter.swr / 10).toFixed(1) : '—'}</span>
-              {/if}
-            </div>
-
-            <!-- ATU -->
-            <button
-              class="m-atu-btn"
-              class:m-atu-on={atuStatus === 'on'}
-              class:m-atu-tuning={atuStatus === 'tuning'}
-              ontouchstart={atuTouchStart}
-              ontouchend={atuTouchEnd}
-              ontouchcancel={atuTouchEnd}
-              onmousedown={atuTouchStart}
-              onmouseup={atuTouchEnd}
-            >
-              ATU
-            </button>
-
-            <!-- TX settings -->
-            <button class="m-tx-settings-btn" onclick={() => (txSettingsOpen = true)}>
-              <Sliders size={14} />
-            </button>
-
-            <!-- PTT (wider) -->
-            <button
-              class="m-ptt-btn"
-              class:m-ptt-held={pttMode === 'held'}
-              class:m-ptt-latched={pttMode === 'latched'}
-              ontouchstart={(e) => { e.preventDefault(); pttDown(); }}
-              ontouchend={(e) => { e.preventDefault(); pttUp(); }}
-              ontouchcancel={() => pttUp()}
-              onmousedown={pttDown}
-              onmouseup={pttUp}
-              onmouseleave={() => { if (pttMode === 'held') pttUp(); }}
-            >
-              {#if pttMode === 'latched'}
-                <MicOff size={18} />
-                TX LOCK
-              {:else if pttMode === 'held'}
-                TX
-              {:else}
-                <Mic size={18} />
-                PTT
-              {/if}
-            </button>
+      {:else if activeChip === 'tx' && txCapable}
+        <div class="m-tx-compact">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="m-tx-info" onclick={() => (powerModalOpen = true)}>
+            <span class="m-tx-power-value">{formatPower(tx.rfPower)}</span>
+            {#if tx.txActive || pttActive}
+              <span class="m-tx-swr-value">SWR {meter.swr > 0 ? (meter.swr / 10).toFixed(1) : '—'}</span>
+            {/if}
           </div>
-          {#if tx.txActive || pttActive}
-            <div class="m-tx-meter">
-              <DockMeterPanel
-                sValue={mainVfo.sValue}
-                rfPower={meter.rfPower ?? 0}
-                swr={meter.swr}
-                alc={meter.alc ?? 0}
-                txActive={true}
-                meterSource="po"
-                onMeterSourceChange={() => {}}
-              />
-            </div>
-          {/if}
-        </CollapsiblePanel>
-      </section>
-    {/if}
+          <button
+            class="m-atu-btn"
+            class:m-atu-on={atuStatus === 'on'}
+            class:m-atu-tuning={atuStatus === 'tuning'}
+            ontouchstart={atuTouchStart}
+            ontouchend={atuTouchEnd}
+            ontouchcancel={atuTouchEnd}
+            onmousedown={atuTouchStart}
+            onmouseup={atuTouchEnd}
+          >
+            ATU
+          </button>
+          <button class="m-tx-settings-btn" onclick={() => (txSettingsOpen = true)}>
+            <Sliders size={14} />
+          </button>
+          <button
+            class="m-ptt-btn"
+            class:m-ptt-held={pttMode === 'held'}
+            class:m-ptt-latched={pttMode === 'latched'}
+            ontouchstart={(e) => { e.preventDefault(); pttDown(); }}
+            ontouchend={(e) => { e.preventDefault(); pttUp(); }}
+            ontouchcancel={() => pttUp()}
+            onmousedown={pttDown}
+            onmouseup={pttUp}
+            onmouseleave={() => { if (pttMode === 'held') pttUp(); }}
+          >
+            {#if pttMode === 'latched'}
+              <MicOff size={18} />
+              TX LOCK
+            {:else if pttMode === 'held'}
+              TX
+            {:else}
+              <Mic size={18} />
+              PTT
+            {/if}
+          </button>
+        </div>
+        {#if tx.txActive || pttActive}
+          <div class="m-tx-meter">
+            <DockMeterPanel
+              sValue={mainVfo.sValue}
+              rfPower={meter.rfPower ?? 0}
+              swr={meter.swr}
+              alc={meter.alc ?? 0}
+              txActive={true}
+              meterSource="po"
+              onMeterSourceChange={() => {}}
+            />
+          </div>
+        {/if}
+      {/if}
+    </section>
 
     <!-- Spacer for tuning strip -->
     <div class="m-bottom-spacer"></div>
@@ -1328,60 +1232,10 @@
     box-shadow: none;
   }
 
-  /* ── Sections ── */
-  .m-section {
+  /* ── Active chip content ── */
+  .m-chip-content {
     display: flex;
     flex-direction: column;
-  }
-
-  .m-section :global(.collapsible-panel) {
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-  }
-
-  /* ── Quick grid (mode, filter quick buttons) ── */
-  .m-quick-grid {
-    display: flex;
-    gap: 4px;
-    padding: 7px 8px;
-    flex-wrap: wrap;
-  }
-
-  .m-quick-grid > :global(button) {
-    flex: 1 1 auto;
-    min-width: 52px;
-    min-height: 40px;
-  }
-
-  /* ── Audio content ── */
-  .m-audio-content {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 7px 8px;
-  }
-
-  .m-audio-buttons {
-    display: flex;
-    gap: 4px;
-  }
-
-  .m-audio-buttons > :global(button) {
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 36px;
-  }
-
-  .m-dsp-toggles {
-    display: flex;
-    gap: 4px;
-  }
-
-  .m-dsp-toggles > :global(button) {
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 36px;
   }
 
   /* ── TX compact section ── */

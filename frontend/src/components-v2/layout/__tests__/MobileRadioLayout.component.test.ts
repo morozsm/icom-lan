@@ -163,8 +163,12 @@ describe('MobileRadioLayout structure', () => {
     expect(mountMobile().querySelector('.m-tuning-strip')).not.toBeNull();
   });
 
-  it('renders section panels inside m-content', () => {
-    expect(mountMobile().querySelectorAll('.m-content .m-section').length).toBeGreaterThan(0);
+  it('renders chip-bar nav inside m-content', () => {
+    expect(mountMobile().querySelector('.m-content .m-chip-bar')).not.toBeNull();
+  });
+
+  it('renders active chip content area', () => {
+    expect(mountMobile().querySelector('.m-content .m-chip-content')).not.toBeNull();
   });
 
   it('renders TX indicator', () => {
@@ -177,14 +181,27 @@ describe('MobileRadioLayout structure', () => {
 });
 
 describe('MobileRadioLayout TX gating', () => {
-  it('renders PTT button when hasTx is true', () => {
+  it('exposes TX chip when hasTx is true', () => {
     vi.mocked(hasTx).mockReturnValue(true);
-    expect(mountMobile().querySelector('.m-ptt-btn')).not.toBeNull();
+    const chips = Array.from(mountMobile().querySelectorAll('.m-chip')) as HTMLButtonElement[];
+    expect(chips.some((c) => c.textContent?.trim() === 'TX')).toBe(true);
   });
 
-  it('hides PTT button when hasTx is false', () => {
+  it('hides TX chip when hasTx is false', () => {
     vi.mocked(hasTx).mockReturnValue(false);
-    expect(mountMobile().querySelector('.m-ptt-btn')).toBeNull();
+    const chips = Array.from(mountMobile().querySelectorAll('.m-chip')) as HTMLButtonElement[];
+    expect(chips.some((c) => c.textContent?.trim() === 'TX')).toBe(false);
+  });
+
+  it('renders PTT button when TX chip selected', () => {
+    vi.mocked(hasTx).mockReturnValue(true);
+    const root = mountMobile();
+    const txChip = Array.from(root.querySelectorAll('.m-chip')).find(
+      (c) => c.textContent?.trim() === 'TX',
+    ) as HTMLButtonElement | undefined;
+    txChip?.click();
+    flushSync();
+    expect(root.querySelector('.m-ptt-btn')).not.toBeNull();
   });
 });
 
