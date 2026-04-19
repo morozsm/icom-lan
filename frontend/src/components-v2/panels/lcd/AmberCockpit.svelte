@@ -248,13 +248,18 @@
   let vfoAActive = $derived(radioState?.active !== 'SUB');
   let vfoBActive = $derived(radioState?.active === 'SUB');
 
-  // Meter for main VFO cockpit (always main, but source follows active-meter logic)
+  // Meter for main VFO cockpit (always main, but source follows active-meter logic).
+  // During TX, the meter shows radio-global TX telemetry (PO/SWR/ALC/COMP) — this
+  // must win over the receiver-active check so the cockpit never loses TX feedback
+  // when SUB is the active RX (VFO B's meter is suppressed during TX by design).
   let mainMeterValue = $derived.by(() => {
-    if (vfoAActive) return meterValue;  // A is active — use the adapter-derived meter
-    // A is inactive — show main S-meter only
-    return mainSMeter;
+    if (tx.txActive) return meterValue;          // TX: radio-global telemetry
+    if (vfoAActive) return meterValue;           // RX + A active: use adapter-derived meter
+    return mainSMeter;                           // RX + B active: show A's own S-meter
   });
-  let mainMeterSource = $derived<MeterSource>(vfoAActive ? activeMeterSource : 'S');
+  let mainMeterSource = $derived<MeterSource>(
+    tx.txActive || vfoAActive ? activeMeterSource : 'S',
+  );
 </script>
 
 <!--
