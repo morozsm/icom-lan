@@ -56,9 +56,12 @@ def _interpolate_swr(
     legacy linear approximation when no table is configured
     (preserves backward compat for rigs that don't define
     ``[meters.swr.calibration]``).
+
+    When a calibration table exists, the table is the source of truth
+    for the full raw range — including ``raw <= 0`` (codex P2 on
+    PR #924). Profiles can define a non-1.0 first point if their
+    meter produces such values.
     """
-    if raw <= 0:
-        return 1.0
     points = (meter_calibrations or {}).get("swr")
     if points:
         # Points are already sorted by raw in typical TOMLs, but sort defensively.
@@ -74,7 +77,9 @@ def _interpolate_swr(
                     return float(lo["actual"])
                 t = (raw - lo["raw"]) / span
                 return float(lo["actual"]) + t * (float(hi["actual"]) - float(lo["actual"]))
-    # Legacy linear fallback (pre-#440 behavior).
+    # No table: legacy linear fallback (pre-#440 behavior).
+    if raw <= 0:
+        return 1.0
     return 1.0 + (raw / 255.0) * 8.9
 
 
