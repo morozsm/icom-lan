@@ -311,6 +311,37 @@ describe('CollapsiblePanel', () => {
       expect(header?.getAttribute('aria-expanded')).toBe('false');
     });
 
+    it('expands on a single click when persisted-collapsed AND autoCollapseWhen=true', () => {
+      // Regression: previously, loading collapsed=true from localStorage while
+      // autoCollapseWhen=true required TWO clicks — the first flipped
+      // ``collapsed`` to false but left ``userExpanded`` false, so the derived
+      // ``effectiveCollapsed`` stayed true.
+      localStorage.setItem(
+        'icom-lan:panel-collapsed',
+        JSON.stringify({ 'auto-cw-persisted': true }),
+      );
+
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw-persisted', autoCollapseWhen: true },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      expect(header?.getAttribute('aria-expanded')).toBe('false');
+
+      // One click should expand it.
+      header.click();
+      flushSync();
+
+      expect(header?.getAttribute('aria-expanded')).toBe('true');
+      const chevron = target.querySelector('.chevron');
+      expect(chevron?.textContent).toBe('▾');
+    });
+
     it('does not force-collapse when autoCollapseWhen=false', () => {
       const target = document.createElement('div');
       document.body.appendChild(target);

@@ -74,6 +74,13 @@
     if (collapsed && autoCollapseWhen) {
       userExpanded = false;
     }
+    // Expanding (e.g. from a persisted-collapsed state) while auto-collapse
+    // is active must also set the sticky override, otherwise the derived
+    // ``effectiveCollapsed`` stays true and the panel wouldn't open until a
+    // second click.
+    if (!collapsed && autoCollapseWhen) {
+      userExpanded = true;
+    }
 
     // Save to localStorage
     try {
