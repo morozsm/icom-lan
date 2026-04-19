@@ -253,6 +253,79 @@ describe('CollapsiblePanel', () => {
     expect(panel?.style.order).toBe('3');
   });
 
+  describe('autoCollapseWhen', () => {
+    it('force-collapses when autoCollapseWhen=true', () => {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw', autoCollapseWhen: true },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      const chevron = target.querySelector('.chevron');
+      expect(chevron?.textContent).toBe('▸');
+      expect(header?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('clicking while auto-collapsed expands (user override)', () => {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw', autoCollapseWhen: true },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      header.click();
+      flushSync();
+
+      const chevron = target.querySelector('.chevron');
+      expect(chevron?.textContent).toBe('▾');
+      expect(header?.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('clicking while expanded under auto-collapse re-collapses', () => {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw', autoCollapseWhen: true },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      // Expand via user click
+      header.click();
+      flushSync();
+      expect(header?.getAttribute('aria-expanded')).toBe('true');
+
+      // Click again — should collapse (auto-collapse re-asserts)
+      header.click();
+      flushSync();
+      expect(header?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('does not force-collapse when autoCollapseWhen=false', () => {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw', autoCollapseWhen: false },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      expect(header?.getAttribute('aria-expanded')).toBe('true');
+    });
+  });
+
   describe('swipe gestures', () => {
     function simulateSwipe(header: HTMLElement, dy: number, dx = 0) {
       const startX = 100;
