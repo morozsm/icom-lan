@@ -211,8 +211,10 @@
 
 {#if skinId === 'mobile'}
   <MobileRadioLayout />
-{:else if skinId === 'lcd-cockpit' || skinId === 'lcd-scope'}
-  <LcdLayout />
+{:else if skinId === 'lcd-cockpit'}
+  <LcdLayout variant="cockpit" />
+{:else if skinId === 'lcd-scope'}
+  <LcdLayout variant="scope" />
 {:else}
 <div class="radio-layout">
   <StatusBar onSettings={() => (settingsOpen = true)} />
