@@ -103,11 +103,23 @@ describe('SpectrumToolbar component', () => {
     expect(spanLabel).toBeDefined();
   });
 
-  it('renders speed selector', () => {
+  it('renders speed selector with SPEED label', () => {
     const target = mountToolbar();
     const labels = Array.from(target.querySelectorAll('.toolbar-label'));
-    const spdLabel = labels.find((el) => el.textContent?.trim() === 'SPD');
-    expect(spdLabel).toBeDefined();
+    const speedLabel = labels.find((el) => el.textContent?.trim() === 'SPEED');
+    expect(speedLabel).toBeDefined();
+  });
+
+  it('renders wash-background group containers (B, C, D)', () => {
+    const target = mountToolbar();
+    expect(target.querySelector('.toolbar-group-b')).not.toBeNull();
+    expect(target.querySelector('.toolbar-group-c')).not.toBeNull();
+    expect(target.querySelector('.toolbar-group-d')).not.toBeNull();
+  });
+
+  it('renders 1px sub-separator inside group containers', () => {
+    const target = mountToolbar();
+    expect(target.querySelector('.toolbar-sub-separator')).not.toBeNull();
   });
 
   it('renders STEP control', () => {

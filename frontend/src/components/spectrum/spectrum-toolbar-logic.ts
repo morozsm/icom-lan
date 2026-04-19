@@ -5,6 +5,12 @@
 
 /* ── Constants ── */
 
+/**
+ * Static label for the sweep-speed stepper.
+ * Renamed from "SPD" → "SPEED" per design plan 2026-04-18-spectrum-controls §9.
+ */
+export const SPEED_STATIC_LABEL = 'SPEED';
+
 export const SPAN_LABELS: Record<number, string> = {
   0: '\u00b12.5k', 1: '\u00b15k', 2: '\u00b110k', 3: '\u00b125k',
   4: '\u00b150k', 5: '\u00b1100k', 6: '\u00b1250k', 7: '\u00b1500k',

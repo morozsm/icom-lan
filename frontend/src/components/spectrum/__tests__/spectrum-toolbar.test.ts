@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-  SPAN_LABELS, SPEED_LABELS, MODE_BUTTONS,
+  SPAN_LABELS, SPEED_LABELS, SPEED_STATIC_LABEL, MODE_BUTTONS,
   toggleLayer, isLayerVisible,
   isSpanApplicable, isEdgeApplicable,
   clampSpan, clampSpeed, clampBrt, clampRef,
@@ -31,6 +31,10 @@ describe('SpectrumToolbar constants', () => {
     expect(SPEED_LABELS[0]).toBe('FST');
     expect(SPEED_LABELS[1]).toBe('MID');
     expect(SPEED_LABELS[2]).toBe('SLO');
+  });
+
+  it('SPEED_STATIC_LABEL is the expanded "SPEED" (renamed from SPD)', () => {
+    expect(SPEED_STATIC_LABEL).toBe('SPEED');
   });
 
   it('MODE_BUTTONS has 4 entries with correct labels', () => {
