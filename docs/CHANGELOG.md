@@ -7,6 +7,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-04-19
+
+### Added
+
+- **Meter responsiveness (epic #936)** — backend priority polling tier plus
+  frontend rAF needle smoothing. S-meter on RX jumps from ~3 Hz to an
+  effective 16 Hz with asymmetric visual smoothing (50 ms attack /
+  150 ms release); Pwr/SWR/ALC on TX go from ~3 Hz to 6.7 Hz each.
+  PTT-on skips the LOW tier so TX-tier meters meet the smooth-needle
+  acceptance target; Vd/Id/Comp deferred to a LOW tier (~750 ms each).
+  (#936, #937, #938, #941)
+- **Amber-LCD twin skins (epic #887)** — `lcd-cockpit` and `lcd-scope`
+  skin variants with dedicated wrappers, 60/40 scope-dominant grid for
+  single-RX, peer dual-cockpit grid for dual-RX, per-VFO indicator
+  zones + global strip, AmberAfScope dominant mode + running-max line,
+  ghost-graticule fallback when AF-FFT is unavailable, memory /
+  recent-QSY strip, telemetry strip (VD/TEMP/ID + sparklines), Display
+  Mode effects (vintage / CRT / flicker), LCD contrast in the
+  control-strip, warm-dark theme. (#808, #823, #836, #837, #838, #861,
+  #864, #877, #887-#895, #896-#900, #902, #904-#908, #911, #914, #915,
+  #916, #918, #919, #920, #921, #929, #932, #933)
+- **Mobile IA overhaul** — chip-scroll navigation + ESSENTIALS panel;
+  persistent guarded PTT FAB; container-query collapse + aux row
+  reserve; first-class RIT/XIT mobile chip; auto-collapse mode-specific
+  panels. (#810, #839, #840, #842, #843, #857, #885, #894, #912, #926,
+  #928, #930)
+- **MetersDockPanel (epic #820)** — new station-health dock with
+  Po/SWR/ALC/S tiles plus Id/Vd/COMP tiles gated by capabilities;
+  peak-hold and SWR/ALC fault highlighting; replaced legacy bottom-dock
+  cards; audio spectrum relocated accordingly. (#820, #821, #822, #823,
+  #848, #866, #872, #878, #880)
+- **Active-receiver UI (epic #825)** — `ActiveReceiverToggle` segmented
+  `[M|S]` control; keyboard bindings for active-receiver switch with
+  audio-focus sync; legacy activate-chip + adapter removed. (#825,
+  #827, #828, #856, #858, #868, #875)
+- **Skin system** — StatusBar dropdown skin-switcher; `lcd-cockpit` /
+  `lcd-scope` registered as first-class skin IDs; variant prop threaded
+  through dedicated wrappers. (#888, #889, #895, #901, #902, #904,
+  #909, #913)
+- **Spectrum toolbar** — keyboard shortcuts; grouping + separators +
+  visual spec. (#830, #831, #847, #855)
+- **Settings reorg** — settings gear moved into StatusBar; subgrid VFO
+  digit/badge layout resolves crowding. (#807, #860, #865, #871)
+
+### Changed
+
+- **LCD token cascade + contrast core** — unified grid scaffold,
+  AmberCockpit extracted, behavior-preserving refactors. (#833, #844,
+  #853, #859, #890, #903)
+- **Panel simplification** — removed panel-wide click-to-activate and
+  STANDBY/ACTIVE pill; consolidated ON/OFF into a single power toggle;
+  renamed SETTINGS → SETUP and pruned chip-duplicated panels;
+  strengthened active/inactive VFO panel treatment. (#805, #824, #826,
+  #841, #849, #854, #867, #925)
+- **Bottom-dock reshuffle** — replaced bottom-dock cards with
+  `MetersDockPanel`; relocated `AudioSpectrumPanel`; BRT/REF moved to
+  mobile spectrum gear; SCOPE status moved to `VfoHeader` bridge. (#812,
+  #821, #832, #869, #870, #880)
+
+### Fixed
+
+- **Scope reconnect deadlock** — break scope re-enable deadlock on
+  reconnect. (#881)
+- **CI-V watchdog** — self-cancel + patient OpenClose recovery. (#851)
+- **Session rejection** — retry-with-mono fallback on stereo `rx_codec`
+  session rejection. (#797, #802)
+- **SWR calibration** — honor TOML calibration table at `raw=0`;
+  non-linear calibration from TOML config. (#440, #924, #927)
+- **hamlib rig model** — read from TOML in Yaesu `dump_state`. (#441,
+  #923)
+- **TX meter telemetry** — preserved when SUB is active; Vd tile
+  readable in RX idle. (#822, #872, #891, #910)
+- **AmberScope / AmberCockpit fallbacks** — VFO A filter-width fallback
+  restored; ghost fallback when AF-FFT unavailable. (#918, #919, #920,
+  #921)
+- **Scope controls on mobile + v1** — restored source/dual controls;
+  SCOPE pills no longer cropped by VFO bridge column overflow. (#832,
+  #873, #883)
+- **lcd-scope variant reachability** — end-to-end variant plumbing via
+  dedicated skin wrappers. (#895, #909, #913)
+- **v2-control-button** — distinguish idle vs disabled states. (#804,
+  #879)
+- **RightSidebar** — restored `AudioSpectrumPanel`; preserve
+  cross-sidebar drag in `loadPanelOrder`. (#884, #886)
+- **Codex review batches** — P1/P2 findings resolved across mobile grid
+  rows, IP+ per-RX, legacy LCD, QSY debounce + orientation PTT release,
+  tile-smoother pruning on capability toggle. (#887, #917, #931, #934,
+  #935, #941)
+
+### Docs
+
+- LCD twin-skin redesign plan (epic #887).
+- UI refinement design spikes (epic #818, #819).
+
+### Chores
+
+- Repo-wide `ruff format` pass (#922).
+- 53 Svelte build warnings cleared — build now emits 0 warnings.
+- `chore(#828)` VFO area tooltip audit + standardization (#882).
+- `chore(#829)` StatusBar tooltip audit + standardization (#876).
+
 ## [0.17.0] — 2026-04-18
 
 ### Added
@@ -589,7 +690,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/morozsm/icom-lan/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/morozsm/icom-lan/compare/v0.16.4...v0.17.0
 [0.16.4]: https://github.com/morozsm/icom-lan/compare/v0.16.3...v0.16.4
 [0.16.3]: https://github.com/morozsm/icom-lan/compare/v0.16.2...v0.16.3
