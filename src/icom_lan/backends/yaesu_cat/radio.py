@@ -76,7 +76,10 @@ def _interpolate_swr(
                 if span == 0:
                     return float(lo["actual"])
                 t = (raw - lo["raw"]) / span
-                return float(lo["actual"]) + t * (float(hi["actual"]) - float(lo["actual"]))
+                return float(
+                    float(lo["actual"])
+                    + t * (float(hi["actual"]) - float(lo["actual"]))
+                )
     # No table: legacy linear fallback (pre-#440 behavior).
     if raw <= 0:
         return 1.0
