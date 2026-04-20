@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onMount, untrack } from 'svelte';
+  import { createSmoother } from '$lib/utils/smoothing.svelte';
   import {
     formatAlc,
     formatAmps,
@@ -191,6 +192,38 @@
     }
     return out;
   });
+
+  // Issue #938 — per-tile rAF-driven bar smoothing. Smoothers are keyed by
+  // tile.key and reused across renders so the bar carries fractional state
+  // between updates. Peak-hold (`peakPct`) and digit text (`tile.display`)
+  // continue to read raw props; only the bar-fill width is smoothed. Each
+  // smoother is seeded with the tile's current fillPct on first creation so
+  // the initial synchronous render matches the raw target (no flash from 0).
+  type Smoother = ReturnType<typeof createSmoother>;
+  const smoothers = new Map<Tile['key'], Smoother>();
+
+  function getSmoother(key: Tile['key'], initial: number): Smoother {
+    let s = smoothers.get(key);
+    if (!s) {
+      s = createSmoother(0.05, 0.15, initial);
+      s.start();
+      smoothers.set(key, s);
+    }
+    return s;
+  }
+
+  $effect(() => {
+    for (const tile of tiles) {
+      getSmoother(tile.key, tile.fillPct).update(tile.fillPct);
+    }
+  });
+
+  onMount(() => {
+    return () => {
+      for (const s of smoothers.values()) s.stop();
+      smoothers.clear();
+    };
+  });
 </script>
 
 <article class="meters-dock-panel" data-testid="meters-dock-panel">
@@ -207,6 +240,7 @@
             ? peakHoldDisplay(peaks[tile.key], tile.fillPct, now)
             : undefined
           : undefined}
+      {@const displayPct = smoothers.get(tile.key)?.value ?? tile.fillPct}
       <div
         class="dock-tile"
         role="group"
@@ -227,7 +261,7 @@
         <div class="tile-bar" style:background={tile.track}>
           <div
             class="tile-bar-fill"
-            style:width={`${Math.max(0, Math.min(100, tile.fillPct))}%`}
+            style:width={`${Math.max(0, Math.min(100, displayPct))}%`}
             style:background={tile.fill}
           ></div>
           {#if peakPct !== undefined && tile.relevant}

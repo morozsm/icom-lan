@@ -2,8 +2,8 @@
  * Exponential smoothing for meter values.
  * React useSmoothedValue → Svelte $state + rAF loop.
  */
-export function createSmoother(attack = 0.12, release = 0.32) {
-  let current = $state(0);
+export function createSmoother(attack = 0.12, release = 0.32, initialValue = 0) {
+  let current = $state(initialValue);
   let target = 0;
   let frameId = 0;
   let lastTime = 0;
