@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { createSmoother } from '$lib/utils/smoothing.svelte';
   import { getCalibrationPoints, getS9Raw, rawToSUnit, rawToDbm } from '../../meters/smeter-scale';
 
   type MeterSource = 'S' | 'PO' | 'SWR' | 'ALC' | 'COMP';
@@ -44,7 +46,26 @@
     return ticks;
   })());
 
-  let filledSegs = $derived(Math.round(Math.min(SEGMENTS, Math.max(0, (value / MAX_RAW) * SEGMENTS))));
+  // Issue #938 — rAF-driven needle smoothing: asymmetric attack (50 ms) /
+  // release (150 ms) so the bar punches in fast and glides down. Drives the
+  // bar fill only; sReadout/ticks stay on the raw value. Seed the smoother
+  // with the current computed segment count so the first synchronous render
+  // matches the raw target (no flash to 0 on mount).
+  function computeSegs(raw: number): number {
+    return Math.min(SEGMENTS, Math.max(0, (raw / MAX_RAW) * SEGMENTS));
+  }
+
+  // svelte-ignore state_referenced_locally — intentional one-shot seed read
+  const smoother = createSmoother(0.05, 0.15, computeSegs(value));
+  $effect(() => {
+    smoother.update(computeSegs(value));
+  });
+  onMount(() => {
+    smoother.start();
+    return () => smoother.stop();
+  });
+
+  let filledSegs = $derived(Math.round(smoother.value));
 
   let sReadout = $derived.by(() => {
     if (source === 'S') return { label: rawToSUnit(value), sub: rawToDbm(value) + ' dBm' };

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
 import type { ComponentProps } from 'svelte';
 import MetersDockPanel from '../MetersDockPanel.svelte';
+import { createSmoother } from '$lib/utils/smoothing.svelte';
 import {
   formatAmps,
   formatVolts,
@@ -423,5 +424,32 @@ describe('MetersDockPanel formatted values', () => {
   it('displays S-meter as S-units', () => {
     const t = mountPanel(fullProps);
     expect(t.querySelector('[data-meter="s"] .tile-value')?.textContent).toBe('S9');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Issue #938 — bar-fill smoothing
+// ---------------------------------------------------------------------------
+
+describe('createSmoother initial value (issue #938)', () => {
+  it('seeds the internal state with the supplied initialValue', () => {
+    const s = createSmoother(0.05, 0.15, 42);
+    expect(s.value).toBe(42);
+  });
+});
+
+describe('MetersDockPanel bar-fill smoothing', () => {
+  it('starts the Po bar-fill at the raw target on the first synchronous render', () => {
+    // powerMeter=128 -> raw fillPct ~50%. With the v2 seed the smoother is
+    // initialized at the current target, so the bar-fill width must equal
+    // the raw fillPct on first paint (no flash to 0). This asserts the seed
+    // wires correctly through getSmoother(key, initial).
+    const t = mountPanel({ ...fullProps, powerMeter: 128, txActive: true });
+    const fill = t.querySelector('[data-meter="po"] .tile-bar-fill') as HTMLElement;
+    expect(fill).not.toBeNull();
+    const fillPct = parseFloat(fill.style.width);
+    // 128/255 * 100 ≈ 50.2%. Allow a small tolerance for floating-point.
+    expect(fillPct).toBeGreaterThan(40);
+    expect(fillPct).toBeLessThan(60);
   });
 });
