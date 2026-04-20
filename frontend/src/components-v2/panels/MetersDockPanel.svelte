@@ -213,8 +213,19 @@
   }
 
   $effect(() => {
+    const activeKeys = new Set<Tile['key']>();
     for (const tile of tiles) {
+      activeKeys.add(tile.key);
       getSmoother(tile.key, tile.fillPct).update(tile.fillPct);
+    }
+    // Prune smoothers for tiles that disappeared (e.g. COMP when
+    // compressorOn toggles off). Without this, a re-entered tile would
+    // briefly render its stale last value before the rAF loop converged.
+    for (const [key, s] of smoothers) {
+      if (!activeKeys.has(key)) {
+        s.stop();
+        smoothers.delete(key);
+      }
     }
   });
 
