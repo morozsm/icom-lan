@@ -51,12 +51,18 @@ class _UdpProtocol(asyncio.DatagramProtocol):
 
     def __init__(self, transport_owner: "IcomTransport") -> None:
         self._owner = transport_owner
+        # Peer "host:port" captured on connection_made so diagnostic logs
+        # can disambiguate which radio port (control/CI-V/audio) is failing.
+        self._peer: str = "?"
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         # Note: on macOS/selector loop, _SelectorDatagramTransport does NOT
         # inherit from asyncio.DatagramTransport (CPython quirk), but it
         # has sendto() — so we skip the isinstance check.
         self._owner._udp_transport = transport  # type: ignore[assignment]
+        peer = transport.get_extra_info("peername")
+        if isinstance(peer, tuple) and len(peer) >= 2:
+            self._peer = f"{peer[0]}:{peer[1]}"
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
         self._owner._handle_packet(data)
@@ -66,12 +72,14 @@ class _UdpProtocol(asyncio.DatagramProtocol):
         owner._udp_error_count += 1
         n = owner._udp_error_count
         if n <= 3:
-            logger.warning("UDP error (#%d): %s", n, exc)
+            logger.warning("UDP error [peer=%s] (#%d): %s", self._peer, n, exc)
         elif n % 100 == 0:
-            logger.warning("UDP error (#%d, suppressed 97): %s", n, exc)
+            logger.warning(
+                "UDP error [peer=%s] (#%d, suppressed 97): %s", self._peer, n, exc
+            )
 
     def connection_lost(self, exc: Exception | None) -> None:
-        logger.info("UDP connection lost: %s", exc)
+        logger.info("UDP connection lost [peer=%s]: %s", self._peer, exc)
 
 
 class IcomTransport:
