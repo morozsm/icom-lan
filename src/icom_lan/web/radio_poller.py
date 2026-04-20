@@ -1756,16 +1756,60 @@ class RadioPoller:
     ]
     _FAST_CMDS: list[tuple[int, int | None]] = _FAST_CMDS_LAN  # class default
 
+    # Issue #937 — two-tier meter scheme (LAN only).
+    # HIGH tier — emitted on most meter cycles, gated by PTT.
+    _HIGH_TIER_RX: list[tuple[int, int | None]] = [
+        (0x15, 0x02),  # S-meter
+    ]
+    _HIGH_TIER_TX: list[tuple[int, int | None]] = [
+        (0x15, 0x11),  # RF power
+        (0x15, 0x12),  # SWR
+        (0x15, 0x13),  # ALC
+    ]
+    # LOW tier — emitted every _LOW_STRIDE-th HIGH meter cycle, rotating.
+    _LOW_TIER: list[tuple[int, int | None]] = [
+        (0x15, 0x14),  # Compressor meter
+        (0x15, 0x15),  # Vd
+        (0x15, 0x16),  # Id
+    ]
+    _LOW_STRIDE: int = 5
+
     # State queries interleaved on odd cycles.
     # Tuple: (cmd, sub, receiver) where receiver=None means global query.
     # Populated per instance from runtime profile/capabilities.
     _STATE_QUERIES: list[tuple[int, int | None, int | None]] = []
 
+    def _pick_high_meter(self, high_idx: int) -> tuple[int, int | None]:
+        """Choose HIGH-tier meter based on PTT state."""
+        on_tx = (
+            getattr(self._radio_state, "ptt", False)
+            if self._radio_state is not None
+            else False
+        )
+        if not on_tx:
+            return self._HIGH_TIER_RX[0]
+        return self._HIGH_TIER_TX[high_idx % len(self._HIGH_TIER_TX)]
+
     async def _send_query(self) -> None:
         # Even cycles → meter query; odd cycles → state query.
         if self._poll_index % 2 == 0:
-            fast_idx = (self._poll_index // 2) % len(self._FAST_CMDS)
-            cmd_byte, sub_byte = self._FAST_CMDS[fast_idx]
+            if self._is_serial:
+                # Serial path UNCHANGED — keep flat round-robin over _FAST_CMDS.
+                fast_idx = (self._poll_index // 2) % len(self._FAST_CMDS)
+                cmd_byte, sub_byte = self._FAST_CMDS[fast_idx]
+            else:
+                # LAN: two-tier scheme (issue #937).
+                high_idx = self._poll_index // 2
+                on_tx = (
+                    getattr(self._radio_state, "ptt", False)
+                    if self._radio_state is not None
+                    else False
+                )
+                if not on_tx and high_idx % self._LOW_STRIDE == 0:
+                    low_idx = (high_idx // self._LOW_STRIDE) % len(self._LOW_TIER)
+                    cmd_byte, sub_byte = self._LOW_TIER[low_idx]
+                else:
+                    cmd_byte, sub_byte = self._pick_high_meter(high_idx)
             await self._civ(cmd_byte, sub=sub_byte, data=b"")
         else:
             if not self._STATE_QUERIES:

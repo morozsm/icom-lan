@@ -812,3 +812,110 @@ class TestAdaptiveGap:
         poller = self._make_poller(1.0)
         base = poller._gap  # noqa: SLF001
         assert poller._adaptive_gap() == base * 2.0  # noqa: SLF001
+
+
+# Issue #937 — two-tier meter polling tests.
+
+
+@pytest.mark.asyncio
+async def test_high_tier_emits_s_meter_on_rx_for_consecutive_cycles() -> None:
+    radio = _make_radio()
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    poller._radio_state = SimpleNamespace(ptt=False)  # noqa: SLF001
+    # _poll_index ∈ {2,4,6,8} → high_idx ∈ {1,2,3,4} (none multiple of 5).
+    for poll_idx in (2, 4, 6, 8):
+        radio.send_civ.reset_mock()
+        poller._poll_index = poll_idx  # noqa: SLF001
+        await poller._send_query()  # noqa: SLF001
+        args = radio.send_civ.await_args.args
+        kwargs = radio.send_civ.await_args.kwargs
+        assert (args[0], kwargs.get("sub")) == (0x15, 0x02)
+
+
+@pytest.mark.asyncio
+async def test_high_tier_rotates_pwr_swr_alc_on_tx() -> None:
+    radio = _make_radio()
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    poller._radio_state = SimpleNamespace(ptt=True)  # noqa: SLF001
+    emissions: set[tuple[int, int | None]] = set()
+    for poll_idx in (2, 4, 6, 8, 10, 12):
+        radio.send_civ.reset_mock()
+        poller._poll_index = poll_idx  # noqa: SLF001
+        await poller._send_query()  # noqa: SLF001
+        args = radio.send_civ.await_args.args
+        kwargs = radio.send_civ.await_args.kwargs
+        emissions.add((args[0], kwargs.get("sub")))
+    assert emissions == {(0x15, 0x11), (0x15, 0x12), (0x15, 0x13)}
+    assert (0x15, 0x02) not in emissions
+
+
+@pytest.mark.asyncio
+async def test_low_tier_emits_at_expected_stride_for_lan() -> None:
+    radio = _make_radio()
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    poller._radio_state = SimpleNamespace(ptt=False)  # noqa: SLF001
+    expected = [(0x15, 0x14), (0x15, 0x15), (0x15, 0x16)]
+    for poll_idx, exp in zip((0, 10, 20), expected, strict=True):
+        radio.send_civ.reset_mock()
+        poller._poll_index = poll_idx  # noqa: SLF001
+        await poller._send_query()  # noqa: SLF001
+        args = radio.send_civ.await_args.args
+        kwargs = radio.send_civ.await_args.kwargs
+        assert (args[0], kwargs.get("sub")) == exp
+
+
+def test_low_tier_contains_comp_vd_id_for_ic7610() -> None:
+    assert set(RadioPoller._LOW_TIER) == {  # noqa: SLF001
+        (0x15, 0x14),
+        (0x15, 0x15),
+        (0x15, 0x16),
+    }
+    assert RadioPoller._LOW_STRIDE == 5  # noqa: SLF001
+
+
+@pytest.mark.asyncio
+async def test_poll_index_monotonic_across_ptt_toggle() -> None:
+    radio = _make_radio()
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    state = SimpleNamespace(ptt=False)
+    poller._radio_state = state  # noqa: SLF001
+    for _ in range(4):
+        await poller._send_query()  # noqa: SLF001
+    state.ptt = True
+    for _ in range(4):
+        await poller._send_query()  # noqa: SLF001
+    assert poller._poll_index == 8  # noqa: SLF001
+
+
+@pytest.mark.asyncio
+async def test_serial_backend_unchanged_on_ptt_toggle() -> None:
+    radio = _make_radio()
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    poller._is_serial = True  # noqa: SLF001
+    poller._FAST_CMDS = list(RadioPoller._FAST_CMDS_SERIAL)  # noqa: SLF001
+    state = SimpleNamespace(ptt=False)
+    poller._radio_state = state  # noqa: SLF001
+
+    serial_set = set(RadioPoller._FAST_CMDS_SERIAL)  # noqa: SLF001
+    rx_emissions: dict[int, tuple[int, int | None]] = {}
+    for poll_idx in (0, 2, 4, 6):
+        radio.send_civ.reset_mock()
+        poller._poll_index = poll_idx  # noqa: SLF001
+        await poller._send_query()  # noqa: SLF001
+        args = radio.send_civ.await_args.args
+        kwargs = radio.send_civ.await_args.kwargs
+        emission = (args[0], kwargs.get("sub"))
+        assert emission in serial_set
+        rx_emissions[poll_idx] = emission
+
+    state.ptt = True
+    for poll_idx in (0, 2, 4, 6):
+        radio.send_civ.reset_mock()
+        poller._poll_index = poll_idx  # noqa: SLF001
+        await poller._send_query()  # noqa: SLF001
+        args = radio.send_civ.await_args.args
+        kwargs = radio.send_civ.await_args.kwargs
+        emission = (args[0], kwargs.get("sub"))
+        assert emission in serial_set
+        # PTT state must not change which command is emitted at given index.
+        assert emission == rx_emissions[poll_idx]
