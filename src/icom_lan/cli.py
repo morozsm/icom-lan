@@ -2749,6 +2749,7 @@ def main() -> None:
     # ICOM_LOG_FILE=/path/to/file.log — log to file (default: logs/icom-lan.log)
     # ICOM_LOG_MAX_BYTES=50000000 — rotate when file reaches this size (default: 50 MB)
     # ICOM_LOG_BACKUP_COUNT=5 — keep N rotated backups (default: 5; 0 disables rotation)
+    # Set ICOM_LOG_FILE=off to disable the default file log on daemon commands.
     debug_mode = os.environ.get("ICOM_DEBUG", "").strip() not in (
         "",
         "0",
@@ -2756,6 +2757,9 @@ def main() -> None:
         "no",
     )
     log_file = os.environ.get("ICOM_LOG_FILE", "")
+    log_file_disabled = log_file.strip().lower() in ("off", "none", "-")
+    if log_file_disabled:
+        log_file = ""
 
     handlers: list[logging.Handler] = []
 
@@ -2775,9 +2779,13 @@ def main() -> None:
         )
     handlers.append(console_handler)
 
-    # File handler (if log_file specified or debug mode)
-    if debug_mode and not log_file:
-        # Default log file in debug mode: logs/icom-lan.log
+    # Default to a rotating file log for long-running daemon commands so we
+    # have a forensic trail for bug reports (EPIPE storms, reconnect loops,
+    # etc.) that are easy to lose from stdout alone.
+    is_daemon = getattr(args, "command", None) in ("web", "serve")
+
+    # File handler (if log_file specified, debug mode, or daemon command)
+    if (debug_mode or is_daemon) and not log_file and not log_file_disabled:
         log_file = "logs/icom-lan.log"
 
     if log_file:
