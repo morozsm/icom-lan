@@ -257,6 +257,47 @@ at a time. Scope data (~225 packets/sec) would queue ahead of command responses.
 **Solution:** Upgrade to v0.8.0+. The drain-all RX pattern processes all queued
 packets each iteration.
 
+## UDP Errors in Logs (`peer=<host:port>`)
+
+**Symptom:** log lines like:
+
+- `UDP error [peer=192.168.55.40:50002] (#1): ...`
+- `UDP error [peer=192.168.55.40:50001] (#100, suppressed 97): ...`
+
+**What changed:** transport logs now include the remote endpoint in each UDP error
+line. This helps distinguish which logical channel is failing.
+
+**Port mapping:**
+
+- `:50001` -> control/keepalive channel
+- `:50002` -> CI-V command/state channel
+- `:50003` -> audio channel
+
+**How to interpret quickly:**
+
+1. Mostly `:50003` errors -> audio path issue (network jitter/loss, remote link).
+2. Repeated `:50002` errors -> command/state instability; expect CI-V retries/timeouts.
+3. `:50001` errors -> session-level risk (keepalive/control path), reconnect likely.
+
+**Important logging behavior:**
+
+- First 3 UDP errors are logged individually.
+- After that, logs are throttled and emitted every 100th event
+  (`suppressed 97`) to avoid log storms.
+
+**Runbook:**
+
+```bash
+# Keep only UDP diagnostics from the daemon log
+rg "UDP error|UDP connection lost" logs/icom-lan.log
+
+# Focus on CI-V channel failures only
+rg "peer=.*:50002" logs/icom-lan.log
+```
+
+If only one peer/port is noisy, troubleshoot that path first (audio, CI-V, or
+control) instead of treating it as a generic network failure.
+
 ## Reconnect After Disconnect Takes Too Long
 
 **Symptom:** After clicking Disconnect then Connect, the radio doesn't respond

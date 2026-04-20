@@ -706,6 +706,39 @@ test -f /var/run/icom-lan.pid && ps -p $(cat /var/run/icom-lan.pid)
 
 If `ICOM_PID_FILE` is unset or empty, no PID file is written. This avoids conflicts when running multiple instances or in tests.
 
+## Daemon Logging and Rotation (`web` / `serve`)
+
+`web` and `serve` are long-running commands, so the CLI enables file logging by default
+to preserve diagnostics across reconnects/restarts.
+
+- Default file path: `logs/icom-lan.log`
+- Handler type: Python `RotatingFileHandler`
+- Rotation defaults: `50_000_000` bytes per file, `5` backups
+
+You can tune this behavior with environment variables:
+
+| Variable | Default | Meaning |
+|---|---:|---|
+| `ICOM_LOG_FILE` | `logs/icom-lan.log` (for `web`/`serve`) | Log file path. Set to `off`, `none`, or `-` to disable file logging entirely. |
+| `ICOM_LOG_MAX_BYTES` | `50000000` | Rotate when file reaches this size (bytes). |
+| `ICOM_LOG_BACKUP_COUNT` | `5` | Number of rotated files to keep. Set `0` to disable rotation. |
+| `ICOM_DEBUG` | unset | Enables debug-level logging and also enables file logging if `ICOM_LOG_FILE` is not disabled. |
+
+```bash
+# Custom log location (systemd/container-friendly)
+export ICOM_LOG_FILE=/var/log/icom-lan/daemon.log
+icom-lan web
+
+# Smaller files with more backups
+export ICOM_LOG_MAX_BYTES=10000000
+export ICOM_LOG_BACKUP_COUNT=10
+icom-lan serve
+
+# Explicitly disable file logs (stdout/stderr only)
+export ICOM_LOG_FILE=off
+icom-lan web
+```
+
 ## Flag Reference
 
 Compact per-flag reference for all notable options, including which subcommand accepts them, the default value, and a minimal working example.
