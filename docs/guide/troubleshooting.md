@@ -267,11 +267,18 @@ packets each iteration.
 **What changed:** transport logs now include the remote endpoint in each UDP error
 line. This helps distinguish which logical channel is failing.
 
-**Port mapping:**
+**Port mapping (defaults):**
 
 - `:50001` -> control/keepalive channel
 - `:50002` -> CI-V command/state channel
 - `:50003` -> audio channel
+
+These are Icom's factory defaults and match the vast majority of deployments.
+If the radio's menu has been changed, or the client was started with a custom
+`--control-port` / `ICOM_PORT` (see `src/icom_lan/cli.py`), the actual ports may
+differ — CI-V and audio ports can also be reassigned by the radio's status
+report (see `src/icom_lan/_control_phase.py`). In that case, substitute your
+session's ports in the filters below.
 
 **How to interpret quickly:**
 
@@ -291,7 +298,7 @@ line. This helps distinguish which logical channel is failing.
 # Keep only UDP diagnostics from the daemon log
 rg "UDP error|UDP connection lost" logs/icom-lan.log
 
-# Focus on CI-V channel failures only
+# Focus on CI-V channel failures only (replace 50002 if your session uses a custom CI-V port)
 rg "peer=.*:50002" logs/icom-lan.log
 ```
 
