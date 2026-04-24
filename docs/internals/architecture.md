@@ -371,7 +371,7 @@ enable/disable. Avoids request-response patterns to survive the IC-7610's 225-pa
 scope flood.
 
 **`web/handlers/`** — WebSocket handler subpackage: scope, meters, audio, and control
-handlers. Routes incoming WebSocket messages to the radio via `IcomCommander`.
+handlers. Enqueues commands via `CommandQueue`; `RadioPoller` drains the queue and dispatches to the radio. (`IcomCommander` is a lower-level CI-V helper used by the backend, not part of the web dispatch path.)
 
 **`web/band_plan.py`** — Amateur radio band definitions and frequency validation helpers.
 Used by the web UI to show band segments and validate frequency input.
