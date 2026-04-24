@@ -66,6 +66,28 @@ logger = logging.getLogger(__name__)
 _DEFAULT_STATIC_DIR = pathlib.Path(__file__).parent / "static"
 _RADIO_MODEL = "IC-7610"
 
+
+def _redact_token_in_path(path: str) -> str:
+    """Return `path` with any `token=` query value replaced by `***`.
+
+    Prevents auth tokens from leaking into log captures when clients
+    authenticate via the `?token=` query parameter (see issue #948).
+    """
+    if "token=" not in path:
+        return path
+    base, _, query = path.partition("?")
+    if not query:
+        return path
+    parts = []
+    for pair in query.split("&"):
+        key, eq, _value = pair.partition("=")
+        if key == "token" and eq:
+            parts.append("token=***")
+        else:
+            parts.append(pair)
+    return f"{base}?{'&'.join(parts)}"
+
+
 # Mode/filter lists moved to RadioProfile (profiles.py)
 
 
@@ -1286,7 +1308,13 @@ class WebServer:
                 return
             method, path, headers, query = result
 
-            logger.debug("request: %s %s from %s:%s", method, path, peer[0], peer[1])
+            logger.debug(
+                "request: %s %s from %s:%s",
+                method,
+                _redact_token_in_path(path),
+                peer[0],
+                peer[1],
+            )
 
             # WebSocket upgrade?
             if (
@@ -2438,7 +2466,7 @@ class WebServer:
         try:
             await handler.run()
         except Exception as exc:
-            logger.debug("ws handler error on %s: %s", path, exc)
+            logger.debug("ws handler error on %s: %s", _redact_token_in_path(path), exc)
         finally:
             keepalive.cancel()
             try:
