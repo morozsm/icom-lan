@@ -33,7 +33,8 @@ export class ScopeController {
   readonly activeScope: 'hardware' | 'audio-fft' | null = 'audio-fft';
   readonly scopeFrame: ScopeFrame | null = null;
 
-  private _subscribers = new Set<FrameHandler>();
+  private _subscribers = new Map<number, FrameHandler>();
+  private _nextId = 0;
   private _unsubBinary: (() => void) | null = null;
   private _channel: WsChannel | null = null;
   private _getChannel: ChannelFactory;
@@ -46,16 +47,18 @@ export class ScopeController {
    * Subscribe to parsed scope frames.
    * Opens the WS channel on the first subscriber.
    * Returns an `unsubscribe` function — call it to stop receiving frames.
+   * Each subscribe() call creates an independent subscription, even for the same handler reference.
    */
   subscribe(handler: FrameHandler): () => void {
-    this._subscribers.add(handler);
+    const id = this._nextId++;
+    this._subscribers.set(id, handler);
 
     if (this._subscribers.size === 1) {
       this._connect();
     }
 
     return () => {
-      this._subscribers.delete(handler);
+      this._subscribers.delete(id);
       if (this._subscribers.size === 0) {
         this._disconnect();
       }
@@ -71,7 +74,7 @@ export class ScopeController {
       const frame = parseScopeFrame(buf);
       if (frame) {
         this.audioScopeFrame = frame;
-        for (const h of this._subscribers) {
+        for (const h of this._subscribers.values()) {
           h(frame);
         }
       }
