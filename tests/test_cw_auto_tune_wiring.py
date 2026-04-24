@@ -62,10 +62,16 @@ class TestCwAutoTuneWiring:
     async def test_timeout_returns_not_detected(self) -> None:
         """If no audio arrives within 3s, return detected=None."""
         handler = _make_handler()
+
+        async def _raise_timeout(coro: Any, timeout: float) -> None:
+            # Close the Event.wait() coroutine so it isn't left un-awaited.
+            coro.close()
+            raise asyncio.TimeoutError
+
         # No audio fed → tuner never fires → timeout
         with patch(
             "icom_lan.web.handlers.control.asyncio.wait_for",
-            side_effect=asyncio.TimeoutError,
+            side_effect=_raise_timeout,
         ):
             result = await handler._cw_auto_tune()
 
@@ -187,9 +193,14 @@ class TestCwAutoTuneWiring:
         handler = _make_handler()
         registry = handler._server._audio_broadcaster._tap_registry
 
+        async def _raise_timeout(coro: Any, timeout: float) -> None:
+            # Close the Event.wait() coroutine so it isn't left un-awaited.
+            coro.close()
+            raise asyncio.TimeoutError
+
         with patch(
             "icom_lan.web.handlers.control.asyncio.wait_for",
-            side_effect=asyncio.TimeoutError,
+            side_effect=_raise_timeout,
         ):
             await handler._cw_auto_tune()
 
