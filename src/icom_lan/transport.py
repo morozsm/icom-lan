@@ -178,7 +178,7 @@ class IcomTransport:
             TimeoutError: If the radio does not respond to discovery.
         """
         self.state = ConnectionState.CONNECTING
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         if sock is not None:
             # Caller reserved this socket earlier; connect + hand off.
             sock.connect((host, port))
@@ -232,7 +232,7 @@ class IcomTransport:
 
         saved_remote_id = self.remote_id
         self.state = ConnectionState.CONNECTING
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         local_addr = (local_host, 0) if local_host else None
         await loop.create_datagram_endpoint(
             lambda: _UdpProtocol(self),

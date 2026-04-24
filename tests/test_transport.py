@@ -136,7 +136,7 @@ class TestConnectionState:
         loop = _FakeLoop(("192.168.2.194", 50002))
 
         with (
-            patch("icom_lan.transport.asyncio.get_event_loop", return_value=loop),
+            patch("icom_lan.transport.asyncio.get_running_loop", return_value=loop),
             patch.object(t, "_discover", new=AsyncMock()),
             patch.object(t, "_ready_handshake", new=AsyncMock()),
         ):
@@ -166,7 +166,7 @@ class TestConnectionState:
         sock.bind(("0.0.0.0", 0))
 
         with (
-            patch("icom_lan.transport.asyncio.get_event_loop", return_value=loop),
+            patch("icom_lan.transport.asyncio.get_running_loop", return_value=loop),
             patch.object(t, "_discover", new=AsyncMock()),
             patch.object(t, "_ready_handshake", new=AsyncMock()),
         ):
@@ -191,7 +191,7 @@ class TestConnectionState:
         loop = _FakeLoop(("192.168.2.194", 50001))
 
         with (
-            patch("icom_lan.transport.asyncio.get_event_loop", return_value=loop),
+            patch("icom_lan.transport.asyncio.get_running_loop", return_value=loop),
             patch.object(t, "_ready_handshake", new=AsyncMock()),
         ):
             await t.reconnect(
