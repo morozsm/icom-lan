@@ -728,7 +728,7 @@ class WebServer:
                     len(self._scope_handlers),
                 )
 
-        asyncio.create_task(_refetch_and_reenable())
+        self._spawn(_refetch_and_reenable())
 
     def _schedule_scope_enable_when_ready(self, *, reason: str) -> None:
         """Schedule delayed scope enable once radio becomes ready."""
