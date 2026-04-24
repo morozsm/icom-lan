@@ -22,6 +22,7 @@ import {
 import { getCapabilities, getControlRange } from '$lib/stores/capabilities.svelte';
 import { audioManager } from '$lib/audio/audio-manager';
 import { setMuted, setVolume } from '$lib/stores/audio.svelte';
+import { consumePendingFocus } from '$lib/radio/pending-focus';
 
 /* ── Shared helpers ──────────────────────────────────────────────── */
 
@@ -103,28 +104,6 @@ export function makeAgcHandlers() {
 }
 
 /* ── Mode Handlers ───────────────────────────────────────────────── */
-
-/**
- * Short-lived pending-focus cache — bridges the gap between a MAIN/SUB mode
- * badge click and a subsequent mode change targeting the just-focused receiver.
- */
-const PENDING_FOCUS_TTL_MS = 300;
-let pendingFocusVfo: 'MAIN' | 'SUB' | null = null;
-let pendingFocusAt = 0;
-
-function setPendingFocus(vfo: 'MAIN' | 'SUB'): void {
-  pendingFocusVfo = vfo;
-  pendingFocusAt = Date.now();
-}
-
-function consumePendingFocus(): 'MAIN' | 'SUB' | null {
-  if (pendingFocusVfo === null) return null;
-  const fresh = Date.now() - pendingFocusAt < PENDING_FOCUS_TTL_MS;
-  const vfo = pendingFocusVfo;
-  pendingFocusVfo = null;
-  pendingFocusAt = 0;
-  return fresh ? vfo : null;
-}
 
 export function makeModeHandlers() {
   return {

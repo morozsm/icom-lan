@@ -18,6 +18,7 @@ import { setMuted, setVolume } from '$lib/stores/audio.svelte';
 import type { KeyboardActionConfig } from '../layout/keyboard-map';
 import { mapIfShiftToPbt, pbtHzToRaw } from '../panels/filter-controls';
 import { clampRef, clampSpan } from '../../components/spectrum/spectrum-toolbar-logic';
+import { consumePendingFocus, setPendingFocus } from '$lib/radio/pending-focus';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 
@@ -30,30 +31,6 @@ function cmd(name: string, params: Record<string, unknown> = {}): void {
 
 function activeReceiverParam(): Receiver {
   return getRadioState()?.active === 'SUB' ? 1 : 0;
-}
-
-/**
- * Short-lived pending-focus cache — bridges the gap between a MAIN/SUB mode
- * badge click (which toggles `active` + `set_vfo`) and a subsequent mode
- * change that must target the just-focused receiver.  `activeReceiverParam()`
- * can lag during rapid clicks; see issue #720.
- */
-const PENDING_FOCUS_TTL_MS = 300;
-let pendingFocusVfo: 'MAIN' | 'SUB' | null = null;
-let pendingFocusAt = 0;
-
-function setPendingFocus(vfo: 'MAIN' | 'SUB'): void {
-  pendingFocusVfo = vfo;
-  pendingFocusAt = Date.now();
-}
-
-function consumePendingFocus(): 'MAIN' | 'SUB' | null {
-  if (pendingFocusVfo === null) return null;
-  const fresh = Date.now() - pendingFocusAt < PENDING_FOCUS_TTL_MS;
-  const vfo = pendingFocusVfo;
-  pendingFocusVfo = null;
-  pendingFocusAt = 0;
-  return fresh ? vfo : null;
 }
 
 function focusModePanel(vfo: 'MAIN' | 'SUB'): void {
