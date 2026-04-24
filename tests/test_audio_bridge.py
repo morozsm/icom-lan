@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
+import types
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -14,6 +16,7 @@ from icom_lan.audio.backend import (
     AudioDeviceInfo,
     FakeAudioBackend,
 )
+from icom_lan.audio.lan_stream import AudioPacket
 from icom_lan.audio_bridge import (
     AudioBridge,
     CHANNELS,
@@ -92,19 +95,25 @@ def _bridge_backend(
     )
 
 
-def _make_radio() -> MagicMock:
+def _make_radio() -> types.SimpleNamespace:
     from icom_lan.audio_bus import AudioBus
 
-    radio = MagicMock()
-    radio.start_audio_rx_opus = AsyncMock()
-    radio.stop_audio_rx_opus = AsyncMock()
-    radio.start_audio_tx_pcm = AsyncMock()
-    radio.stop_audio_tx_pcm = AsyncMock()
-    radio.push_audio_tx_pcm = AsyncMock()
-    radio.push_audio_tx_opus = AsyncMock()
+    radio: types.SimpleNamespace = types.SimpleNamespace(
+        start_audio_rx_opus=AsyncMock(),
+        stop_audio_rx_opus=AsyncMock(),
+        start_audio_tx_pcm=AsyncMock(),
+        stop_audio_tx_pcm=AsyncMock(),
+        push_audio_tx_pcm=AsyncMock(),
+        push_audio_tx_opus=AsyncMock(),
+    )
     bus = AudioBus(radio)
     radio.audio_bus = bus
     return radio
+
+
+def _bare_radio(**kwargs: object) -> types.SimpleNamespace:
+    """Minimal radio stub for tests that don't call bridge.start()."""
+    return types.SimpleNamespace(**kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +201,7 @@ def test_list_audio_devices_no_sounddevice():
 
 
 def test_bridge_init_defaults():
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     assert not bridge.running
     assert bridge.bridge_state == BridgeState.IDLE
@@ -210,23 +219,23 @@ def test_bridge_init_defaults():
 
 
 def test_bridge_init_custom():
-    radio = MagicMock()
-    custom_executor = MagicMock()
-    bridge = AudioBridge(
-        radio,
-        device_name="MyDevice",
-        sample_rate=8000,
-        channels=2,
-        frame_ms=40,
-        tx_enabled=False,
-        tx_executor=custom_executor,
-    )
-    assert bridge._device_name == "MyDevice"
-    assert bridge._sample_rate == 8000
-    assert bridge._channels == 2
-    assert bridge._frame_ms == 40
-    assert bridge._tx_enabled is False
-    assert bridge._tx_executor is custom_executor
+    radio = _bare_radio()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as custom_executor:
+        bridge = AudioBridge(
+            radio,
+            device_name="MyDevice",
+            sample_rate=8000,
+            channels=2,
+            frame_ms=40,
+            tx_enabled=False,
+            tx_executor=custom_executor,
+        )
+        assert bridge._device_name == "MyDevice"
+        assert bridge._sample_rate == 8000
+        assert bridge._channels == 2
+        assert bridge._frame_ms == 40
+        assert bridge._tx_enabled is False
+        assert bridge._tx_executor is custom_executor
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +244,7 @@ def test_bridge_init_custom():
 
 
 async def test_bridge_start_no_device():
-    radio = MagicMock()
+    radio = _bare_radio()
     backend = FakeAudioBackend(
         [AudioDeviceInfo(id=AudioDeviceId(0), name="Built-in", output_channels=2)]
     )
@@ -286,7 +295,7 @@ async def test_bridge_start_already_running():
 
 
 async def test_bridge_stop_when_not_running():
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     await bridge.stop()  # no-op, no error
 
@@ -304,8 +313,7 @@ async def test_bridge_rx_via_bus():
     )
     await bridge.start()
 
-    packet = MagicMock()
-    packet.data = b"\x01\x02\x03"
+    packet = AudioPacket(ident=0x80, send_seq=0, data=b"\x01\x02\x03")
     radio.audio_bus._on_opus_packet(packet)
     assert bridge._subscription._received == 1
 
@@ -350,7 +358,7 @@ async def test_bridge_tx_path_uses_backend_rx_stream():
 
 
 def test_initial_state_is_idle():
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     assert bridge.bridge_state == BridgeState.IDLE
 
@@ -428,8 +436,7 @@ async def test_reconnect_on_stream_write_failure():
     checkpoint = len(waiter.events)  # skip initial RUNNING
 
     backend.tx_streams[0].fail_on_write = OSError("device removed")
-    packet = MagicMock()
-    packet.data = b"\x01\x02\x03" * 100
+    packet = AudioPacket(ident=0x80, send_seq=1, data=b"\x01\x02\x03" * 100)
     radio.audio_bus._on_opus_packet(packet)
 
     # Wait for reconnect to complete (event-based, no timing assumption)
@@ -460,8 +467,7 @@ async def test_reconnect_succeeds_when_device_returns():
     backend.tx_streams[0].fail_on_write = OSError("device removed")
     backend.remove_devices()
 
-    packet = MagicMock()
-    packet.data = b"\xaa" * 100
+    packet = AudioPacket(ident=0x80, send_seq=2, data=b"\xaa" * 100)
     radio.audio_bus._on_opus_packet(packet)
 
     # Wait for RECONNECTING state
@@ -497,8 +503,7 @@ async def test_failed_state_after_max_retries():
     backend.tx_streams[0].fail_on_write = OSError("gone")
     backend.remove_devices()
 
-    packet = MagicMock()
-    packet.data = b"\xbb" * 100
+    packet = AudioPacket(ident=0x80, send_seq=3, data=b"\xbb" * 100)
     radio.audio_bus._on_opus_packet(packet)
 
     # Wait for FAILED state (event-based — no timing assumption)
@@ -526,8 +531,7 @@ async def test_stop_cancels_reconnect_task():
     backend.tx_streams[0].fail_on_write = OSError("gone")
     backend.remove_devices()
 
-    packet = MagicMock()
-    packet.data = b"\xcc" * 100
+    packet = AudioPacket(ident=0x80, send_seq=4, data=b"\xcc" * 100)
     radio.audio_bus._on_opus_packet(packet)
 
     # Wait for RECONNECTING (event-based)
@@ -557,7 +561,7 @@ async def test_stats_includes_bridge_state():
 
 
 def test_stats_has_new_fields():
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     s = bridge.stats
     assert "uptime_seconds" in s
@@ -571,7 +575,7 @@ def test_stats_has_new_fields():
 def test_rx_latency_calculation():
     import time
 
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     bridge._last_rx_time = time.monotonic() - 0.020
     bridge._rx_latency_samples.append(0.020)
@@ -583,7 +587,7 @@ def test_rx_latency_calculation():
 
 
 def test_tx_latency_calculation():
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     bridge._tx_latency_samples.append(0.040)
     bridge._tx_latency_samples.append(0.040)
@@ -595,7 +599,7 @@ def test_tx_latency_calculation():
 def test_latency_buffer_capped_at_100():
     import time
 
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     bridge._last_rx_time = time.monotonic() - 0.020
 
@@ -614,25 +618,22 @@ def test_latency_buffer_capped_at_100():
 
 
 def test_derive_label_explicit():
-    radio = MagicMock()
-    radio.model = "IC-7610"
+    radio = _bare_radio(model="IC-7610")
     assert derive_bridge_label(radio, "my-label") == "my-label"
 
 
 def test_derive_label_from_model():
-    radio = MagicMock()
-    radio.model = "IC-7610"
+    radio = _bare_radio(model="IC-7610")
     assert derive_bridge_label(radio, None) == "icom-lan (IC-7610)"
 
 
 def test_derive_label_no_model():
-    radio = MagicMock(spec=[])
+    radio = _bare_radio()  # no model attr — same semantics as MagicMock(spec=[])
     assert derive_bridge_label(radio, None) == "icom-lan"
 
 
 def test_derive_label_empty_model():
-    radio = MagicMock()
-    radio.model = ""
+    radio = _bare_radio(model="")
     assert derive_bridge_label(radio, None) == "icom-lan"
 
 
@@ -642,19 +643,19 @@ def test_derive_label_empty_model():
 
 
 def test_bridge_label_default():
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     assert bridge.label == "icom-lan"
 
 
 def test_bridge_label_custom():
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio, label="icom-lan (IC-7610)")
     assert bridge.label == "icom-lan (IC-7610)"
 
 
 def test_bridge_label_in_stats():
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio, label="icom-lan (IC-905)")
     assert bridge.stats["label"] == "icom-lan (IC-905)"
 
@@ -662,7 +663,7 @@ def test_bridge_label_in_stats():
 async def test_bridge_label_in_log_messages(caplog):
     import logging
 
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio, label="icom-lan (IC-905)")
 
     with caplog.at_level(logging.WARNING):
@@ -678,7 +679,7 @@ async def test_bridge_label_in_log_messages(caplog):
 
 
 def test_metrics_returns_bridge_metrics_instance():
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     m = bridge.metrics
     assert isinstance(m, BridgeMetrics)
@@ -694,7 +695,7 @@ def test_metrics_returns_bridge_metrics_instance():
 
 def test_metrics_to_dict_backward_compat():
     """stats returns a dict with all BridgeMetrics fields."""
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     s = bridge.stats
     assert isinstance(s, dict)
@@ -706,7 +707,7 @@ def test_metrics_to_dict_backward_compat():
 
 def test_metrics_jitter_computed():
     """Jitter is the std dev of inter-frame intervals."""
-    radio = MagicMock()
+    radio = _bare_radio()
     bridge = AudioBridge(radio)
     # Vary intervals: 20ms, 22ms, 18ms, 20ms
     bridge._rx_latency_samples = [0.020, 0.022, 0.018, 0.020]
@@ -731,8 +732,7 @@ async def test_on_metrics_callback():
 
     # Deliver 50 frames to trigger a metrics emission (every 50 frames)
     for i in range(51):
-        packet = MagicMock()
-        packet.data = b"\xaa" * 100
+        packet = AudioPacket(ident=0x80, send_seq=i, data=b"\xaa" * 100)
         radio.audio_bus._on_opus_packet(packet)
 
     await asyncio.sleep(0.1)
