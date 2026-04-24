@@ -257,12 +257,13 @@ def _resolve_password(args: argparse.Namespace) -> str:
     to the $ICOM_PASS environment variable.
     """
     cli_pass = getattr(args, "password_cli", None)
-    if cli_pass:
+    if cli_pass is not None:
         return str(cli_pass)
     pass_file = getattr(args, "pass_file", None)
     if pass_file:
         try:
-            return Path(pass_file).read_text(encoding="utf-8").rstrip("\n\r")
+            lines = Path(pass_file).read_text(encoding="utf-8").splitlines()
+            return lines[0] if lines else ""
         except OSError as e:
             print(
                 f"Error: cannot read --pass-file {pass_file!r}: {e}",
