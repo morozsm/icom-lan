@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
+from icom_lan.audio import AudioPacket
 from icom_lan.audio_bus import AudioBus, AudioSubscription
 
 
 @pytest.fixture
 def mock_radio():
-    radio = MagicMock()
+    radio = SimpleNamespace()
     radio.start_audio_rx_opus = AsyncMock()
     radio.stop_audio_rx_opus = AsyncMock()
     return radio
@@ -124,8 +126,7 @@ async def test_packet_delivery(bus, mock_radio):
     await s2.start()
 
     # Simulate radio callback
-    pkt = MagicMock()
-    pkt.data = b"\x01\x02\x03"
+    pkt = AudioPacket(ident=0x80, send_seq=1, data=b"\x01\x02\x03")
     bus._on_opus_packet(pkt)
 
     # Both subscribers should receive it
@@ -155,7 +156,7 @@ async def test_packet_delivery_none_gap(bus, mock_radio):
 async def test_inactive_subscriber_ignores_packets(bus, mock_radio):
     sub = bus.subscribe(name="s1")
     # Not started — deliver should be a no-op
-    sub.deliver(MagicMock())
+    sub.deliver(AudioPacket(ident=0x80, send_seq=0, data=b""))
     assert sub._received == 0
 
 
@@ -168,7 +169,9 @@ async def test_queue_overflow_drops_oldest(bus, mock_radio):
     sub = bus.subscribe(name="s1", queue_size=2)
     await sub.start()
 
-    pkt1, pkt2, pkt3 = MagicMock(), MagicMock(), MagicMock()
+    pkt1 = AudioPacket(ident=0x80, send_seq=1, data=b"pkt1")
+    pkt2 = AudioPacket(ident=0x80, send_seq=2, data=b"pkt2")
+    pkt3 = AudioPacket(ident=0x80, send_seq=3, data=b"pkt3")
     bus._on_opus_packet(pkt1)
     bus._on_opus_packet(pkt2)
     bus._on_opus_packet(pkt3)  # should drop pkt1
@@ -191,7 +194,10 @@ async def test_async_iteration(bus, mock_radio):
     sub = bus.subscribe(name="s1")
     await sub.start()
 
-    pkts = [MagicMock() for _ in range(3)]
+    pkts = [
+        AudioPacket(ident=0x80, send_seq=i, data=f"pkt{i}".encode())
+        for i in range(3)
+    ]
     for p in pkts:
         bus._on_opus_packet(p)
 
@@ -214,7 +220,7 @@ async def test_context_manager(bus, mock_radio):
         assert sub.active
         assert bus.subscriber_count == 1
 
-        pkt = MagicMock()
+        pkt = AudioPacket(ident=0x80, send_seq=1, data=b"context")
         bus._on_opus_packet(pkt)
         result = sub.get_nowait()
         assert result is pkt
@@ -253,8 +259,8 @@ async def test_subscription_stats(bus, mock_radio):
     sub = bus.subscribe(name="test-sub")
     await sub.start()
 
-    bus._on_opus_packet(MagicMock())
-    bus._on_opus_packet(MagicMock())
+    bus._on_opus_packet(AudioPacket(ident=0x80, send_seq=1, data=b"stat1"))
+    bus._on_opus_packet(AudioPacket(ident=0x80, send_seq=2, data=b"stat2"))
 
     stats = sub.stats
     assert stats["name"] == "test-sub"
