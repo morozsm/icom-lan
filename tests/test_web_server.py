@@ -34,7 +34,7 @@ from icom_lan.web.protocol import (
     encode_json,
     encode_scope_frame,
 )
-from icom_lan.web.server import WebConfig, WebServer
+from icom_lan.web.server import _DEFAULT_STATIC_DIR, WebConfig, WebServer
 from icom_lan.web.websocket import (
     WS_MAGIC,
     WS_OP_BINARY,
@@ -44,6 +44,21 @@ from icom_lan.web.websocket import (
     make_accept_key,
     make_frame,
 )
+
+# ---------------------------------------------------------------------------
+# Frontend static build guard
+# ---------------------------------------------------------------------------
+
+# The web server serves `index.html` from `src/icom_lan/web/static/` at `GET /`.
+# In a fresh checkout without a frontend build, that directory is absent and
+# any test relying on the root route would fail deterministically. Skip such
+# tests when the built frontend is not present (see issue #953).
+_STATIC_INDEX_MISSING = not (_DEFAULT_STATIC_DIR / "index.html").is_file()
+_requires_static_index = pytest.mark.skipif(
+    _STATIC_INDEX_MISSING,
+    reason="frontend build not present (src/icom_lan/web/static/index.html missing)",
+)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -579,6 +594,7 @@ class TestHttpEndpoints:
         assert "connection" in data
         assert isinstance(data["connection"]["radioReady"], bool)
 
+    @_requires_static_index
     async def test_root_returns_html(self, server: WebServer) -> None:
         host, port = _addr(server)
         status, headers, body = await _http_get(host, port, "/")
@@ -2072,6 +2088,7 @@ class TestScopeLifecycle:
 class TestCacheControl:
     """Static file responses must include Cache-Control: no-cache."""
 
+    @_requires_static_index
     async def test_static_index_has_cache_control(self, server: WebServer) -> None:
         host, port = _addr(server)
         status, headers, _ = await _http_get(host, port, "/")
