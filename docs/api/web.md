@@ -57,7 +57,7 @@ Version, model, capability summary, and connection metadata.
 ```json
 {
   "server": "icom-lan",
-  "version": "0.12.0",
+  "version": "0.18.0",
   "proto": 1,
   "radio": "IC-7300",
   "model": "IC-7300",
