@@ -9,8 +9,8 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   Frontend (Web UI)                         │
-│  Svelte 5 + TypeScript → HTTP poll /api/v1/state (200ms)   │
-│  WebSocket для команд + scope data + audio stream           │
+│  Svelte 5 + TypeScript → WebSocket /api/v1/ws state_update  │
+│  HTTP fallback for initial load; WS for commands + scope    │
 └─────────────────────────────────────────────────────────────┘
                               ↕
 ┌─────────────────────────────────────────────────────────────┐
@@ -226,7 +226,7 @@ GET /api/v1/state
 
 **WebSocket channels:**
 ```
-/api/v1/ws          → control commands (set freq/mode/power)
+/api/v1/ws          → state_update broadcasts + control commands (set freq/mode/power)
 /api/v1/scope       → binary spectrum data (WebAssembly decoder)
 /api/v1/audio       → Opus audio stream (RX/TX)
 ```
@@ -234,7 +234,8 @@ GET /api/v1/state
 **RadioPoller** (`radio_poller.py`):
 - 200ms таймер → `get_all_state()`
 - Собирает 30+ команд (freq, mode, meters, toggles)
-- Broadcast state → все подключенные WS клиенты
+- DeltaEncoder → delta-encoded state_update events over WS
+- HTTP /api/v1/state remains as fallback (initial load, offline recovery)
 
 ---
 
@@ -244,10 +245,14 @@ GET /api/v1/state
 
 **State sync:**
 ```typescript
-// HTTP poll (200ms)
-const state = await fetch('/api/v1/state').then(r => r.json());
+// WebSocket state_update (delta-encoded, ~50ms latency)
+ws.on('message', (event) => {
+  if (event.type === 'state_update') {
+    state = applyDelta(state, event.data);
+  }
+});
 
-// Derived UI state
+// Derived UI state (reactive Svelte stores)
 $: freqMhz = state.main.freqHz / 1e6;
 $: modeLabel = state.main.mode;
 ```
@@ -262,17 +267,20 @@ ws.send(JSON.stringify({
 }));
 ```
 
-**Components:**
-- `App.svelte` — root, desktop/mobile layout switch
-- `Spectrum.svelte` — canvas rendering (WebAssembly decoder)
-- `Waterfall.svelte` — canvas + DX spots overlay
-- `ControlPanel.svelte` — sliders, toggles, buttons
-- `MobileLayout.svelte` — touch-optimized
+**Components** (organized under `components-v2/`):
+- `layout/` — `RadioLayout.svelte` (desktop), responsive frame
+- `panels/` — `VfoPanel.svelte`, `MetersDockPanel.svelte`, `ControlPanel.svelte` (sliders, toggles)
+- `vfo/` — dual-receiver VFO UI with bridge controls
+- `display/` — meters, indicators, DX cluster
+- `controls/` — buttons, switches, mode/filter selectors
+- `wiring/` — state-adapter + command-bus (adapter layer per CLAUDE.md)
+- `theme/` — skin registry, visual system
 
 **State management:**
-- Server state = single source of truth
-- No Redux/Vuex — direct HTTP poll + WS commands
+- Server state = single source of truth (via WS state_update)
+- FrontendRuntime singleton + Svelte stores (see CLAUDE.md frontend layering)
 - Pending actions tracked locally for optimistic UI
+- No Redux/Vuex — delta-encoded WS + command dispatch
 
 ---
 
@@ -293,10 +301,11 @@ ws.send(JSON.stringify({
 - Retry + timeout + deduplication
 - Pacing (1ms min gap between commands)
 
-### 🔹 State polling (не push)
-- Web UI делает GET /api/v1/state каждые 200ms
-- Проще, чем WebSocket delta push
-- Мобильная оптимизация отложена (Phase 3+)
+### 🔹 State push over WebSocket
+- Server broadcasts delta-encoded state_update events over /api/v1/ws (~200ms interval)
+- DeltaEncoder reduces bandwidth vs full-state JSON
+- HTTP /api/v1/state kept as fallback (initial sync, offline recovery)
+- Lower latency (~50ms vs 200ms poll) + reduced server load
 
 ### 🔹 Zero external dependencies
 - Чистый Python stdlib (asyncio, socket, struct)
@@ -397,21 +406,24 @@ Used for:
 
 ## Тестирование
 
-- **3470 unit тестов** (5 минут runtime)
+- **~4796 unit tests** (5 минут runtime)
+  - Command builders/parsers, protocol roundtrips
+  - Rig profile validation (TOML schema)
+  - Web API (HTTP + WebSocket)
 - **Mock radio classes** для integration tests (без hardware)
-- **Command roundtrip tests** (builder → parser → validate)
-- **Rig profile validation** (TOML schema checks)
-- **Web API smoke tests** (HTTP endpoints)
+- **FakeAudioBackend** for audio pipeline tests
+- **Full test suite enforced** before commits (see CLAUDE.md)
 
 ---
 
 ## Документация
 
 - `docs/guide/` — user guides (installation, quickstart, troubleshooting)
-- `docs/plans/` — architecture decisions
-- `docs/sessions/` — development session reports
+- `docs/plans/` — architecture decisions, ADRs
+- `docs/api/` — API documentation (CI-V protocol, WebSocket schema)
 - `README.md` — project overview + API examples
 - `ARCHITECTURE.md` — (этот файл) high-level overview
+- `CLAUDE.md` — internal: workflow, testing, git conventions
 
 ---
 
