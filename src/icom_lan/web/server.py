@@ -964,13 +964,7 @@ class WebServer:
             from ..radio_protocol import StateNotifyCapable
 
             # --- Yaesu CAT backend: use YaesuCatPoller (request-response) ---
-            _is_yaesu = False
-            try:
-                from ..backends.yaesu_cat.radio import YaesuCatRadio
-
-                _is_yaesu = isinstance(self._radio, YaesuCatRadio)
-            except ImportError:
-                pass
+            _is_yaesu = getattr(self._radio, "backend_id", None) == "yaesu_cat"
 
             if _is_yaesu:
                 from ..backends.yaesu_cat.poller import YaesuCatPoller
