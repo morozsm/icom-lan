@@ -13,7 +13,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.audio import AudioState, AudioStream
+from _audio_stream_fake import FakeAudioStream
+
+from icom_lan.audio import AudioState
 from icom_lan.radio import AudioRecoveryState, IcomRadio
 
 
@@ -48,15 +50,9 @@ def _make_radio(**kwargs) -> IcomRadio:
     return radio
 
 
-def _install_audio_stream(radio: IcomRadio) -> MagicMock:
-    """Install a mock AudioStream on the radio."""
-    stream = MagicMock(spec=AudioStream)
-    stream.start_rx = AsyncMock()
-    stream.stop_rx = AsyncMock()
-    stream.start_tx = AsyncMock()
-    stream.stop_tx = AsyncMock()
-    stream.push_tx = AsyncMock()
-    stream.state = AudioState.IDLE
+def _install_audio_stream(radio: IcomRadio) -> FakeAudioStream:
+    """Install a FakeAudioStream on the radio."""
+    stream = FakeAudioStream()
     radio._audio_stream = stream
     radio._audio_transport = MagicMock()
     radio._audio_transport.disconnect = AsyncMock()

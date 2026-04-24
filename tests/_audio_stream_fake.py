@@ -25,11 +25,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from icom_lan.audio import AudioState
+
 
 class FakeAudioStream:
     """Deterministic double for ``AudioStream`` — no real transport needed."""
 
     def __init__(self) -> None:
+        self.state: AudioState = AudioState.IDLE
+
         self.start_rx_count: int = 0
         self.stop_rx_count: int = 0
         self.start_tx_count: int = 0
