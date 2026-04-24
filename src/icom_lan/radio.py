@@ -295,6 +295,13 @@ _DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
 # Default TTLs (seconds) for the GET-command cache fallback paths.
 _DEFAULT_CACHE_TTL: dict[str, float] = {"freq": 10.0, "mode": 10.0, "rf_power": 30.0}
 
+# Threshold for ``Radio.connected`` to treat a UDP transport as unhealthy.
+# A single transient ``error_received`` (e.g. EAGAIN/EWOULDBLOCK/Broken pipe)
+# should not latch the socket into a disconnected state — the counter is
+# cumulative and only the 30s watchdog resets it via ``soft_reconnect``.
+# Require >=3 accumulated errors before reporting ``connected = False``.
+_UDP_ERROR_THRESHOLD: int = 3
+
 
 def _resolve_profile_codec(
     profile: RadioProfile, explicit: "AudioCodec | int"
@@ -796,9 +803,13 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         civ = self._civ_transport
         if civ is None:
             return False
-        # Check for UDP errors (only on real IcomTransport, not mocks)
+        # Check for UDP errors (only on real IcomTransport, not mocks).
+        # A single transient EAGAIN/EWOULDBLOCK should not latch the socket
+        # into a "disconnected" state — only treat the transport as unhealthy
+        # after repeated errors.  The counter is reset on soft_reconnect and
+        # on reset_udp_error_count() after sustained healthy packet receipt.
         error_count = getattr(civ, "_udp_error_count", None)
-        if isinstance(error_count, int) and error_count > 0:
+        if isinstance(error_count, int) and error_count >= _UDP_ERROR_THRESHOLD:
             return False
         return True
 

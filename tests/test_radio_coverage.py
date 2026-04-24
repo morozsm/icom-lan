@@ -1178,10 +1178,22 @@ async def test_capture_scope_frames_multiple(
 # ---------------------------------------------------------------------------
 
 
-def test_connected_returns_false_when_error_count_positive(radio: IcomRadio) -> None:
-    """connected returns False when transport has _udp_error_count > 0 (lines 261, 265)."""
-    radio._civ_transport._udp_error_count = 1  # type: ignore[attr-defined]
+def test_connected_returns_false_when_error_count_above_threshold(
+    radio: IcomRadio,
+) -> None:
+    """connected returns False only when _udp_error_count >= threshold (issue #954)."""
+    radio._civ_transport._udp_error_count = 3  # type: ignore[attr-defined]
     assert radio.connected is False
+
+
+def test_connected_stays_true_on_single_transient_udp_error(
+    radio: IcomRadio,
+) -> None:
+    """A single transient UDP error must not latch .connected to False (issue #954)."""
+    radio._civ_transport._udp_error_count = 1  # type: ignore[attr-defined]
+    assert radio.connected is True
+    radio._civ_transport._udp_error_count = 2  # type: ignore[attr-defined]
+    assert radio.connected is True
 
 
 def test_connected_returns_true_when_error_count_zero(radio: IcomRadio) -> None:
