@@ -14,7 +14,7 @@ Fix: radio_poller.py PttOff case now calls start_audio_rx_opus() after stop_audi
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -28,45 +28,41 @@ from icom_lan.web.radio_poller import (
 )
 
 
-def _make_audio_capable_radio() -> MagicMock:
-    """Create mock radio with audio capabilities.
+def _make_audio_capable_radio() -> SimpleNamespace:
+    """Create stub radio with audio capabilities.
 
     Must satisfy isinstance(radio, AudioCapable) so that the poller
     runs the PTT-on/off audio stream transitions (start/stop TX, restart RX).
     """
     profile = resolve_radio_profile(model="IC-7610")
-    radio = MagicMock()
-    radio.profile = profile
-    radio.model = profile.model
-    radio.capabilities = set(profile.capabilities)
-    radio._radio_state = SimpleNamespace(active="MAIN")
-
-    # Core methods
-    radio.send_civ = AsyncMock()
-    radio.set_ptt = AsyncMock()
-
-    # AudioCapable protocol (required for isinstance(radio, AudioCapable))
-    # All attrs must be explicitly set; Python 3.12+ runtime_checkable uses
-    # inspect.getattr_static which bypasses MagicMock.__getattr__.
-    radio.audio_bus = MagicMock()
-    radio.start_audio_rx_opus = AsyncMock()
-    radio.stop_audio_rx_opus = AsyncMock()
-    radio.push_audio_tx_opus = AsyncMock()
-    radio.start_audio_rx_pcm = AsyncMock()
-    radio.stop_audio_rx_pcm = AsyncMock()
-    radio.start_audio_tx_pcm = AsyncMock()
-    radio.push_audio_tx_pcm = AsyncMock()
-    radio.stop_audio_tx_pcm = AsyncMock()
-    radio.get_audio_stats = AsyncMock(return_value={})
-    # PTT transition methods (used by poller when AudioCapable)
-    radio.start_audio_tx_opus = AsyncMock()
-    radio.stop_audio_tx = AsyncMock()
-
-    return radio
+    return SimpleNamespace(
+        profile=profile,
+        model=profile.model,
+        capabilities=set(profile.capabilities),
+        _radio_state=SimpleNamespace(active="MAIN"),
+        # Core methods
+        send_civ=AsyncMock(),
+        set_ptt=AsyncMock(),
+        # AudioCapable protocol attrs (required for isinstance(radio, AudioCapable))
+        # All async methods use AsyncMock so assert_awaited_* and await_count work.
+        audio_bus=SimpleNamespace(),
+        start_audio_rx_opus=AsyncMock(),
+        stop_audio_rx_opus=AsyncMock(),
+        push_audio_tx_opus=AsyncMock(),
+        start_audio_rx_pcm=AsyncMock(),
+        stop_audio_rx_pcm=AsyncMock(),
+        start_audio_tx_pcm=AsyncMock(),
+        push_audio_tx_pcm=AsyncMock(),
+        stop_audio_tx_pcm=AsyncMock(),
+        get_audio_stats=AsyncMock(return_value={}),
+        # PTT transition methods (used by poller when AudioCapable)
+        start_audio_tx_opus=AsyncMock(),
+        stop_audio_tx=AsyncMock(),
+    )
 
 
 @pytest.fixture
-def radio() -> MagicMock:
+def radio() -> SimpleNamespace:
     return _make_audio_capable_radio()
 
 
@@ -82,13 +78,15 @@ def command_queue() -> CommandQueue:
 
 @pytest.fixture
 def poller(
-    radio: MagicMock, state_cache: StateCache, command_queue: CommandQueue
+    radio: SimpleNamespace, state_cache: StateCache, command_queue: CommandQueue
 ) -> RadioPoller:
     return RadioPoller(radio, state_cache, command_queue)
 
 
 @pytest.mark.asyncio
-async def test_ptt_on_starts_tx_audio(poller: RadioPoller, radio: MagicMock) -> None:
+async def test_ptt_on_starts_tx_audio(
+    poller: RadioPoller, radio: SimpleNamespace
+) -> None:
     """PTT ON должен запускать TX audio stream."""
     # Execute PTT ON command directly
     await poller._execute(PttOn())
@@ -103,7 +101,9 @@ async def test_ptt_on_starts_tx_audio(poller: RadioPoller, radio: MagicMock) -> 
 
 
 @pytest.mark.asyncio
-async def test_ptt_off_restarts_rx_audio(poller: RadioPoller, radio: MagicMock) -> None:
+async def test_ptt_off_restarts_rx_audio(
+    poller: RadioPoller, radio: SimpleNamespace
+) -> None:
     """PTT OFF должен останавливать TX и перезапускать RX audio.
 
     This is the critical regression test for the 2026-03-09 bug.
@@ -129,7 +129,9 @@ async def test_ptt_off_restarts_rx_audio(poller: RadioPoller, radio: MagicMock) 
 
 
 @pytest.mark.asyncio
-async def test_ptt_cycle_full_sequence(poller: RadioPoller, radio: MagicMock) -> None:
+async def test_ptt_cycle_full_sequence(
+    poller: RadioPoller, radio: SimpleNamespace
+) -> None:
     """Полный цикл PTT ON → PTT OFF должен корректно переключать audio streams."""
     # PTT ON
     await poller._execute(PttOn())
@@ -149,7 +151,7 @@ async def test_ptt_cycle_full_sequence(poller: RadioPoller, radio: MagicMock) ->
 
 @pytest.mark.asyncio
 async def test_ptt_off_handles_audio_errors_gracefully(
-    poller: RadioPoller, radio: MagicMock
+    poller: RadioPoller, radio: SimpleNamespace
 ) -> None:
     """PTT OFF должен обрабатывать ошибки audio transitions без crash."""
     # Simulate audio method failures
@@ -164,7 +166,9 @@ async def test_ptt_off_handles_audio_errors_gracefully(
 
 
 @pytest.mark.asyncio
-async def test_multiple_ptt_cycles(poller: RadioPoller, radio: MagicMock) -> None:
+async def test_multiple_ptt_cycles(
+    poller: RadioPoller, radio: SimpleNamespace
+) -> None:
     """Множественные PTT циклы должны работать стабильно."""
     for i in range(3):
         # PTT ON
