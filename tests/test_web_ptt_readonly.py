@@ -1,14 +1,15 @@
-"""Tests for read-only guard on web PTT dispatch (issue #950)."""
+"""Tests for read-only guard on web PTT dispatch (issue #950, #987)."""
 
 from __future__ import annotations
 
 from queue import Queue
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from icom_lan.capabilities import CAP_CW, CAP_TUNER
 from icom_lan.web.handlers.control import ControlHandler
 
 
@@ -100,3 +101,98 @@ class TestWebPttReadOnly:
 
         assert result == {}
         assert not q.empty(), "PttOff must be enqueued"
+
+
+class TestWebCwReadOnly:
+    """read_only=True must reject send_cw_text without keying the radio."""
+
+    def _make_cw_radio(self) -> MagicMock:
+        radio = MagicMock()
+        radio.capabilities = frozenset({CAP_CW})
+        radio.send_cw_text = AsyncMock(return_value=None)
+        return radio
+
+    @pytest.mark.asyncio
+    async def test_send_cw_text_rejected_in_read_only_mode(self) -> None:
+        """send_cw_text raises PermissionError when read_only=True."""
+        handler, q = _make_handler(read_only=True, radio=self._make_cw_radio())
+
+        with pytest.raises(PermissionError, match="read-only"):
+            await handler._enqueue_command("send_cw_text", {"text": "CQ CQ"})
+
+        assert q.empty(), "command queue must not be touched in read-only mode"
+
+    @pytest.mark.asyncio
+    async def test_send_cw_text_not_called_on_radio_in_read_only_mode(self) -> None:
+        """Radio send_cw_text must never be invoked when read_only=True."""
+        radio = self._make_cw_radio()
+        handler, _ = _make_handler(read_only=True, radio=radio)
+
+        with pytest.raises(PermissionError):
+            await handler._enqueue_command("send_cw_text", {"text": "TEST"})
+
+        radio.send_cw_text.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_send_cw_text_allowed_when_not_read_only(self) -> None:
+        """send_cw_text dispatches normally when read_only=False."""
+        radio = self._make_cw_radio()
+        handler, q = _make_handler(read_only=False, radio=radio)
+
+        result = await handler._enqueue_command("send_cw_text", {"text": "CQ"})
+
+        assert result == {"text": "CQ"}
+        radio.send_cw_text.assert_awaited_once_with("CQ")
+
+
+class TestWebTunerReadOnly:
+    """read_only=True must reject set_tuner_status TUNING (value=2) only."""
+
+    def _make_tuner_radio(self) -> MagicMock:
+        radio = MagicMock()
+        radio.capabilities = frozenset({CAP_TUNER})
+        radio.set_tuner_status = AsyncMock(return_value=None)
+        return radio
+
+    @pytest.mark.asyncio
+    async def test_tuner_tune_rejected_in_read_only_mode(self) -> None:
+        """set_tuner_status value=2 (TUNING) raises PermissionError when read_only=True."""
+        handler, q = _make_handler(read_only=True, radio=self._make_tuner_radio())
+
+        with pytest.raises(PermissionError, match="read-only"):
+            await handler._enqueue_command("set_tuner_status", {"value": 2})
+
+        assert q.empty(), "command queue must not be touched in read-only mode"
+
+    @pytest.mark.asyncio
+    async def test_tuner_on_allowed_in_read_only_mode(self) -> None:
+        """set_tuner_status value=1 (ON) is allowed even when read_only=True."""
+        radio = self._make_tuner_radio()
+        handler, q = _make_handler(read_only=True, radio=radio)
+
+        result = await handler._enqueue_command("set_tuner_status", {"value": 1})
+
+        assert result == {"value": 1, "label": "ON"}
+        radio.set_tuner_status.assert_awaited_once_with(1)
+
+    @pytest.mark.asyncio
+    async def test_tuner_off_allowed_in_read_only_mode(self) -> None:
+        """set_tuner_status value=0 (OFF) is allowed even when read_only=True."""
+        radio = self._make_tuner_radio()
+        handler, q = _make_handler(read_only=True, radio=radio)
+
+        result = await handler._enqueue_command("set_tuner_status", {"value": 0})
+
+        assert result == {"value": 0, "label": "OFF"}
+        radio.set_tuner_status.assert_awaited_once_with(0)
+
+    @pytest.mark.asyncio
+    async def test_tuner_tune_allowed_when_not_read_only(self) -> None:
+        """set_tuner_status value=2 (TUNING) dispatches normally when read_only=False."""
+        radio = self._make_tuner_radio()
+        handler, q = _make_handler(read_only=False, radio=radio)
+
+        result = await handler._enqueue_command("set_tuner_status", {"value": 2})
+
+        assert result == {"value": 2, "label": "TUNING"}
+        radio.set_tuner_status.assert_awaited_once_with(2)

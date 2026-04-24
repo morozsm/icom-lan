@@ -346,6 +346,17 @@ class ControlHandler:
         ]
     )
 
+    # Commands that key the transmitter — rejected when read_only=True.
+    # set_tuner_status value=2 (TUNING) is handled inline in _enqueue_read_only.
+    _TX_COMMANDS: frozenset[str] = frozenset(
+        {
+            "ptt",
+            "ptt_on",
+            "ptt_off",
+            "send_cw_text",
+        }
+    )
+
     def __init__(
         self,
         ws: WebSocketConnection,
@@ -841,6 +852,10 @@ class ControlHandler:
         logger.info("enqueue_command: %s params=%s", name, params)
         radio = self._radio
 
+        # Transmit safety gate — must come before any dispatch.
+        if self._read_only and name in self._TX_COMMANDS:
+            raise PermissionError(f"read-only mode: {name} rejected")
+
         # Read-only commands — bypass command queue
         result = await self._enqueue_read_only(name, params, radio)
         if result is not None:
@@ -969,6 +984,10 @@ class ControlHandler:
             value = int(params["value"])
             if value not in (0, 1, 2):
                 raise ValueError(f"tuner value must be 0, 1, or 2, got {value}")
+            if self._read_only and value == 2:
+                raise PermissionError(
+                    "read-only mode: set_tuner_status TUNING rejected"
+                )
             # Try direct call if the radio has the method
             if radio is not None and CAP_TUNER in radio.capabilities:
                 await radio.set_tuner_status(value)
