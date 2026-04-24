@@ -29,6 +29,8 @@ import { sendCommand, connect, sendRaw } from '$lib/transport/ws-client';
 import { fetchCapabilities, startPolling } from '$lib/transport/http-client';
 import { audioManager } from '$lib/audio/audio-manager';
 import { systemController } from './system-controller';
+import { scopeController } from './scope-controller.svelte';
+import type { ScopeController } from './scope-controller.svelte';
 
 import type { ServerState, ReceiverState } from '$lib/types/state';
 import type { Capabilities } from '$lib/types/capabilities';
@@ -110,6 +112,13 @@ class FrontendRuntime {
   /** System actions (power, connect/disconnect, frequency identification). */
   get system() {
     return systemController;
+  }
+
+  // ── Scope controller ──
+
+  /** Single owner of the audio-scope WS channel. Subscribe to receive parsed frames. */
+  get scope(): ScopeController {
+    return scopeController;
   }
 
   // ── Bootstrap ──
