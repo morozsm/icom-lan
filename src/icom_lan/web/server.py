@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import gzip as _gzip
+import hmac
 import json
 import logging
 import mimetypes
@@ -67,6 +68,31 @@ _DEFAULT_STATIC_DIR = pathlib.Path(__file__).parent / "static"
 _RADIO_MODEL = "IC-7610"
 
 # Mode/filter lists moved to RadioProfile (profiles.py)
+
+
+def _redact_token_from_path(
+    path: str, query: dict[str, list[str]] | None = None
+) -> str:
+    """Redact auth token from request path for safe logging.
+
+    Args:
+        path: URL path (e.g., "/api/info")
+        query: Parsed query parameters dict, or None
+
+    Returns:
+        Path with ?token=*** if token was present, or original path
+    """
+    if not query or "token" not in query:
+        return path
+
+    def unquote_all(
+        s: str, safe: str = "", encoding: str | None = None, errors: str | None = None
+    ) -> str:
+        return s
+
+    safe_query = {k: (["***"] if k == "token" else v) for k, v in query.items()}
+    query_str = urllib.parse.urlencode(safe_query, doseq=True, quote_via=unquote_all)
+    return f"{path}?{query_str}" if query_str else path
 
 
 def _serialize_filter_config(profile: "RadioProfile") -> dict[str, dict[str, object]]:
@@ -1286,7 +1312,10 @@ class WebServer:
                 return
             method, path, headers, query = result
 
-            logger.debug("request: %s %s from %s:%s", method, path, peer[0], peer[1])
+            safe_path = _redact_token_from_path(path, query)
+            logger.debug(
+                "request: %s %s from %s:%s", method, safe_path, peer[0], peer[1]
+            )
 
             # WebSocket upgrade?
             if (
@@ -1323,7 +1352,9 @@ class WebServer:
         # Auth check for API endpoints
         if self._config.auth_token and path.startswith("/api/"):
             auth_header = (headers or {}).get("authorization", "")
-            if auth_header != f"Bearer {self._config.auth_token}":
+            if not hmac.compare_digest(
+                auth_header.encode(), f"Bearer {self._config.auth_token}".encode()
+            ):
                 await _send_response(
                     writer,
                     401,
@@ -2354,9 +2385,10 @@ class WebServer:
         if self._config.auth_token:
             auth_header = headers.get("authorization", "")
             token_param = (query or {}).get("token", [""])[0]
-            if (
-                auth_header != f"Bearer {self._config.auth_token}"
-                and token_param != self._config.auth_token
+            if not hmac.compare_digest(
+                auth_header.encode(), f"Bearer {self._config.auth_token}".encode()
+            ) and not hmac.compare_digest(
+                token_param.encode(), self._config.auth_token.encode()
             ):
                 await _send_response(writer, 401, "Unauthorized", b"Unauthorized", {})
                 return
