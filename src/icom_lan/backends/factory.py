@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from ..radio import IcomRadio  # noqa: TID251
 from ..radio_protocol import Radio
@@ -45,12 +46,16 @@ def create_radio(config: BackendConfig) -> Radio:
             model=config.model,
         )
     if isinstance(config, YaesuCatBackendConfig):
-        return YaesuCatRadio(
-            device=config.device,
-            baudrate=config.baudrate,
-            rx_device=config.rx_device,
-            tx_device=config.tx_device,
-            audio_sample_rate=config.audio_sample_rate,
+        # cast: YaesuCatRadio will implement backend_id in #994
+        return cast(
+            Radio,
+            YaesuCatRadio(
+                device=config.device,
+                baudrate=config.baudrate,
+                rx_device=config.rx_device,
+                tx_device=config.tx_device,
+                audio_sample_rate=config.audio_sample_rate,
+            ),
         )
     if isinstance(config, SerialBackendConfig):
         # Route to model-specific serial backend
@@ -59,12 +64,16 @@ def create_radio(config: BackendConfig) -> Radio:
         # Yaesu CAT radios (FTX-1, FT-710, FT-991A, etc.)
         _YAESU_MODELS = {"FTX-1", "FT-710", "FT-991A", "FT-991", "FTDX101", "FTDX10"}
         if model in _YAESU_MODELS or model.startswith("FT"):
-            return YaesuCatRadio(
-                device=config.device,
-                baudrate=config.baudrate or 38400,
-                rx_device=config.rx_device,
-                tx_device=config.tx_device,
-                audio_sample_rate=config.audio_sample_rate or 48000,
+            # cast: YaesuCatRadio will implement backend_id in #994
+            return cast(
+                Radio,
+                YaesuCatRadio(
+                    device=config.device,
+                    baudrate=config.baudrate or 38400,
+                    rx_device=config.rx_device,
+                    tx_device=config.tx_device,
+                    audio_sample_rate=config.audio_sample_rate or 48000,
+                ),
             )
 
         serial_class: (

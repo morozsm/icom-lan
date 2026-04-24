@@ -197,6 +197,20 @@ class Radio(Protocol):
         ...
 
     @property
+    def backend_id(self) -> str:
+        """Stable string identifier for the backend family.
+
+        Consumers (web server, rigctld) use this to route backend-specific
+        logic without importing concrete backend classes.
+
+        Known values (family-level, not per-model):
+          - ``"icom_lan"``    — Icom LAN/CI-V-over-Ethernet (IC-7610, IC-9700, …)
+          - ``"icom_serial"`` — Icom serial CI-V (IC-7300, IC-705, …)
+          - ``"yaesu_cat"``   — Yaesu CAT (FTX-1, …)
+        """
+        ...
+
+    @property
     def capabilities(self) -> set[str]:
         """Set of capability tags this radio supports.
 
