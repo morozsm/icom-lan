@@ -11,8 +11,8 @@
  * @see docs/plans/2026-04-12-target-frontend-architecture.md
  */
 
-import { radio, getRadioState, patchActiveReceiver, patchRadioState } from '$lib/stores/radio.svelte';
-import { getCapabilities } from '$lib/stores/capabilities.svelte';
+import { radio, getRadioState, patchActiveReceiver, patchRadioState, setRadioState } from '$lib/stores/radio.svelte';
+import { getCapabilities, setCapabilities } from '$lib/stores/capabilities.svelte';
 import {
   getConnectionStatus,
   isConnected,
@@ -25,7 +25,8 @@ import {
   getRadioPowerOn,
 } from '$lib/stores/connection.svelte';
 import { getAudioState, setVolume, setMuted, toggleMute } from '$lib/stores/audio.svelte';
-import { sendCommand } from '$lib/transport/ws-client';
+import { sendCommand, connect, sendRaw } from '$lib/transport/ws-client';
+import { fetchCapabilities, startPolling } from '$lib/transport/http-client';
 import { audioManager } from '$lib/audio/audio-manager';
 import { systemController } from './system-controller';
 
@@ -49,6 +50,8 @@ export interface ConnectionSnapshot {
 // ── Runtime class ──
 
 class FrontendRuntime {
+  private _bootstrapCleanup: (() => void) | null = null;
+
   // ── Reactive state reads ──
   // These return live $state references — Svelte 5 tracks them automatically.
 
@@ -107,6 +110,46 @@ class FrontendRuntime {
   /** System actions (power, connect/disconnect, frequency identification). */
   get system() {
     return systemController;
+  }
+
+  // ── Bootstrap ──
+
+  /**
+   * Initialize the full transport stack: capabilities → polling → WebSocket → subscribe.
+   *
+   * Idempotent: if already started, returns the existing cleanup function without
+   * re-running any transport calls. If the previous attempt threw, the flag is not
+   * set and bootstrap can be retried.
+   *
+   * @returns A cleanup function that stops polling when called.
+   */
+  async bootstrap(): Promise<() => void> {
+    if (this._bootstrapCleanup !== null) {
+      return this._bootstrapCleanup;
+    }
+
+    // 1. Fetch capabilities and push into the store.
+    const caps = await fetchCapabilities();
+    setCapabilities(caps);
+
+    // 2. Register polling lifecycle with SystemController so connect/disconnect works.
+    systemController.registerPolling(() =>
+      startPolling((state) => { setRadioState(state); }, 1000),
+    );
+
+    // 3. Start polling and hand the stop handle to SystemController.
+    const stopPolling = startPolling((state) => { setRadioState(state); }, 1000);
+    systemController.setStopPolling(stopPolling);
+
+    // 4. Open the control WebSocket channel.
+    connect('/api/v1/ws');
+
+    // 5. Subscribe to the events stream (re-sent automatically on reconnect by WsChannel).
+    sendRaw({ type: 'subscribe', streams: ['events'] });
+
+    // Only latch as started after the entire chain succeeds.
+    this._bootstrapCleanup = stopPolling;
+    return stopPolling;
   }
 
   // ── Command dispatch ──
