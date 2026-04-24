@@ -6,8 +6,8 @@
  */
 
 import { runtime } from '../frontend-runtime';
-import { toRxAudioProps, type RxAudioProps } from '../../../components-v2/wiring/state-adapter';
-import { makeRxAudioHandlers } from '../../../components-v2/wiring/command-bus';
+import { toRxAudioProps, type RxAudioProps } from '../props/panel-props';
+import { makeRxAudioHandlers } from '../commands/panel-commands';
 
 export function deriveRxAudioProps(): RxAudioProps {
   const state = runtime.state;
