@@ -1,7 +1,7 @@
 # CLAUDE.md — Control Plane
 
 **icom-lan** v0.17.0 — Python 3.11+ asyncio library + Web UI for Icom transceivers over LAN/USB.
-IC-7610 at `192.168.55.40`, CI-V `0x98`. Context: `AGENTS.md`, `docs/PROJECT.md`.
+IC-7610 at `192.168.55.40`, CI-V `0x98`. Context: `docs/PROJECT.md`.
 
 ---
 
@@ -49,21 +49,6 @@ Never bare `python` or `pytest`. Worktrees: `uv sync --all-extras` first.
 - TDD — test first, implement second
 - Batch all fixes, run tests once (not per fix)
 - Audio tests: `FakeAudioBackend` only — no one-off mocks
-
----
-
-## External rules (lazy-load — read ONLY when relevant)
-
-| File | Load when |
-|------|-----------|
-| @.claude/docs/rag.md | transport/CI-V/audio/protocol changes |
-| @.claude/docs/rules.md | API or behavior changes needing doc updates |
-| @.claude/architecture/modules.md | navigating unfamiliar module |
-| @.claude/architecture/protocol.md | protocol-level work |
-| @.claude/workflow/testing.md | test strategy questions |
-| @.claude/context/loading.md | per-phase context budgets |
-
-Never load full documentation, large files, or unrelated sections into context.
 
 ---
 
@@ -183,4 +168,3 @@ Worktrees are ephemeral. Cleanup is mandatory and automatic.
 
 - Repeated mistakes or inconsistent decisions → `/clear`
 - 2+ corrections on same step → session reset
-- Context budget per phase: @.claude/context/loading.md
