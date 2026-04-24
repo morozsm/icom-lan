@@ -15,15 +15,6 @@ from mock_server import MockIcomRadio
 
 from _caps import FULL_ICOM_CAPS as FULL_ICOM_CAPS  # noqa: F401 — re-export
 
-# ---------------------------------------------------------------------------
-# Patch for missing IcomRadio._handle_raw_civ_packet
-# radio.py:268 sets civ_transport.on_raw_packet to this method, but the
-# method body has not been implemented yet.  Add a no-op so the transport
-# callback doesn't AttributeError.
-# ---------------------------------------------------------------------------
-if not hasattr(IcomRadio, "_handle_raw_civ_packet"):
-    IcomRadio._handle_raw_civ_packet = lambda self, data: None  # type: ignore[attr-defined]
-
 _HEADER_FMT = "<IHHII"
 
 
