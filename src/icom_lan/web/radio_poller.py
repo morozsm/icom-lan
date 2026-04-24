@@ -67,9 +67,9 @@ from ..capabilities import (
     CAP_TUNER,
     CAP_VOX,
 )
+from .._queue_pressure import PRESSURE_THRESHOLD
 from .._state_queries import build_state_queries
 from ..profiles import RadioProfile, resolve_radio_profile
-from ..transport import PRESSURE_THRESHOLD
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio

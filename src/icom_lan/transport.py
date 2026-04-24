@@ -13,6 +13,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from enum import StrEnum
 
+from ._queue_pressure import PRESSURE_THRESHOLD
 from .exceptions import TimeoutError as _TimeoutError
 from .types import HEADER_SIZE, PacketType
 
@@ -35,7 +36,6 @@ DISCOVERY_TIMEOUT = 1.0  # seconds per attempt
 BUFSIZE = 500
 MAX_MISSING = 50
 PACKET_QUEUE_MAXSIZE = 4096
-PRESSURE_THRESHOLD = 0.7
 
 
 class ConnectionState(StrEnum):
