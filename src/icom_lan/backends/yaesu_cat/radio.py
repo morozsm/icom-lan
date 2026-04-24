@@ -197,6 +197,11 @@ class YaesuCatRadio:
         return self._transport.connected
 
     @property
+    def backend_id(self) -> str:
+        """Stable backend family identifier — ``"yaesu_cat"`` for Yaesu CAT."""
+        return "yaesu_cat"
+
+    @property
     def model(self) -> str:
         """Human-readable radio model name (e.g. ``'FTX-1'``)."""
         return str(self._config.model)

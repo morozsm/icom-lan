@@ -900,6 +900,11 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         return self._profile.model
 
     @property
+    def backend_id(self) -> str:
+        """Stable backend family identifier — ``"icom_lan"`` for LAN/CI-V-over-Ethernet."""
+        return "icom_lan"
+
+    @property
     def capabilities(self) -> set[str]:
         """Set of capability tags supported by this radio.
 
