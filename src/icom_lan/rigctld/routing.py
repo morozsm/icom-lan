@@ -310,10 +310,6 @@ def create_routing(
     Returns None for Icom radios — the handler's built-in Icom routing
     is used as the default path.
     """
-    try:
-        from ..backends.yaesu_cat.radio import YaesuCatRadio
-    except ImportError:
-        return None
-    if isinstance(radio, YaesuCatRadio):
+    if getattr(radio, "backend_id", None) == "yaesu_cat":
         return YaesuRouting(radio, cache, max_power_w)
     return None

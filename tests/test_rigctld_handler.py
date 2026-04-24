@@ -1615,8 +1615,9 @@ class _FakeYaesuRadio(YaesuCatRadio):
 
 @pytest.fixture
 def yaesu_radio() -> AsyncMock:
-    """AsyncMock that isinstance-checks as YaesuCatRadio."""
+    """AsyncMock of a Yaesu CAT radio with backend_id discriminator."""
     mock = AsyncMock(spec=_FakeYaesuRadio)
+    mock.backend_id = "yaesu_cat"
     return mock
 
 
