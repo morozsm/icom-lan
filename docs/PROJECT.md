@@ -250,7 +250,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 ### Phase 11 — M6 Productization (M6) ✅ COMPLETE (2026-03-24)
 
 **Goal:** Production-ready library with audio codec support, documentation, and performance optimization.
-**Status**: Core tasks 3/4 complete (M6.1, M6.3, M6.P2); M6.2 blocked on hardware testing. All optimizations complete.
+**Status**: All core tasks and optimizations complete (M6.1, M6.3, M6.P2). M6.2 extended response protocol research documented.
 
 #### M6.1 ulaw→pcm Audio Codec Decoder ✅ COMPLETE (2026-03-23)
 - [x] Pure-Python ulaw→PCM16 decoder (`_audio_codecs.py`) with standard 256-entry lookup table
