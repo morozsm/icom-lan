@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import gzip as _gzip
+import hmac
 import json
 import logging
 import mimetypes
@@ -83,7 +84,6 @@ async def _read_capped_body(
         reader.readexactly(content_length),
         timeout=5.0,
     )
-
 
 
 def _redact_token_in_path(path: str) -> str:
@@ -1371,7 +1371,10 @@ class WebServer:
         # Auth check for API endpoints
         if self._config.auth_token and path.startswith("/api/"):
             auth_header = (headers or {}).get("authorization", "")
-            if auth_header != f"Bearer {self._config.auth_token}":
+            expected = f"Bearer {self._config.auth_token}"
+            if not hmac.compare_digest(
+                auth_header.encode("utf-8"), expected.encode("utf-8")
+            ):
                 await _send_response(
                     writer,
                     401,
@@ -2449,10 +2452,13 @@ class WebServer:
         if self._config.auth_token:
             auth_header = headers.get("authorization", "")
             token_param = (query or {}).get("token", [""])[0]
-            if (
-                auth_header != f"Bearer {self._config.auth_token}"
-                and token_param != self._config.auth_token
-            ):
+            expected_bearer = f"Bearer {self._config.auth_token}"
+            token_bytes = self._config.auth_token.encode("utf-8")
+            header_ok = hmac.compare_digest(
+                auth_header.encode("utf-8"), expected_bearer.encode("utf-8")
+            )
+            query_ok = hmac.compare_digest(token_param.encode("utf-8"), token_bytes)
+            if not header_ok and not query_ok:
                 await _send_response(writer, 401, "Unauthorized", b"Unauthorized", {})
                 return
 
