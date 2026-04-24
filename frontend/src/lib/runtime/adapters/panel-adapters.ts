@@ -13,14 +13,14 @@ import {
   toRfFrontEndProps, toRitXitProps, toScanProps,
   toMeterProps, toCwProps, toDspProps, toTxProps,
   toFilterProps, toBandSelectorProps,
-} from '../../../components-v2/wiring/state-adapter';
+} from '../props/panel-props';
 import {
   makeAgcHandlers, makeModeHandlers, makeAntennaHandlers,
   makeRfFrontEndHandlers, makeRitXitHandlers, makeScanHandlers,
   makeMeterHandlers, makeCwPanelHandlers, makeDspHandlers,
   makeTxHandlers, makeFilterHandlers, makeBandHandlers,
   makePresetHandlers,
-} from '../../../components-v2/wiring/command-bus';
+} from '../commands/panel-commands';
 
 // Re-export types for panel imports
 export type {
@@ -28,7 +28,7 @@ export type {
   RfFrontEndProps, RitXitProps, ScanProps,
   MeterProps, CwProps, DspProps, TxProps,
   FilterProps, BandSelectorProps,
-} from '../../../components-v2/wiring/state-adapter';
+} from '../props/panel-props';
 
 // ── AGC ──
 export function deriveAgcProps() {
