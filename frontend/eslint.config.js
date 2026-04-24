@@ -88,9 +88,10 @@ export default [
   },
 
   // ── Import boundary: presentation components ──
-  // Panels, layouts, LCD, skins — must NOT import runtime/transport directly.
+  // Panels, layouts, LCD, skins, and app entry — must NOT import runtime/transport directly.
   {
     files: [
+      'src/App.svelte',
       'src/components-v2/panels/**/*.svelte',
       'src/components-v2/panels/**/*.ts',
       'src/components-v2/layout/**/*.svelte',
