@@ -2589,7 +2589,9 @@ _SECURITY_HEADERS: dict[str, str] = {
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "Content-Security-Policy": (
-        "default-src 'self' ws: wss:; img-src 'self' data:; style-src 'self' 'unsafe-inline'"
+        "default-src 'self' ws: wss:; img-src 'self' data:; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net"
     ),
 }
 

@@ -116,6 +116,20 @@ class TestSecurityHeaders:
         csp = headers.get("content-security-policy", "")
         assert "default-src" in csp
 
+    async def test_csp_font_origins(self, sec_server: WebServer) -> None:
+        """CSP must permit the external font origins used by frontend/src/components-v2/theme/*.css.
+
+        fonts.googleapis.com serves Google Fonts CSS stylesheets.
+        fonts.gstatic.com serves the actual woff2 font binaries from Google.
+        cdn.jsdelivr.net serves DSEG woff2 binaries used by digital VFO skins.
+        """
+        host, port = _addr(sec_server)
+        _, headers, _ = await _http_get(host, port, "/api/v1/state")
+        csp = headers.get("content-security-policy", "")
+        assert "fonts.googleapis.com" in csp, "style-src must allow Google Fonts CSS"
+        assert "fonts.gstatic.com" in csp, "font-src must allow Google Fonts binaries"
+        assert "cdn.jsdelivr.net" in csp, "font-src must allow jsDelivr (DSEG fonts)"
+
     async def test_all_headers_on_404(self, sec_server: WebServer) -> None:
         """Security headers must also appear on error responses (e.g. 404)."""
         host, port = _addr(sec_server)
