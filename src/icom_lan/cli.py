@@ -226,6 +226,52 @@ class _DeprecatedPortAction(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+class _DeprecatedPassAction(argparse.Action):
+    """Deprecated --pass flag — warns about leakage via `ps aux` / shell history.
+
+    Prefer $ICOM_PASS environment variable or --pass-file PATH instead.
+    """
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Any,
+        option_string: str | None = None,
+    ) -> None:
+        print(
+            "DeprecationWarning: --pass exposes the password on the process "
+            "command line (visible in `ps aux` and shell history). "
+            "Use $ICOM_PASS or --pass-file PATH instead.",
+            file=sys.stderr,
+        )
+        setattr(namespace, self.dest, values)
+
+
+def _resolve_password(args: argparse.Namespace) -> str:
+    """Resolve password with precedence: --pass (CLI) > --pass-file > $ICOM_PASS.
+
+    --pass takes precedence when explicitly supplied (it emits a deprecation
+    warning at parse time via _DeprecatedPassAction). Otherwise, read from the
+    file at --pass-file if given (stripping trailing newline), else fall back
+    to the $ICOM_PASS environment variable.
+    """
+    cli_pass = getattr(args, "password_cli", None)
+    if cli_pass:
+        return str(cli_pass)
+    pass_file = getattr(args, "pass_file", None)
+    if pass_file:
+        try:
+            return Path(pass_file).read_text(encoding="utf-8").rstrip("\n\r")
+        except OSError as e:
+            print(
+                f"Error: cannot read --pass-file {pass_file!r}: {e}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from e
+    return _get_env("ICOM_PASS", "")
+
+
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="icom-lan",
@@ -274,9 +320,20 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--pass",
-        dest="password",
-        default=_get_env("ICOM_PASS", ""),
-        help="Password (default: $ICOM_PASS)",
+        dest="password_cli",
+        default=None,
+        action=_DeprecatedPassAction,
+        help=(
+            "Deprecated: exposes password in `ps aux`/shell history. "
+            "Prefer $ICOM_PASS or --pass-file PATH."
+        ),
+    )
+    p.add_argument(
+        "--pass-file",
+        dest="pass_file",
+        default=None,
+        metavar="PATH",
+        help="Read password from file (first line, trailing newline stripped)",
     )
     p.add_argument(
         "--timeout",
@@ -1137,7 +1194,7 @@ async def _build_backend_config(
         host=host,
         port=args.control_port,
         username=args.user,
-        password=args.password,
+        password=_resolve_password(args),
         timeout=args.timeout,
         radio_addr=radio_addr,
         model=model_name,

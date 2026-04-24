@@ -10,6 +10,7 @@ from icom_lan.cli import (
     _build_backend_config,
     _build_parser,
     _parse_frequency,
+    _resolve_password,
     check_ports_available,
     main,
 )
@@ -206,6 +207,65 @@ class TestBuildParser:
             args = p.parse_args(["--port", "9999", "status"])
         assert args.control_port == 9999
         assert "deprecated" in mock_stderr.getvalue().lower()
+
+
+class TestPasswordResolution:
+    """Verify password resolution: --pass (deprecated) > --pass-file > $ICOM_PASS."""
+
+    def test_env_var_used_when_no_cli_flags(self, monkeypatch):
+        monkeypatch.setenv("ICOM_PASS", "env-secret")
+        p = _build_parser()
+        args = p.parse_args(["status"])
+        assert _resolve_password(args) == "env-secret"
+
+    def test_empty_when_nothing_set(self, monkeypatch):
+        monkeypatch.delenv("ICOM_PASS", raising=False)
+        p = _build_parser()
+        args = p.parse_args(["status"])
+        assert _resolve_password(args) == ""
+
+    def test_pass_file_overrides_env(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("ICOM_PASS", "env-secret")
+        pw_file = tmp_path / "pw.txt"
+        pw_file.write_text("file-secret\n", encoding="utf-8")
+        p = _build_parser()
+        args = p.parse_args(["--pass-file", str(pw_file), "status"])
+        assert _resolve_password(args) == "file-secret"
+
+    def test_cli_pass_overrides_pass_file_and_env(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("ICOM_PASS", "env-secret")
+        pw_file = tmp_path / "pw.txt"
+        pw_file.write_text("file-secret", encoding="utf-8")
+        p = _build_parser()
+        with patch("sys.stderr", new_callable=io.StringIO):
+            args = p.parse_args(
+                ["--pass", "cli-secret", "--pass-file", str(pw_file), "status"]
+            )
+        assert _resolve_password(args) == "cli-secret"
+
+    def test_deprecation_warning_on_cli_pass(self, monkeypatch):
+        monkeypatch.delenv("ICOM_PASS", raising=False)
+        p = _build_parser()
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            p.parse_args(["--pass", "secret", "status"])
+        err = mock_stderr.getvalue()
+        assert "DeprecationWarning" in err
+        assert "--pass" in err
+        assert "ICOM_PASS" in err
+
+    def test_no_warning_without_cli_pass(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("ICOM_PASS", "env-secret")
+        p = _build_parser()
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            p.parse_args(["status"])
+        assert "DeprecationWarning" not in mock_stderr.getvalue()
+
+    def test_pass_file_missing_exits(self, tmp_path):
+        p = _build_parser()
+        args = p.parse_args(["--pass-file", str(tmp_path / "nope.txt"), "status"])
+        with patch("sys.stderr", new_callable=io.StringIO):
+            with pytest.raises(SystemExit):
+                _resolve_password(args)
 
     def test_deprecated_port_prints_warning(self):
         p = _build_parser()
