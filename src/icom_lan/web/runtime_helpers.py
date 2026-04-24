@@ -38,12 +38,7 @@ def runtime_capabilities(radio: "Radio | None") -> set[str]:
             # Yaesu CAT radios declare "audio" via USB Audio Class (separate
             # device), not through the Radio protocol.  Keep the capability
             # so the frontend shows the audio controls.
-            try:
-                from ..backends.yaesu_cat.radio import YaesuCatRadio
-
-                if not isinstance(radio, YaesuCatRadio):
-                    caps.discard("audio")
-            except ImportError:
+            if getattr(radio, "backend_id", None) != "yaesu_cat":
                 caps.discard("audio")
         if "dual_rx" in caps and not isinstance(radio, DualReceiverCapable):
             caps.discard("dual_rx")
