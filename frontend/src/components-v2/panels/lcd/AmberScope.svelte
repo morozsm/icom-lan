@@ -9,7 +9,7 @@
   import AmberFilterGhost from './AmberFilterGhost.svelte';
   import AmberIndStrip from './AmberIndStrip.svelte';
   import type { IndToken } from './AmberIndStrip.svelte';
-  import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
+  import { runtime } from '$lib/runtime';
 
   // Band lookup by frequency (LCD-specific, mirrors AmberCockpit)
   const BANDS: [string, number, number][] = [
@@ -155,16 +155,15 @@
   let fftPush: ((data: Uint8Array) => void) | null = null;
   let showFft = $derived(hasAudioFft());
 
+  // Scope subscription — delegates lifecycle to ScopeController (ADR INV-2, INV-5)
   $effect(() => {
     if (!hasAudioFft()) return;
 
-    const scope = createAudioScopeConnection((frame) => {
+    return runtime.scope.subscribe((frame) => {
       fftPixels = frame.pixels;
       fftBandwidth = frame.endFreq > frame.startFreq ? frame.endFreq - frame.startFreq : undefined;
       fftPush?.(frame.pixels);
     });
-
-    return () => scope.disconnect();
   });
 </script>
 

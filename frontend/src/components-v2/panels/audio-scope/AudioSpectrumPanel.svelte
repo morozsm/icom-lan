@@ -2,7 +2,7 @@
   import { radio } from '$lib/stores/radio.svelte';
   import { resolveFilterModeConfig } from '../../wiring/state-adapter';
   import { getCapabilities } from '$lib/stores/capabilities.svelte';
-  import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
+  import { runtime } from '$lib/runtime';
   import AudioSpectrumCanvas from './AudioSpectrumCanvas.svelte';
 
   // ── Radio state extraction ──
@@ -31,15 +31,15 @@
   let fftBandwidth = $state(48000);
   let fftPush: ((data: Uint8Array) => void) | null = null;
 
+  // Scope subscription — delegates lifecycle to ScopeController (ADR INV-2, INV-5)
   $effect(() => {
-    const scope = createAudioScopeConnection((frame) => {
+    return runtime.scope.subscribe((frame) => {
       fftPixels = frame.pixels;
       if (frame.endFreq > frame.startFreq) {
         fftBandwidth = frame.endFreq - frame.startFreq;
       }
       fftPush?.(frame.pixels);
     });
-    return () => scope.disconnect();
   });
 </script>
 

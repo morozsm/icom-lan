@@ -15,7 +15,6 @@
   import type { IndToken } from './AmberIndStrip.svelte';
   import { qsyHistory } from '$lib/stores/qsy-history.svelte';
   import { runtime } from '$lib/runtime';
-  import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
 
   // Band lookup by frequency (LCD-specific)
   const BANDS: [string, number, number][] = [
@@ -224,17 +223,15 @@
     }] : []),
   ]);
 
-  // Scope WS connection — reactive to capabilities (may load after mount)
+  // Scope subscription — delegates lifecycle to ScopeController (ADR INV-2, INV-5)
   $effect(() => {
     if (!hasAudioFft()) return;
 
-    const scope = createAudioScopeConnection((frame) => {
+    return runtime.scope.subscribe((frame) => {
       fftPixels = frame.pixels;
       fftBandwidth = frame.endFreq > frame.startFreq ? frame.endFreq - frame.startFreq : undefined;
       fftPush?.(frame.pixels);
     });
-
-    return () => scope.disconnect();
   });
 
   // Record active-receiver frequency changes into the local QSY history
