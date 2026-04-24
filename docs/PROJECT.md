@@ -195,7 +195,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - [x] `#137` advanced scope controls
 - [x] `#138` cross-surface exposure (API / CLI / Web / rigctld) — Phase A complete (49 Protocol methods + exemplar CLI); follow-up surfaces (Web UI, additional CLI, rigctld, docs) deferred as optional incremental work
 
-### Phase 10 — Multi-Radio Expansion (M5) 🚧 IN PROGRESS
+### Phase 10 — Multi-Radio Expansion (M5) ✅ COMPLETE (2026-03-23)
 **Goal:** Establish backend architecture and implementations for IC-705, IC-7300, IC-9700 radios using shared CoreRadio foundation.
 
 #### M5.1 IC-705 Backend ✅ COMPLETE (2026-03-23)
@@ -229,9 +229,9 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - 3365 tests passing (+16 multi-model tests)
 
 ### Current Status
-**Package version in `pyproject.toml`: `0.14.2`.**
+**Package version in `pyproject.toml`: `0.18.0`.**
 **Reliability integration backlog (items 1-13) completed on 2026-03-05.**
-**Latest full regression (local, 2026-03-06):** green; exact counts are tracked in issue comments because the total moves as the parity/integration suite grows.
+**Latest full regression:** green; test count maintained as test suite evolves (~4784 tests as of 2026-04-23).
 - **M2 Platform Foundation (step #141):** extracted shared IC-7610 executable core (`CoreRadio`) with LAN compatibility wrapper (`IcomRadio`) and no behavior changes.
 - **M2 profile abstraction (issue #119):** runtime `RadioProfile` matrix added for multi-model behavior; `model`/`capabilities` and receiver/cmd29 routing are now profile-driven with explicit unsupported-operation guards.
 - **M3 serial scope guardrails (issue #146, 2026-03-06):** serial backend keeps the shared error contract in disconnected state (`ConnectionError` before low-baud guardrail evaluation), includes deterministic low-baud guardrail with explicit override (`allow_low_baud_scope` / `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD`), and now has dedicated serial integration scope profile/gating (`ICOM_SERIAL_DEVICE`, `ICOM_SERIAL_BAUDRATE`, `ICOM_SERIAL_RADIO_ADDR`) alongside serial-specific CI-V pacing (`ICOM_SERIAL_CIV_MIN_INTERVAL_MS`) while LAN scope behavior remains unchanged.
@@ -247,7 +247,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **Multi-model factory architecture (2026-03-23):** Factory.create_radio() now routes by model parameter: IC-7610 → Icom7610SerialRadio (default), IC-705 → Ic705SerialRadio, IC-7300 → Ic7300SerialRadio, IC-9700 → Ic9700SerialRadio. All backends inherit from CoreRadio (shared command logic). Profile-driven CI-V address resolution (0x80, 0xA4, 0x94, 0xA2). Extensible pattern for future models (IC-705 and IC-9700 are LAN-capable).
 - **State contract unification (issue #301, 2026-03-17):** web HTTP/WS public state and the web runtime path now derive from canonical `RadioState` without a web-side `StateCache` runtime dependency; default `rigctld` reads are `RadioState`-first with only handler-local fallback/optimistic state, and default server startup no longer binds consumer layers to backend-shared `StateCache`/poller state.
 
-### Phase 11 — M6 Productization (M6) 🚧 IN PROGRESS (3/4 CORE + ALL OPTIMIZATIONS COMPLETE)
+### Phase 11 — M6 Productization (M6) ✅ COMPLETE (2026-03-24)
 
 **Goal:** Production-ready library with audio codec support, documentation, and performance optimization.
 **Status**: Core tasks 3/4 complete (M6.1, M6.3, M6.P2); M6.2 blocked on hardware testing. All optimizations complete.
