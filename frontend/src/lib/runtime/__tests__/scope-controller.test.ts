@@ -129,4 +129,26 @@ describe('ScopeController', () => {
     ctrl.subscribe(vi.fn());
     expect(channel.connect).toHaveBeenCalledTimes(2);
   });
+
+  it('counts subscriptions: same handler reference subscribed twice requires two unsubscribes', () => {
+    const handler = vi.fn<[ScopeFrame], void>();
+
+    const unsub1 = ctrl.subscribe(handler);
+    const unsub2 = ctrl.subscribe(handler);
+
+    expect(channel.connect).toHaveBeenCalledTimes(1);
+    expect(channel.disconnect).not.toHaveBeenCalled();
+
+    // Fire a frame — both subscriptions should receive it
+    channel._fire(makeScopeFrameBuffer());
+    expect(handler).toHaveBeenCalledTimes(2);
+
+    // First unsubscribe — channel stays open
+    unsub1();
+    expect(channel.disconnect).not.toHaveBeenCalled();
+
+    // Second unsubscribe — now channel closes
+    unsub2();
+    expect(channel.disconnect).toHaveBeenCalledTimes(1);
+  });
 });
