@@ -253,7 +253,7 @@ See [`docs/guide/rig-profiles.md`](../guide/rig-profiles.md) for how to add a ne
 
 ## Module Responsibilities
 
-### `radio.py` — High-Level Public API (1549 lines)
+### `radio.py` — High-Level Public API (3743 lines)
 
 The central orchestrator. `IcomRadio` inherits from three mixins and manages:
 
@@ -344,13 +344,22 @@ Bidirectional PCM bridge between radio and virtual audio devices:
 
 WebSocket-based browser interface:
 
-- `server.py` — aiohttp web server, WebSocket handler management, audio bridge integration
-- `handlers.py` — scope, meters, audio, and control WebSocket handlers
-- `static/index.html` — single-page app with Canvas2D rendering
+- `server.py` — asyncio HTTP/WebSocket server (pure stdlib), WebSocket handler management, audio bridge integration
+- `handlers/` — scope, meters, audio, and control WebSocket handlers
+- Frontend: Svelte 5 SPA built with Vite; build artifacts served from `web/static/`
 - Audio: PCM16 binary frames over WebSocket, Web Audio API playback
 - AudioBroadcaster uses AudioBus subscription for RX audio distribution
 
 #### `web/` Module Descriptions
+
+**`web/server.py`** — Single `asyncio.start_server` accepts raw TCP. For each connection,
+it performs an HTTP Upgrade handshake via pure-stdlib RFC 6455 implementation, then full-duplex
+WebSocket messaging with ping/pong support. Integrates audio bridge and handlers; no external
+web framework (pure stdlib: asyncio, socket, struct).
+
+**`web/websocket.py`** — Pure-stdlib RFC 6455 WebSocket implementation. HTTP Upgrade handshake
+key computation, frame serialisation/parsing, and `WebSocketConnection` class for full-duplex
+messaging with ping/pong support. Used by `server.py`.
 
 **`web/protocol.py`** — Binary frame codec for web UI data streams. Encodes scope frames
 (16-byte header + pixel data), meter frames (4-byte header + values), and audio frames
@@ -361,9 +370,21 @@ commands, drives rapid meter polling (25 ms interval), slower state polling, and
 enable/disable. Avoids request-response patterns to survive the IC-7610's 225-packet/sec
 scope flood.
 
-**`web/websocket.py`** — Pure-stdlib RFC 6455 WebSocket implementation (no aiohttp WebSocket
-dependency). HTTP Upgrade handshake key computation, frame serialisation/parsing, and
-`WebSocketConnection` class for full-duplex messaging with ping/pong support.
+**`web/handlers/`** — WebSocket handler subpackage: scope, meters, audio, and control
+handlers. Routes incoming WebSocket messages to the radio via `IcomCommander`.
+
+**`web/band_plan.py`** — Amateur radio band definitions and frequency validation helpers.
+Used by the web UI to show band segments and validate frequency input.
+
+**`web/eibi.py`** — EIBI.net broadcast station database integration. Fetches and caches
+broadcast station schedules for the waterfall display.
+
+**`web/discovery.py`** — UDP broadcast discovery for radio discovery on the local LAN.
+Used by the web UI to find available radios without manual IP entry.
+
+**`web/rtc.py`** — Real-Time Communication utilities (reserved for future peer-to-peer audio).
+
+**`web/tls.py`** — TLS support for `server.py`. Certificate loading and HTTPS server setup.
 
 **Boundary rule (web layer):**
 - `src/icom_lan/web/` must depend on `radio_protocol` protocols (`Radio` + capability protocols), not on concrete `IcomRadio`.
