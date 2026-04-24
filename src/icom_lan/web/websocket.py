@@ -46,12 +46,21 @@ WS_OP_PONG = 0xA
 
 _RSV1 = 0x40  # per-message deflate flag
 
+# Maximum accepted incoming frame payload (bytes). Frames larger than this
+# are rejected with close code 1009 (Message Too Big) before any allocation
+# to prevent memory exhaustion from a malicious/malformed length field.
+_MAX_WS_FRAME = 64 * 1024
+
 # zlib flush marker appended by deflate, stripped per RFC 7692 §7.2.1
 _DEFLATE_TAIL = b"\x00\x00\xff\xff"
 
 
 class WebSocketError(Exception):
     """Raised when a WebSocket protocol violation is detected."""
+
+
+class _FrameTooLargeError(WebSocketError):
+    """Raised when an incoming frame exceeds ``_MAX_WS_FRAME``."""
 
 
 def make_accept_key(client_key: str) -> str:
@@ -147,6 +156,11 @@ async def _read_one_frame(
         ext = await reader.readexactly(8)
         payload_len = struct.unpack("!Q", ext)[0]
 
+    if payload_len > _MAX_WS_FRAME:
+        raise _FrameTooLargeError(
+            f"frame payload {payload_len} exceeds max {_MAX_WS_FRAME}"
+        )
+
     mask_key = b""
     if masked:
         mask_key = await reader.readexactly(4)
@@ -230,6 +244,10 @@ class WebSocketConnection:
                 )
             except asyncio.IncompleteReadError as exc:
                 raise EOFError("connection closed") from exc
+            except _FrameTooLargeError as exc:
+                # Oversize frame: respond with close 1009 and abort.
+                await self.close(1009, "frame too large")
+                raise EOFError("frame too large") from exc
 
             if opcode == WS_OP_PING:
                 await self._send_raw(make_frame(WS_OP_PONG, payload))

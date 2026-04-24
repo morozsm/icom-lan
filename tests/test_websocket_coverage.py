@@ -115,14 +115,43 @@ async def test_read_one_frame_16bit_extended_length() -> None:
     assert fin is True
 
 
-async def test_read_one_frame_64bit_extended_length() -> None:
-    """Payload larger than 65535 bytes uses 8-byte extended length encoding."""
-    payload = b"y" * 70000  # > 65535 → uses 64-bit length
-    frame = _client_frame(WS_OP_BINARY, payload)
-    reader = _make_reader(frame)
-    opcode, data, fin, _ = await _read_one_frame(reader)
-    assert opcode == WS_OP_BINARY
-    assert data == payload
+async def test_read_one_frame_64bit_extended_length_rejected() -> None:
+    """Payload >64 KiB (which requires 64-bit length) is rejected (S03).
+
+    Before reading any payload bytes, the frame parser must bail out to
+    prevent multi-GB allocations from a malicious length field.
+    """
+    # Craft a header that advertises a huge payload but don't supply any data.
+    # byte0 = 0x82 (FIN | BINARY), byte1 = 0x80|127 (mask, 64-bit length),
+    # followed by 8 bytes of length = 1 GiB, then 4-byte mask key.
+    header = (
+        bytes([0x82, 0x80 | 127]) + struct.pack("!Q", 1 << 30) + b"\x00\x00\x00\x00"
+    )
+    reader = _make_reader(header)
+    with pytest.raises(WebSocketError, match="exceeds max"):
+        await _read_one_frame(reader)
+
+
+async def test_recv_oversize_frame_sends_close_1009() -> None:
+    """recv() must send a 1009 (Message Too Big) close frame and raise EOFError."""
+    header = (
+        bytes([0x82, 0x80 | 127]) + struct.pack("!Q", 1 << 30) + b"\x00\x00\x00\x00"
+    )
+    reader = _make_reader(header)
+    writer = _make_writer()
+    ws = WebSocketConnection(reader, writer)
+    with pytest.raises(EOFError, match="frame too large"):
+        await ws.recv()
+    # Verify a close frame with code 1009 was written.
+    assert writer.write.called
+    sent = b"".join(call.args[0] for call in writer.write.call_args_list)
+    # Close frame: opcode 0x8, payload starts with 2-byte close code.
+    # Find a close frame (byte0 == 0x88) and check its code.
+    assert b"\x88" in sent
+    idx = sent.index(b"\x88")
+    # byte after 0x88 is payload length (no mask on server→client)
+    code = struct.unpack("!H", sent[idx + 2 : idx + 4])[0]
+    assert code == 1009
 
 
 async def test_read_one_frame_unmasked_payload() -> None:
