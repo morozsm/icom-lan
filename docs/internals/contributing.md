@@ -7,29 +7,23 @@ Contributions are welcome! Here's how to get started.
 ```bash
 git clone https://github.com/morozsm/icom-lan.git
 cd icom-lan
-pip install -e ".[dev]"
-```
-
-Or with [uv](https://github.com/astral-sh/uv):
-
-```bash
-uv sync --extra dev
+uv sync --all-extras
 ```
 
 ## Running Tests
 
 ```bash
-# All unit tests
-pytest tests/test_*.py
+# All unit tests (skip integration tests requiring hardware)
+uv run pytest tests/ -q --tb=short --ignore=tests/integration
 
 # With verbose output
-pytest tests/test_*.py -v
+uv run pytest tests/ -v --ignore=tests/integration
 
 # Specific test file
-pytest tests/test_commands.py
+uv run pytest tests/test_commands.py -q --tb=short
 
 # Specific test
-pytest tests/test_commands.py::test_get_frequency_builds_correct_frame
+uv run pytest tests/test_commands.py::test_get_frequency_builds_correct_frame -q --tb=short
 ```
 
 ### Test Structure
@@ -66,7 +60,7 @@ mock radio state, and the expected byte-exact response in both normal and extend
 To run only golden tests:
 
 ```bash
-pytest tests/test_golden_protocol.py tests/test_server_wire.py -v
+uv run pytest tests/test_golden_protocol.py tests/test_server_wire.py -v
 ```
 
 When adding a new rigctld command, add corresponding fixtures to `protocol_golden.json`
@@ -81,15 +75,18 @@ to lock down the wire format.
 
 ## Commit Messages
 
-We use [Conventional Commits](https://www.conventionalcommits.org/):
+We use [Conventional Commits](https://www.conventionalcommits.org/) with issue scope:
 
 ```
-feat: add AGC level control
-fix: handle timeout during conninfo exchange
-docs: add IC-705 setup instructions
-test: add VFO swap command test
+feat(#123): add AGC level control
+fix(#456): handle timeout during conninfo exchange
+docs(#789): add IC-705 setup instructions
+test(#012): add VFO swap command test
+refactor: restructure command parsing (no issue scope for non-issue changes)
 chore: bump version to 0.3.0
 ```
+
+Always include the issue number in the scope (e.g., `#123`) for feature, fix, and docs commits tied to GitHub issues.
 
 ## Adding a New CI-V Command
 
@@ -146,6 +143,6 @@ chore: bump version to 0.3.0
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/my-feature`
 3. Make your changes with tests
-4. Ensure all tests pass: `pytest tests/test_*.py`
-5. Commit with conventional commit message
+4. Ensure all tests pass: `uv run pytest tests/ -q --tb=short --ignore=tests/integration`
+5. Commit with conventional commit message (include issue scope: `feat(#N):`)
 6. Open a PR against `main`
