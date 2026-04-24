@@ -126,13 +126,18 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
                 try:
                     await self.set_vfo(current)
                     self._radio_state.active = current
-                except Exception:
+                except TimeoutError:
+                    # Do not swallow — radio would silently remain on the
+                    # temporary receiver. Retry once (the first attempt may
+                    # fail because a prior fire-and-forget ACK sink consumed
+                    # the timeout budget), then propagate on a second failure.
                     logger.warning(
-                        "%s: failed to restore VFO receiver to %s",
+                        "%s: timeout restoring VFO receiver to %s, retrying once",
                         operation,
                         current,
-                        exc_info=True,
                     )
+                    await self.set_vfo(current)
+                    self._radio_state.active = current
 
     async def _get_frequency_main(
         self, *, bypass_cache: bool = False, update_cache: bool = True
