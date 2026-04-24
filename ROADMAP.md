@@ -86,11 +86,8 @@
 - Known hardware limitation: #153 (TX Freq Monitor not hardware-supported on IC-7610)
 
 ### Testing & Quality
-- [x] 3365+ unit/integration/mock tests (95% coverage)
-  - 2962+ base tests
-  - +134 IC-7610 parity tests
-  - +269 web UI / backend integration tests
-  - +16 multi-radio backend tests
+- [x] 5073+ unit/integration/mock tests (comprehensive coverage)
+  - Full test suite across all backends and integrations
 - [x] Golden protocol response suite (45+ fixtures)
 - [x] Integration tests with real IC-7610
 - [x] Contract tests for IC-705, IC-7300, IC-9700 backends
@@ -108,22 +105,13 @@
 - [x] Session reports in `docs/sessions/` (RAG-indexed)
 - [x] Backend architecture docs
 
-## Current: v0.12.0 → v0.13.0
-
-### IC-7610 Command Parity (Epic #140) — Priority P0
-- [ ] #133: Memory and band-stacking command family
-- [ ] #135: System/config family (antenna, CI-V options, mod routing, date/time/UTC)
-- [ ] #138: Expose implemented parity features through API/CLI/Web consistently
-- [ ] Update `docs/PROJECT.md` parity status with concrete counts
-- [ ] Close #140 epic when all sub-issues merged
-
-### Release checklist (v0.13.0)
-- [ ] Verify `ruff check` clean
-- [ ] Verify `mkdocs build` clean
-- [ ] Move CHANGELOG [Unreleased] → [0.13.0]
-- [ ] Version bump: 0.12.0 → 0.13.0
-- [ ] GitHub release + PyPI publish
-- [ ] Community announcement (Reddit, QRZ)
+### v0.12.0 → v0.18.0 Milestones (Completed)
+- [x] Epic #140 (IC-7610 Command Parity) — all 134/134 commands complete
+- [x] v0.13.0 through v0.18.0 releases shipped
+- [x] Web UI refactoring (runtime layers, adapter pattern, skin registry)
+- [x] Frontend architecture modernization (#1024–#1029)
+- [x] Security hardening (CSP, token handling, read-only guards)
+- [x] Bug fixes and reliability improvements
 
 ## Future (Post-Parity)
 
@@ -166,5 +154,5 @@
 
 ---
 
-*Updated: 2026-03-23 (v0.11.0)*
-**Current version: 0.11.0 — M4 (IC-7610 Command Parity) and M5 (Multi-Radio Expansion) complete.**
+*Updated: 2026-04-23 (v0.18.0)*
+**Current version: 0.18.0 — All milestones complete. See [CHANGELOG.md](CHANGELOG.md) for v0.12.0–v0.18.0 details.**
