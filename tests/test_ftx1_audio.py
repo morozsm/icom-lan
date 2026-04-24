@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
 
 from icom_lan.audio import AudioPacket
+from icom_lan.audio.usb_driver import UsbAudioDriver
 from icom_lan.audio_bus import AudioBus
 from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
 from icom_lan.exceptions import AudioFormatError
@@ -19,14 +20,7 @@ from icom_lan.exceptions import AudioFormatError
 
 @pytest.fixture
 def mock_audio_driver():
-    driver = MagicMock()
-    driver.start_rx = AsyncMock()
-    driver.stop_rx = AsyncMock()
-    driver.start_tx = AsyncMock()
-    driver.stop_tx = AsyncMock()
-    driver.push_tx_pcm = AsyncMock()
-    driver.tx_running = False
-    return driver
+    return create_autospec(UsbAudioDriver, instance=True)
 
 
 @pytest.fixture
