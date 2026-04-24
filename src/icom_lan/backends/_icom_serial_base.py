@@ -158,6 +158,15 @@ class _IcomSerialRadioBase(CoreRadio):
         self._serial_audio_seq = 0
 
     # ------------------------------------------------------------------
+    # Backend identity
+    # ------------------------------------------------------------------
+
+    @property
+    def backend_id(self) -> str:
+        """Stable backend family identifier — ``"icom_serial"`` for serial CI-V."""
+        return "icom_serial"
+
+    # ------------------------------------------------------------------
     # Connection properties
     # ------------------------------------------------------------------
 

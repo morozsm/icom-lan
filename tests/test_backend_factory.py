@@ -7,8 +7,9 @@ from dataclasses import dataclass
 import pytest
 
 from icom_lan import IcomRadio, create_radio
-from icom_lan.backends.config import LanBackendConfig, SerialBackendConfig
+from icom_lan.backends.config import LanBackendConfig, SerialBackendConfig, YaesuCatBackendConfig
 from icom_lan.backends.icom7610 import Icom7610SerialRadio
+from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
 from icom_lan.backends.icom7610.drivers.contracts import (
     AudioDriver,
     CivLink,
@@ -109,6 +110,19 @@ class TestCreateRadioFactory:
         )
         assert isinstance(radio, Icom7610SerialRadio)
         assert radio._serial_ptt_mode == "civ"
+
+    def test_lan_backend_has_icom_lan_backend_id(self) -> None:
+        radio = create_radio(LanBackendConfig(host="192.168.55.40"))
+        assert radio.backend_id == "icom_lan"
+
+    def test_serial_icom_backend_has_icom_serial_backend_id(self) -> None:
+        radio = create_radio(SerialBackendConfig(device="/dev/ttyUSB0"))
+        assert radio.backend_id == "icom_serial"
+
+    def test_yaesu_cat_backend_config_has_yaesu_cat_backend_id(self) -> None:
+        radio = create_radio(YaesuCatBackendConfig(device="/dev/ttyUSB0"))
+        assert isinstance(radio, YaesuCatRadio)
+        assert radio.backend_id == "yaesu_cat"
 
     def test_create_radio_rejects_unknown_backend(self) -> None:
         @dataclass(slots=True)
