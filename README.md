@@ -30,7 +30,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
   - 🔊 **Browser audio TX** — transmit from your microphone via Opus codec
   - 🎚️ **Full control panel** — AF/RF/Squelch sliders, NB/NR/DIGI-SEL/IP+ toggles, ATT/Preamp, VFO A/B
   - 📊 **Meters** — S-meter, SWR (color-coded), ALC, Power, Vd, Id
-  - 🔄 **Live state sync** — HTTP polling at 200ms, no page refresh needed
+  - 🔄 **Live state sync** — WebSocket state push with delta encoding (no polling, real-time updates)
 - 🔊 **Virtual audio bridge** — route radio audio to BlackHole/Loopback for WSJT-X, fldigi, JS8Call (`icom-lan web --bridge "BlackHole 2ch"`)
 - 📡 **DX cluster integration** — real-time spot overlays on the waterfall with click-to-tune (`icom-lan web --dx-cluster dxc.nc7j.com:7373 --callsign KN4KYD`)
 - 🔌 **Hamlib NET rigctld server** — drop-in replacement for `rigctld`, works with WSJT-X, JS8Call, fldigi
@@ -38,7 +38,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 - 📊 **Audio FFT Scope** — real-time FFT on USB/LAN audio for radios without hardware spectrum (Yaesu FTX-1, etc.)
 - 🖥️ **LCD display mode** — Web UI shows LCD-style layout for radios without a hardware scope
 - 📡 **UDP relay proxy** — remote access via VPN/Tailscale
-- 🔒 **Zero dependencies** — pure Python, stdlib only
+- 🔒 **Minimal dependencies** — core library requires only `pyserial`/`pyserial-asyncio`; optional extras add audio/image/webrtc support
 - 📝 **Type-annotated** — full `py.typed` support
 
 ## Supported Radios
@@ -254,12 +254,31 @@ The main entry point is **`create_radio(config)`** returning a **`Radio`** (see 
 
 ### HTTP Endpoints
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/v1/state` | Dual-receiver state JSON (MAIN+SUB) |
-| `GET /api/v1/bridge` | Audio bridge status |
-| `POST /api/v1/bridge` | Start audio bridge |
-| `DELETE /api/v1/bridge` | Stop audio bridge |
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/info` | Runtime model/capability summary |
+| `GET` | `/api/v1/state` | Canonical current state snapshot |
+| `GET` | `/api/v1/capabilities` | Full profile-backed capabilities |
+| `GET` | `/api/v1/bridge` | Audio bridge status |
+| `GET` | `/api/v1/dx/spots` | Buffered DX cluster spots |
+| `GET` | `/api/v1/band-plan/config` | Active band-plan region |
+| `GET` | `/api/v1/band-plan/layers` | Band-plan layers metadata |
+| `GET` | `/api/v1/band-plan/segments` | Band-plan overlay segments |
+| `GET` | `/api/v1/eibi/status` | EiBi loader status |
+| `GET` | `/api/v1/eibi/stations` | EiBi station list (paged/filterable) |
+| `GET` | `/api/v1/eibi/segments` | EiBi overlay segments |
+| `GET` | `/api/v1/eibi/identify` | Identify probable broadcast stations |
+| `GET` | `/api/v1/eibi/bands` | EiBi frequency bands |
+| `POST` | `/api/v1/bridge` | Start audio bridge |
+| `DELETE` | `/api/v1/bridge` | Stop audio bridge |
+| `POST` | `/api/v1/radio/connect` | Connect/reconnect radio control path |
+| `POST` | `/api/v1/radio/disconnect` | Disconnect radio control path |
+| `POST` | `/api/v1/radio/power` | Power on/off via CI-V |
+| `POST` | `/api/v1/band-plan/config` | Change active band-plan region |
+| `POST` | `/api/v1/eibi/fetch` | Fetch/refresh EiBi dataset |
+| `POST` | `/api/v1/rtc/offer` | WebRTC offer negotiation |
+
+See [Web Server API](https://morozsm.github.io/icom-lan/api/web/) for complete endpoint reference.
 
 ### Configuration
 
@@ -434,7 +453,7 @@ parameters while running icom-lan remotely over WireGuard to his IC-7610.*
 ## Testing
 
 ```bash
-# Unit tests (no radio required) — 4264 tests, 95% coverage
+# Unit tests (no radio required) — ~4794 tests, 95% coverage
 pytest tests/test_*.py
 
 # Mock integration tests (full UDP protocol, no radio required)
@@ -457,7 +476,7 @@ pytest -m integration tests/integration/test_radio_integration.py::TestSoak::tes
 
 ### Test Suite Quality
 
-- **4264 tests** (3929 passed, 56 skipped) across unit, integration, and mock-integration suites
+- **~4794 tests** across unit, integration, and mock-integration suites
 - **95% code coverage** — comprehensive protocol and runtime coverage
 - **0 mypy errors** — full type safety with protocol-based architecture
 - **Epic #140 complete** — 100% CI-V command coverage (134/134 commands)
@@ -476,7 +495,7 @@ pytest -m integration tests/integration/test_radio_integration.py::TestSoak::tes
 
 ## Security
 
-- Zero external dependencies — minimal attack surface
+- Minimal core dependencies (`pyserial`, `pyserial-asyncio` only) — small attack surface
 - Credentials passed via env vars or parameters, never stored
 - The Icom protocol uses UDP without encryption — see [SECURITY.md](docs/SECURITY.md)
 
