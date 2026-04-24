@@ -267,6 +267,22 @@ class TestPasswordResolution:
             with pytest.raises(SystemExit):
                 _resolve_password(args)
 
+    def test_cli_pass_empty_string_overrides_env(self, monkeypatch):
+        """--pass '' (explicit empty string) must win over $ICOM_PASS (#984)."""
+        monkeypatch.setenv("ICOM_PASS", "env-secret")
+        p = _build_parser()
+        with patch("sys.stderr", new_callable=io.StringIO):
+            args = p.parse_args(["--pass", "", "status"])
+        assert _resolve_password(args) == ""
+
+    def test_pass_file_first_line_only(self, tmp_path):
+        """--pass-file returns only the first line, ignoring trailing content (#985)."""
+        pw_file = tmp_path / "pw.txt"
+        pw_file.write_text("real-secret\n# comment\nextra-line\n", encoding="utf-8")
+        p = _build_parser()
+        args = p.parse_args(["--pass-file", str(pw_file), "status"])
+        assert _resolve_password(args) == "real-secret"
+
     def test_deprecated_port_prints_warning(self):
         p = _build_parser()
         with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
