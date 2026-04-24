@@ -65,6 +65,25 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_STATIC_DIR = pathlib.Path(__file__).parent / "static"
 _RADIO_MODEL = "IC-7610"
+_MAX_POST_BODY = 256 * 1024  # 256 KiB — hard ceiling for all POST body reads
+
+
+async def _read_capped_body(
+    reader: asyncio.StreamReader,
+    content_length: int,
+) -> bytes | None:
+    """Read up to *content_length* bytes, rejecting oversize requests.
+
+    Returns the raw bytes on success, or ``None`` when *content_length*
+    exceeds :data:`_MAX_POST_BODY` (caller must send HTTP 413).
+    """
+    if content_length > _MAX_POST_BODY:
+        return None
+    return await asyncio.wait_for(
+        reader.readexactly(content_length),
+        timeout=5.0,
+    )
+
 
 # Mode/filter lists moved to RadioProfile (profiles.py)
 
@@ -1796,10 +1815,22 @@ class WebServer:
             if reader is not None:
                 cl = int((headers or {}).get("content-length", "0"))
                 if cl > 0:
-                    body_bytes = await asyncio.wait_for(
-                        reader.readexactly(cl),
-                        timeout=5.0,
-                    )
+                    read_result = await _read_capped_body(reader, cl)
+                    if read_result is None:
+                        err = json.dumps(
+                            {"error": "request_too_large"},
+                            separators=(",", ":"),
+                        ).encode()
+                        await _send_response(
+                            writer,
+                            413,
+                            "Content Too Large",
+                            err,
+                            {"Content-Type": "application/json"},
+                        )
+                        writer.close()
+                        return
+                    body_bytes = read_result
             if not body_bytes:
                 err = json.dumps(
                     {"error": "missing_body"},
@@ -1897,11 +1928,22 @@ class WebServer:
             if reader is not None:
                 cl = int((headers or {}).get("content-length", "0"))
                 if cl > 0:
-                    body_bytes = await asyncio.wait_for(
-                        reader.readexactly(cl),
-                        timeout=5.0,
-                    )
-                    payload = json.loads(body_bytes)
+                    read_result = await _read_capped_body(reader, cl)
+                    if read_result is None:
+                        err = json.dumps(
+                            {"error": "request_too_large"},
+                            separators=(",", ":"),
+                        ).encode()
+                        await _send_response(
+                            writer,
+                            413,
+                            "Content Too Large",
+                            err,
+                            {"Content-Type": "application/json"},
+                        )
+                        writer.close()
+                        return
+                    payload = json.loads(read_result)
                     force = payload.get("force", False)
 
             result = await self._eibi.fetch(force=force)
@@ -2052,10 +2094,22 @@ class WebServer:
                 if reader is not None:
                     cl = int((headers or {}).get("content-length", "0"))
                     if cl > 0:
-                        body_bytes = await asyncio.wait_for(
-                            reader.readexactly(cl),
-                            timeout=5.0,
-                        )
+                        read_result = await _read_capped_body(reader, cl)
+                        if read_result is None:
+                            err = json.dumps(
+                                {"error": "request_too_large"},
+                                separators=(",", ":"),
+                            ).encode()
+                            await _send_response(
+                                writer,
+                                413,
+                                "Content Too Large",
+                                err,
+                                {"Content-Type": "application/json"},
+                            )
+                            writer.close()
+                            return
+                        body_bytes = read_result
                 if not body_bytes:
                     err = json.dumps(
                         {
@@ -2165,10 +2219,22 @@ class WebServer:
         if reader is not None:
             cl = int((headers or {}).get("content-length", "0"))
             if cl > 0:
-                body_bytes = await asyncio.wait_for(
-                    reader.readexactly(cl),
-                    timeout=5.0,
-                )
+                read_result = await _read_capped_body(reader, cl)
+                if read_result is None:
+                    err = json.dumps(
+                        {"error": "request_too_large"},
+                        separators=(",", ":"),
+                    ).encode()
+                    await _send_response(
+                        writer,
+                        413,
+                        "Content Too Large",
+                        err,
+                        {"Content-Type": "application/json"},
+                    )
+                    writer.close()
+                    return
+                body_bytes = read_result
         if not body_bytes:
             err = json.dumps(
                 {
