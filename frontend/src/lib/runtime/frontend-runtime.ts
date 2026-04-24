@@ -26,7 +26,7 @@ import {
 } from '$lib/stores/connection.svelte';
 import { getAudioState, setVolume, setMuted, toggleMute } from '$lib/stores/audio.svelte';
 import { sendCommand, connect, sendRaw } from '$lib/transport/ws-client';
-import { fetchCapabilities, startPolling } from '$lib/transport/http-client';
+import { fetchCapabilities, startPolling, setPollingMultiplier } from '$lib/transport/http-client';
 import { audioManager } from '$lib/audio/audio-manager';
 import { systemController } from './system-controller';
 
@@ -203,6 +203,11 @@ class FrontendRuntime {
 
   toggleMute(): void {
     toggleMute();
+  }
+
+  /** Adjust HTTP polling cadence (e.g. from battery monitor). */
+  setPollingMultiplier(m: number): void {
+    setPollingMultiplier(m);
   }
 }
 

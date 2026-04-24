@@ -1,16 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fetchCapabilities, startPolling, setPollingMultiplier } from './lib/transport/http-client';
-  import { connect, sendRaw } from './lib/transport/ws-client';
   import { initBatteryMonitor } from './lib/utils/battery';
-  import { setCapabilities } from './lib/stores/capabilities.svelte';
-  import { setRadioState } from './lib/stores/radio.svelte';
   import { initUiVersion, getUiVersion } from './lib/stores/ui-version.svelte';
   import AppShell from './components/layout/AppShell.svelte';
   import RadioLayoutV2 from './components-v2/layout/RadioLayout.svelte';
   import ControlButtonDemo from './components-v2/controls/ControlButtonDemo.svelte';
   import { initMediaSession, destroyMediaSession } from './lib/media/media-session';
-  import { systemController } from './lib/runtime/system-controller';
+  import { runtime } from './lib/runtime/frontend-runtime';
   import './app.css';
 
   let backendError = $state<string | null>(null);
@@ -34,30 +30,18 @@
 
     initMediaSession();
 
-    // Register polling lifecycle with SystemController for connect/disconnect
-    systemController.registerPolling(() =>
-      startPolling((state) => { setRadioState(state); }, 1000),
-    );
-    const stopPolling = startPolling((state) => {
-      setRadioState(state);
-    }, 1000);
-    systemController.setStopPolling(stopPolling);
-
+    let cleanupBootstrap: (() => void) | null = null;
     let cleanupBattery: (() => void) | null = null;
-    initBatteryMonitor((multiplier) => {
-      setPollingMultiplier(multiplier);
-    }).then(cleanup => { cleanupBattery = cleanup; });
-
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    initBatteryMonitor((multiplier) => {
+      runtime.setPollingMultiplier(multiplier);
+    }).then(cleanup => { cleanupBattery = cleanup; });
 
     (async () => {
       try {
-        const caps = await fetchCapabilities();
-        setCapabilities(caps);
+        cleanupBootstrap = await runtime.bootstrap();
         backendError = null;
-
-        connect('/api/v1/ws');
-        sendRaw({ type: 'subscribe', streams: ['events'] });
       } catch (err) {
         console.error('init error:', err);
         backendError = `Backend error: ${err}`;
@@ -78,7 +62,7 @@
     return () => {
       destroyMediaSession();
       cleanupBattery?.();
-      stopPolling();
+      cleanupBootstrap?.();
       if (retryTimer) clearTimeout(retryTimer);
     };
   });
