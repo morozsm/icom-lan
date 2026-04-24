@@ -2482,6 +2482,16 @@ async def _send_json(
     await _send_response(writer, 200, "OK", body, extra)
 
 
+_SECURITY_HEADERS: dict[str, str] = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": (
+        "default-src 'self' ws: wss:; img-src 'self' data:; style-src 'self' 'unsafe-inline'"
+    ),
+}
+
+
 async def _send_response(
     writer: asyncio.StreamWriter,
     status: int,
@@ -2491,6 +2501,7 @@ async def _send_response(
 ) -> None:
     headers = {
         "Content-Length": str(len(body)),
+        **_SECURITY_HEADERS,
         **extra_headers,
     }
     header_lines = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
