@@ -16,7 +16,7 @@ export type SkinId = 'desktop-v2' | 'lcd-cockpit' | 'lcd-scope' | 'mobile' | 'sd
 /**
  * Persisted skin IDs include the legacy `amber-lcd` alias, which routes to
  * `lcd-cockpit`. Kept indefinitely for backwards compatibility with stored
- * user preferences (see docs/plans/2026-04-19-lcd-twin-skins.md §2).
+ * user preferences (see docs/plans/archive/2026-04-19-lcd-twin-skins.md §2).
  */
 export type PersistedSkinId = SkinId | 'amber-lcd';
 
