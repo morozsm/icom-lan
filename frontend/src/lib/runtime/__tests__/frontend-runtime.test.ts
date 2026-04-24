@@ -105,12 +105,14 @@ import { setRadioState } from '$lib/stores/radio.svelte';
 import { systemController } from '../system-controller';
 
 // FrontendRuntime is a singleton — re-import fresh each time via a factory helper
-// so we can reset _bootstrapCleanup between tests.
+// so we can reset _bootstrapCleanup and _bootstrapInFlight between tests.
 async function freshRuntime() {
   // Dynamic import after vi.mock registrations ensures mocks are active.
   const mod = await import('../frontend-runtime');
-  // Reset private state between tests by casting to access _bootstrapCleanup
-  (mod.runtime as unknown as { _bootstrapCleanup: null })._bootstrapCleanup = null;
+  // Reset private state between tests by casting to access both sentinels
+  const rt = mod.runtime as unknown as { _bootstrapCleanup: null; _bootstrapInFlight: null };
+  rt._bootstrapCleanup = null;
+  rt._bootstrapInFlight = null;
   return mod.runtime;
 }
 
@@ -217,5 +219,22 @@ describe('FrontendRuntime.bootstrap()', () => {
 
     expect(registerSpy).toHaveBeenCalledTimes(1);
     expect(registerSpy).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('serializes concurrent callers — both share single in-flight bootstrap', async () => {
+    const rt = await freshRuntime();
+
+    // Invoke bootstrap concurrently (not sequentially)
+    const [cleanup1, cleanup2] = await Promise.all([rt.bootstrap(), rt.bootstrap()]);
+
+    // Each transport function called exactly once, not twice
+    expect(fetchCapabilities).toHaveBeenCalledTimes(1);
+    expect(startPolling).toHaveBeenCalledTimes(1);
+    expect(connect).toHaveBeenCalledTimes(1);
+    expect(sendRaw).toHaveBeenCalledTimes(1);
+
+    // Both callers get the same cleanup function
+    expect(cleanup1).toBe(cleanup2);
+    expect(cleanup1).toBe(fakeStopPolling);
   });
 });

@@ -53,6 +53,7 @@ export interface ConnectionSnapshot {
 
 class FrontendRuntime {
   private _bootstrapCleanup: (() => void) | null = null;
+  private _bootstrapInFlight: Promise<() => void> | null = null;
 
   // ── Reactive state reads ──
   // These return live $state references — Svelte 5 tracks them automatically.
@@ -127,16 +128,39 @@ class FrontendRuntime {
    * Initialize the full transport stack: capabilities → polling → WebSocket → subscribe.
    *
    * Idempotent: if already started, returns the existing cleanup function without
-   * re-running any transport calls. If the previous attempt threw, the flag is not
-   * set and bootstrap can be retried.
+   * re-running any transport calls. Concurrent callers share a single in-flight promise
+   * to prevent duplicate initialization. If the previous attempt threw, the sentinel
+   * is cleared and bootstrap can be retried.
    *
    * @returns A cleanup function that stops polling when called.
    */
   async bootstrap(): Promise<() => void> {
+    // If already completed, return cached cleanup.
     if (this._bootstrapCleanup !== null) {
       return this._bootstrapCleanup;
     }
 
+    // If in-flight, return that promise to serialize concurrent callers.
+    if (this._bootstrapInFlight !== null) {
+      return this._bootstrapInFlight;
+    }
+
+    // Set sentinel before first await to serialize concurrent callers.
+    this._bootstrapInFlight = this._doBootstrap();
+
+    try {
+      return await this._bootstrapInFlight;
+    } finally {
+      // Clear sentinel after completion (success or failure).
+      this._bootstrapInFlight = null;
+    }
+  }
+
+  /**
+   * Private implementation of bootstrap. Separated so the sentinel
+   * can be set before this async function starts.
+   */
+  private async _doBootstrap(): Promise<() => void> {
     // 1. Fetch capabilities and push into the store.
     const caps = await fetchCapabilities();
     setCapabilities(caps);
