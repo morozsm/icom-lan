@@ -167,6 +167,7 @@ class WebConfig:
     tls: bool = False  # enable TLS (HTTPS with auto self-signed cert)
     discovery: bool = True  # enable UDP discovery responder
     discovery_port: int = 8470  # UDP port for discovery
+    read_only: bool = False  # reject PTT and other transmit commands
 
 
 class ConnectionManager:
@@ -2397,6 +2398,7 @@ class WebServer:
                 __version__,
                 model,
                 server=self,
+                read_only=self._config.read_only,
             )
         elif path == "/api/v1/scope":
             handler = ScopeHandler(ws, self._radio, server=self)

@@ -353,12 +353,14 @@ class ControlHandler:
         server_version: str,
         radio_model: str,
         server: Any = None,
+        read_only: bool = False,
     ) -> None:
         self._ws = ws
         self._radio = radio
         self._version = server_version
         self._radio_model = radio_model
         self._server = server
+        self._read_only = read_only
         self._subscribed_streams: set[str] = set()
         self._event_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(
             maxsize=100,
@@ -1211,14 +1213,20 @@ class ControlHandler:
     ) -> dict[str, Any] | None:
         match name:
             case "ptt":
+                if self._read_only:
+                    raise PermissionError("read-only mode: PTT rejected")
                 on = bool(params["state"])
                 logger.info("handler: PTT %s received", "ON" if on else "OFF")
                 q.put(PttOn() if on else PttOff())
                 return {"state": on}
             case "ptt_on":
+                if self._read_only:
+                    raise PermissionError("read-only mode: PTT rejected")
                 q.put(PttOn())
                 return {}
             case "ptt_off":
+                if self._read_only:
+                    raise PermissionError("read-only mode: PTT rejected")
                 q.put(PttOff())
                 return {}
             case "set_rf_power" | "set_power":
