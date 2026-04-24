@@ -15,6 +15,7 @@ from icom_lan.exceptions import (
     AudioTranscodeError,
 )
 from icom_lan.radio import IcomRadio
+from _audio_stream_fake import FakeAudioStream
 
 
 class _FakeBackend:
@@ -165,8 +166,8 @@ class TestRadioPcmRxApi:
         radio = IcomRadio("192.168.1.100")
         radio._connected = True
         radio._civ_transport = MagicMock()
-        radio._audio_stream = MagicMock()
-        radio._audio_stream.start_rx = AsyncMock()
+        fake_stream = FakeAudioStream()
+        radio._audio_stream = fake_stream  # type: ignore[assignment]
 
         class _DummyTranscoder:
             def opus_to_pcm(self, opus: bytes) -> bytes:
@@ -181,9 +182,9 @@ class TestRadioPcmRxApi:
             jitter_depth=7,
         )
 
-        radio._audio_stream.start_rx.assert_awaited_once()
-        rx_callback = radio._audio_stream.start_rx.await_args.args[0]
-        assert radio._audio_stream.start_rx.await_args.kwargs["jitter_depth"] == 7
+        assert fake_stream.start_rx_count == 1
+        rx_callback = fake_stream.last_start_rx_callback
+        assert fake_stream.last_start_rx_jitter_depth == 7
 
         rx_callback(AudioPacket(ident=0x0080, send_seq=10, data=b"\x01\x02"))
         rx_callback(None)
@@ -193,11 +194,11 @@ class TestRadioPcmRxApi:
     @pytest.mark.asyncio
     async def test_stop_audio_rx_pcm_delegates(self) -> None:
         radio = IcomRadio("192.168.1.100")
-        radio._audio_stream = MagicMock()
-        radio._audio_stream.stop_rx = AsyncMock()
+        fake_stream = FakeAudioStream()
+        radio._audio_stream = fake_stream  # type: ignore[assignment]
 
         await radio.stop_audio_rx_pcm()
-        radio._audio_stream.stop_rx.assert_awaited_once()
+        assert fake_stream.stop_rx_count == 1
 
     @pytest.mark.asyncio
     async def test_start_audio_rx_pcm_invalid_callback(self) -> None:
@@ -238,14 +239,14 @@ class TestRadioPcmTxApi:
         radio = IcomRadio("192.168.1.100")
         radio._connected = True
         radio._civ_transport = MagicMock()
-        radio._audio_stream = MagicMock()
-        radio._audio_stream.start_tx = AsyncMock()
+        fake_stream = FakeAudioStream()
+        radio._audio_stream = fake_stream  # type: ignore[assignment]
         radio._pcm_transcoder = object()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
         await radio.start_audio_tx_pcm(sample_rate=48000, channels=1, frame_ms=20)
 
-        radio._audio_stream.start_tx.assert_awaited_once()
+        assert fake_stream.start_tx_count == 1
         assert radio._pcm_tx_fmt == (48000, 1, 20)
 
     @pytest.mark.asyncio
@@ -299,8 +300,8 @@ class TestRadioPcmTxApi:
         radio = IcomRadio("192.168.1.100")
         radio._connected = True
         radio._civ_transport = MagicMock()
-        radio._audio_stream = MagicMock()
-        radio._audio_stream.start_tx = AsyncMock()
+        fake_stream = FakeAudioStream()
+        radio._audio_stream = fake_stream  # type: ignore[assignment]
         radio._get_pcm_transcoder = MagicMock(  # type: ignore[method-assign]
             side_effect=AudioCodecBackendError(
                 "Audio codec backend unavailable; install icom-lan[audio]."
@@ -309,7 +310,7 @@ class TestRadioPcmTxApi:
 
         with pytest.raises(AudioCodecBackendError, match="install icom-lan\\[audio\\]"):
             await radio.start_audio_tx_pcm()
-        radio._audio_stream.start_tx.assert_not_awaited()
+        assert fake_stream.start_tx_count == 0
 
     @pytest.mark.asyncio
     async def test_push_audio_tx_pcm_frame_size_error(self) -> None:
@@ -334,12 +335,12 @@ class TestRadioPcmTxApi:
     @pytest.mark.asyncio
     async def test_stop_audio_tx_pcm_delegates_and_clears_state(self) -> None:
         radio = IcomRadio("192.168.1.100")
-        radio._audio_stream = MagicMock()
-        radio._audio_stream.stop_tx = AsyncMock()
+        fake_stream = FakeAudioStream()
+        radio._audio_stream = fake_stream  # type: ignore[assignment]
         radio._pcm_tx_fmt = (48000, 1, 20)
 
         await radio.stop_audio_tx_pcm()
-        radio._audio_stream.stop_tx.assert_awaited_once()
+        assert fake_stream.stop_tx_count == 1
         assert radio._pcm_tx_fmt is None
 
     @pytest.mark.asyncio
