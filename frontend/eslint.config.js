@@ -110,6 +110,33 @@ export default [
     },
   },
 
+  // ── Import boundary: lib/runtime isolation ──
+  // lib/runtime must NOT import from components-v2 to prevent circular dependencies.
+  // See ADR 2026-04-12 and issue #1005.
+  {
+    files: [
+      'src/lib/runtime/**/*.ts',
+      'src/lib/runtime/**/*.svelte',
+      'src/lib/runtime/**/*.svelte.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/components-v2/**'],
+              message:
+                'lib/runtime must not import from components-v2. ' +
+                'Use lib/runtime/props/ or lib/runtime/commands/ instead. ' +
+                'See ADR 2026-04-12.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // ── Legacy V1 components — same restrictions ──
   {
     files: [
