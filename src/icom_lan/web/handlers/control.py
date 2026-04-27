@@ -164,6 +164,7 @@ from ...radio_protocol import MemoryCapable
 __all__ = ["ControlHandler"]
 
 logger = logging.getLogger(__name__)
+_MAX_CW_TEXT_CHARS = 512
 
 
 class ControlHandler:
@@ -932,9 +933,10 @@ class ControlHandler:
             if CAP_CW not in radio.capabilities:
                 raise RuntimeError("radio does not support this command")
             text = str(params.get("text", ""))
-            if len(text) > 30:
+            if len(text) > _MAX_CW_TEXT_CHARS:
                 raise ValueError(
-                    f"CW text too long: max 30 characters, got {len(text)}"
+                    "CW text too long: "
+                    f"max {_MAX_CW_TEXT_CHARS} characters, got {len(text)}"
                 )
             await radio.send_cw_text(text)
             return {"text": text}
