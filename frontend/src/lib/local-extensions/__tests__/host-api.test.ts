@@ -80,6 +80,10 @@ describe('createLocalExtensionHostApi', () => {
     expect(dispatchCommand.mock.calls[0][1]).toEqual({ freq: 14_074_000 });
     expect(api.dispatchCommand('set_mode', { mode: 'CW' })).toBe(true);
     expect(dispatchCommand).toHaveBeenLastCalledWith('set_mode', { mode: 'CW' });
+
+    const { dispatchCommand: unboundDispatchCommand } = api;
+    expect(unboundDispatchCommand('set_filter', { filter: 2 })).toBe(true);
+    expect(dispatchCommand).toHaveBeenLastCalledWith('set_filter', { filter: 2 });
   });
 
   it('rejects empty command names', () => {

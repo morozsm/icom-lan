@@ -47,6 +47,17 @@ function cloneParams(params: Record<string, unknown> | undefined): Record<string
   return params ? { ...params } : {};
 }
 
+function dispatchVia(
+  deps: LocalExtensionHostDependencies,
+  name: string,
+  params: Record<string, unknown> | undefined,
+): boolean {
+  if (typeof name !== 'string' || name.trim() === '') {
+    return false;
+  }
+  return deps.dispatchCommand(name, cloneParams(params));
+}
+
 export function createLocalExtensionHostApi(
   deps: LocalExtensionHostDependencies,
 ): LocalExtensionHostApiV1 {
@@ -56,13 +67,10 @@ export function createLocalExtensionHostApi(
     getCapabilities: deps.getCapabilities,
     subscribeState: deps.subscribeState,
     sendCommand(name, params) {
-      if (typeof name !== 'string' || name.trim() === '') {
-        return false;
-      }
-      return deps.dispatchCommand(name, cloneParams(params));
+      return dispatchVia(deps, name, params);
     },
     dispatchCommand(name, params) {
-      return this.sendCommand(name, params);
+      return dispatchVia(deps, name, params);
     },
     setKeyboardScope(scope) {
       deps.setKeyboardScope(scope);

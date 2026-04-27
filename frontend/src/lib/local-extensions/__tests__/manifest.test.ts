@@ -67,6 +67,16 @@ describe('loadLocalExtensionManifest', () => {
     await expect(loadLocalExtensionManifest({ fetch })).resolves.toBeNull();
   });
 
+  it('treats malformed host API versions as no local extensions', async () => {
+    const fetch = vi.fn().mockResolvedValue(mockResponse(200, {
+      version: 1,
+      host_api: 1,
+      extensions: [{ id: 'one', mount: 'floating-overlay', entry: '/local/one.js' }],
+    }));
+
+    await expect(loadLocalExtensionManifest({ fetch })).resolves.toBeNull();
+  });
+
   it('loads valid same-origin floating overlay extensions', async () => {
     const fetch = vi.fn().mockResolvedValue(mockResponse(200, {
       version: 1,

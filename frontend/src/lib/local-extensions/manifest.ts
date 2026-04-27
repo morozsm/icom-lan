@@ -64,7 +64,7 @@ export function parseLocalExtensionManifest(
   }
 
   if (
-    typeof manifest.host_api === 'string'
+    manifest.host_api !== undefined
     && manifest.host_api !== LOCAL_EXTENSION_HOST_API_VERSION
   ) {
     return null;

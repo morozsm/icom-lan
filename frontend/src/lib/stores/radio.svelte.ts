@@ -17,7 +17,11 @@ const stateSubscribers = new Set<(state: ServerState | null) => void>();
 
 function notifyRadioStateSubscribers(): void {
   for (const handler of stateSubscribers) {
-    handler(radio.current);
+    try {
+      handler(radio.current);
+    } catch (error) {
+      console.warn('Local extension radio state subscriber failed', error);
+    }
   }
 }
 
