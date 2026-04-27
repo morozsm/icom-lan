@@ -2,6 +2,7 @@ import type {
   KeyboardBindingConfig as CapKeyboardBindingConfig,
   KeyboardConfig as CapKeyboardConfig,
 } from '$lib/types/capabilities';
+import { isLocalExtensionKeyboardScopeActive } from '$lib/local-extensions/keyboard-scope';
 
 export type KeyboardBindingConfig = CapKeyboardBindingConfig;
 export type KeyboardConfig = CapKeyboardConfig;
@@ -298,6 +299,7 @@ export function findBindingByAction(
  * keyboard shortcuts should be suppressed.
  */
 export function shouldIgnoreEvent(activeElement: Element | null): boolean {
+  if (isLocalExtensionKeyboardScopeActive()) return true;
   if (!activeElement) return false;
   return IGNORED_TAGS.has(activeElement.tagName);
 }

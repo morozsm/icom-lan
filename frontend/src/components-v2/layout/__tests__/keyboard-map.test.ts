@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_KEYBOARD_CONFIG, resolveAction, shouldIgnoreEvent } from '../keyboard-map';
+import {
+  resetLocalExtensionKeyboardScope,
+  setLocalExtensionKeyboardScope,
+} from '$lib/local-extensions/keyboard-scope';
 
 describe('resolveAction', () => {
   it('ArrowLeft tunes down by the current frontend step', () => {
@@ -101,8 +105,18 @@ describe('shouldIgnoreEvent', () => {
   });
 
   it('keeps shortcuts active on non-editable elements', () => {
+    resetLocalExtensionKeyboardScope();
     expect(shouldIgnoreEvent(makeEl('DIV'))).toBe(false);
     expect(shouldIgnoreEvent(makeEl('BUTTON'))).toBe(false);
     expect(shouldIgnoreEvent(null)).toBe(false);
+  });
+
+  it('suppresses shortcuts while a local extension owns keyboard scope', () => {
+    setLocalExtensionKeyboardScope('extension-input');
+
+    expect(shouldIgnoreEvent(makeEl('DIV'))).toBe(true);
+    expect(shouldIgnoreEvent(null)).toBe(true);
+
+    resetLocalExtensionKeyboardScope();
   });
 });

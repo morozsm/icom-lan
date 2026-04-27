@@ -13,6 +13,21 @@ class RadioStore {
 export const radio = new RadioStore();
 
 let lastRevision = -1;
+const stateSubscribers = new Set<(state: ServerState | null) => void>();
+
+function notifyRadioStateSubscribers(): void {
+  for (const handler of stateSubscribers) {
+    handler(radio.current);
+  }
+}
+
+export function subscribeRadioState(handler: (state: ServerState | null) => void): () => void {
+  stateSubscribers.add(handler);
+  handler(radio.current);
+  return () => {
+    stateSubscribers.delete(handler);
+  };
+}
 
 // Optimistic patches: field → { value, expires, serverValueAtPatch }
 // Kept until server confirms (value matches) OR hard timeout (5s)
@@ -110,6 +125,7 @@ export function resetRadioState(): void {
   optimisticSub.clear();
   optimisticTopLevel.clear();
   lockedFields.clear();
+  notifyRadioStateSubscribers();
 }
 
 export function setRadioState(state: ServerState): void {
@@ -123,6 +139,7 @@ export function setRadioState(state: ServerState): void {
   if (isInitial || state.revision > lastRevision || isReset) {
     lastRevision = state.revision;
     radio.current = applyOptimistic(state);
+    notifyRadioStateSubscribers();
     // Sync power status to connection store
     if (state.powerOn !== undefined) {
       setRadioPowerOn(state.powerOn);
@@ -174,6 +191,7 @@ export function patchActiveReceiver(patch: Partial<ReceiverState>, lock = false)
     ...s,
     [key]: { ...s[key], ...patch },
   };
+  notifyRadioStateSubscribers();
 }
 
 /**
@@ -204,6 +222,7 @@ export function patchReceiver(receiver: 0 | 1, patch: Partial<ReceiverState>, lo
     ...s,
     [key]: { ...s[key], ...patch },
   };
+  notifyRadioStateSubscribers();
 }
 
 /**
@@ -221,6 +240,7 @@ export function patchRadioState(patch: Partial<ServerState>): void {
     }
   }
   radio.current = { ...s, ...patch };
+  notifyRadioStateSubscribers();
 }
 
 // Convenience getters (still work in non-reactive contexts like callbacks)
