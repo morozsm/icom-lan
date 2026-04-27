@@ -312,21 +312,44 @@ Without selection, UI version defaults to `v1`.
 ### Layout and skin resolution in v2
 
 Skin/layout is resolved in `frontend/src/components-v2/layout/RadioLayout.svelte`
-using `resolveSkinId(...)` and `getLayoutMode()`:
+using `resolveSkinId(...)` and `getLayoutMode()`. The persisted preference is
+stored in localStorage under `icom-lan-layout`.
 
 1. `isMobile` is true when:
    - `min(window.innerWidth, window.innerHeight) < 640`, or
    - touch device and `min(window.innerWidth, window.innerHeight) < 500`.
 2. If `isMobile` is true -> mobile skin.
-3. Otherwise, layout preference from localStorage key `icom-lan-layout` is used:
-   - `lcd` -> amber LCD skin
-   - `standard` -> desktop v2 skin
-   - `auto` -> desktop v2 when any scope is available, amber LCD when no scope is available.
+3. Otherwise, the stored layout preference is resolved by
+   `frontend/src/skins/registry.ts`:
+   - `auto` -> `desktop-v2` when any scope is available, otherwise `lcd-cockpit`
+   - `standard` -> `desktop-v2`
+   - `lcd` or `lcd-cockpit` -> `lcd-cockpit`
+   - `lcd-scope` -> `lcd-scope`
+   - `sdr-test` -> `sdr-test`
+
+`lcd` is a legacy persisted layout value for the cockpit LCD skin. Persisted
+skin IDs can also contain the legacy `amber-lcd` alias, which is normalized to
+`lcd-cockpit` before loading a skin component.
+
+The v2 StatusBar skin dropdown writes layout preferences directly via
+`setLayoutMode(...)` and exposes:
+
+- `AUTO`
+- `Standard`
+- `LCD Cockpit`
+- `LCD Scope`
+- `SDR Screen (test)`
+
+For legacy users, the dropdown canonicalizes a stored `lcd` value to
+`lcd-cockpit` so the selected option remains highlighted.
 
 Status bar layout button behavior (`cycleLayoutMode(...)`):
 
 - if scope is available: `auto -> lcd -> standard -> auto`
 - if scope is not available: selecting layout forces `lcd`
+
+The layout button cycle intentionally does not include `lcd-scope` or
+`sdr-test`; choose those variants from the StatusBar skin dropdown.
 
 ### Bottom sheet gestures
 
