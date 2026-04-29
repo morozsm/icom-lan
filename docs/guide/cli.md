@@ -639,10 +639,8 @@ icom-lan audio bridge --device "BlackHole 2ch" --rx-only
     After install, reboot to load the audio driver. Then `BlackHole 2ch` appears as an audio device.
 
 !!! note "Dependencies"
-    Audio bridge requires optional dependencies:
-    ```bash
-    pip install icom-lan[bridge]
-    ```
+    Audio-bridge dependencies (`opuslib`, `sounddevice`, `numpy`) ship with
+    the core install since v0.19 — `pip install icom-lan` is sufficient.
     On macOS with Homebrew, you may also need:
     ```bash
     export DYLD_LIBRARY_PATH=/opt/homebrew/lib

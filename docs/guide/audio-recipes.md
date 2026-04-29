@@ -12,7 +12,9 @@ export ICOM_PASS=YOUR_PASS
 ```
 
 ```bash
-pip install "icom-lan[audio]"
+# Audio dependencies (opuslib, sounddevice, numpy) ship with the core
+# install since v0.19 — `pip install icom-lan` is enough.
+pip install icom-lan
 ```
 
 ---
@@ -242,8 +244,8 @@ asyncio.run(main())
 Run Web UI + audio bridge + rigctld in a single command:
 
 ```bash
-# Install dependencies
-pip install icom-lan[bridge]
+# Install (audio-bridge deps ship with the core install since v0.19)
+pip install icom-lan
 brew install blackhole-2ch  # macOS
 
 # Start everything

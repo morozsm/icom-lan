@@ -33,13 +33,18 @@ pip install -e ".[dev]"
 ## Optional Dependencies
 
 ```bash
-pip install icom-lan[audio]    # Opus codec (opuslib)
-pip install icom-lan[bridge]   # Audio bridge (opuslib, sounddevice, numpy)
 pip install icom-lan[scope]    # Scope PNG rendering (pillow)
 pip install icom-lan[tls]      # HTTPS with auto-generated certs (cryptography)
+pip install icom-lan[webrtc]   # WebRTC audio transport (aiortc)
 ```
 
-Audio support (`[audio]`) installs `opuslib` for Opus codec. Not required for PCM/uLaw audio.
+!!! note "Audio bridge included by default (since v0.19)"
+    `opuslib`, `sounddevice`, and `numpy` are now part of the core install.
+    `pip install icom-lan` is enough for the Web UI, audio bridge, and Opus
+    codec support — no extras needed.
+
+    The legacy `[audio]` and `[bridge]` extras are preserved as no-op
+    aliases so existing install commands keep working.
 
 ## Verify Installation
 

@@ -12,6 +12,9 @@ requires-python = ">=3.11"
 dependencies = [
     "pyserial>=3.5",
     "pyserial-asyncio>=0.6",
+    "opuslib",
+    "sounddevice",
+    "numpy",
 ]
 authors = [
     { name = "Sergey Morozik", email = "morozsm@gmail.com" },
@@ -37,12 +40,15 @@ Issues = "https://github.com/morozsm/icom-lan/issues"
 icom-lan = "icom_lan.cli:main"
 
 [project.optional-dependencies]
-audio = ["opuslib"]
-bridge = ["opuslib", "sounddevice", "numpy"]
+# `audio` and `bridge` extras are kept as no-op aliases for backwards
+# compatibility — `opuslib`, `sounddevice`, and `numpy` are now part of
+# the core dependencies (#1090). New users should run `pip install icom-lan`.
+audio = []
+bridge = []
 scope = [
     "pillow>=10.0",
 ]
-dsp = ["numpy>=1.24", "scipy>=1.11"]
+dsp = ["scipy>=1.11"]
 webrtc = ["aiortc>=1.9"]
 tls = ["cryptography>=41.0"]
 dev = ["pytest", "pytest-asyncio", "pytest-cov", "pytest-timeout", "ruff", "mypy"]
@@ -108,9 +114,9 @@ ignore_missing_imports = true
 module = ["scipy", "scipy.*"]
 ignore_missing_imports = true
 
-# Optional audio / bridge / DSP deps (installed via ``[audio]`` /
-# ``[bridge]`` / ``[dsp]`` extras).  Ignore missing stubs so mypy runs
-# cleanly against the default (non-extras) install that CI uses.
+# Audio / DSP deps without published type stubs.  ``numpy``, ``sounddevice``
+# and ``opuslib`` ship with the core install since #1090; ``scipy`` is still
+# behind the ``[dsp]`` extra.  Ignore missing stubs so mypy runs cleanly.
 [[tool.mypy.overrides]]
 module = [
     "numpy",

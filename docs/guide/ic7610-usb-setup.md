@@ -45,17 +45,15 @@ This guide shows how to control the IC-7610 via **USB serial CI-V + USB audio de
 ### 1. Install icom-lan
 
 ```bash
+# Core install — includes serial CI-V (pyserial), USB audio RX/TX,
+# audio-device listing (sounddevice + numpy + opuslib).
 pip install icom-lan
-
-# For serial CI-V control:
-pip install icom-lan
-
-# For USB audio RX/TX and audio-device listing:
-pip install 'icom-lan[serial,bridge]'
-
-# serial: pyserial + pyserial-asyncio
-# bridge: sounddevice + numpy + opuslib
 ```
+
+!!! note
+    Since v0.19 the audio-bridge stack (`sounddevice`, `numpy`, `opuslib`)
+    is part of the core install. The legacy `[bridge]` and `[audio]` extras
+    still resolve but are now no-op aliases.
 
 ### 2. Connect the Radio
 
@@ -93,11 +91,8 @@ IC-7610:
 icom-lan --list-audio-devices
 ```
 
-This command requires the optional bridge dependencies:
-
-```bash
-pip install 'icom-lan[bridge]'
-```
+Audio-device listing requires `sounddevice`, which ships with the core
+install since v0.19 (`pip install icom-lan`).
 
 Example output:
 

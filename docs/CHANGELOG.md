@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Audio-bridge dependencies folded into core install (#1090).** `opuslib`,
+  `sounddevice`, and `numpy` moved from the `[bridge]` extra into the main
+  `dependencies` list — `pip install icom-lan` now ships the audio bridge,
+  Opus codec, and USB audio device listing out of the box. The legacy
+  `[audio]` and `[bridge]` extras remain as no-op aliases so existing
+  install commands keep working. The `[dsp]` extra now installs only
+  `scipy>=1.11` (numpy is core). Documentation updated accordingly.
+
 ## [0.18.0] — 2026-04-19
 
 ### Added

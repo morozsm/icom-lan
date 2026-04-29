@@ -10,8 +10,8 @@ to work with `icom-lan serve` as a Hamlib NET rigctld replacement.
 **Recommended: all-in-one** (Web UI + audio bridge + rigctld):
 
 ```bash
-# Install bridge dependencies
-pip install icom-lan[bridge]
+# Install icom-lan (audio-bridge deps ship with the core install since v0.19)
+pip install icom-lan
 
 # Install BlackHole virtual audio devices (macOS)
 # Two devices required: one for RX, one for TX (single device creates feedback loop)
