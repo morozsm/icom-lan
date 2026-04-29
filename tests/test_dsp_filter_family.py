@@ -27,6 +27,7 @@ from icom_lan.profiles import resolve_radio_profile
 from icom_lan.radio import IcomRadio
 from icom_lan.radio_protocol import DspControlCapable
 from icom_lan.rig_loader import load_rig
+from icom_lan.types import CivFrame
 
 _RIGS_DIR = Path(__file__).parents[1] / "rigs"
 
@@ -130,9 +131,12 @@ class TestDspControlCapableSatisfaction:
 # ---------------------------------------------------------------------------
 
 
-def _connected_icom() -> IcomRadio:
+def _connected_icom(*, model: str | None = None) -> IcomRadio:
     """Build a minimally-connected IcomRadio for unit tests."""
-    radio = IcomRadio(host="127.0.0.1", username="x", password="y")
+    kwargs: dict[str, str] = {}
+    if model is not None:
+        kwargs["model"] = model
+    radio = IcomRadio(host="127.0.0.1", username="x", password="y", **kwargs)
     # Bypass _check_connected without touching transport internals.
     radio._civ_runtime._check_connected = lambda: None  # type: ignore[method-assign]
     radio._civ_runtime._connected = True  # type: ignore[attr-defined]
@@ -180,6 +184,90 @@ async def test_icom_set_filter_width_rejects_out_of_range() -> None:
     with pytest.raises(CommandError):
         await radio.set_filter_width(20, receiver=0)
     radio.send_civ.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# get_filter_width — branches on profile.filter_width_encoding (issue #1145)
+# ---------------------------------------------------------------------------
+
+
+class TestIcomGetFilterWidthProfileBranching:
+    """get_filter_width must branch on encoding, mirroring set_filter_width.
+
+    Regression for #1145: prior code always used a cmd29-wrapped 1-byte BCD
+    GET, which broke ``direct_bcd_hz`` profiles (IC-705, IC-9700) — multi-byte
+    BCD widths like 2400 Hz were truncated to 24.
+    """
+
+    @pytest.mark.asyncio
+    async def test_ic7610_segmented_index_request_is_cmd29_wrapped(self) -> None:
+        """IC-7610 (segmented_bcd_index): request frame is cmd29-wrapped."""
+        radio = _connected_icom(model="IC-7610")
+        captured: dict[str, bytes] = {}
+
+        async def fake_expect(civ: bytes, **_: object) -> CivFrame:
+            captured["civ"] = civ
+            # 1-byte BCD 0x20 = decimal 20 = USB segment index 20 → 1600 Hz.
+            return CivFrame(
+                to_addr=0xE0, from_addr=0x98, command=0x1A, sub=0x03, data=b"\x20"
+            )
+
+        radio._send_civ_expect = fake_expect  # type: ignore[method-assign]
+        radio._radio_state.main.mode = "USB"
+
+        hz = await radio.get_filter_width(receiver=0)
+        # Wire frame: cmd29-wrapped (0x29 + receiver=0x00 + 0x1A 0x03).
+        assert captured["civ"].hex() == "fefe98e029001a03fd"
+        # Decoded: BCD 0x20 → index 20 → USB segment 600 + (20 - 10) * 100 = 1600 Hz.
+        assert hz == 1600
+
+    @pytest.mark.asyncio
+    async def test_ic705_direct_bcd_hz_request_is_not_cmd29_wrapped(self) -> None:
+        """IC-705 (direct_bcd_hz): request frame is direct, NOT cmd29-wrapped."""
+        radio = _connected_icom(model="IC-705")
+        captured: dict[str, bytes] = {}
+
+        async def fake_expect(civ: bytes, **_: object) -> CivFrame:
+            captured["civ"] = civ
+            # 2-byte BCD: 0x24 0x00 = 2400 Hz (raw Hz, not index).
+            return CivFrame(
+                to_addr=0xE0,
+                from_addr=0xA4,
+                command=0x1A,
+                sub=0x03,
+                data=b"\x24\x00",
+            )
+
+        radio._send_civ_expect = fake_expect  # type: ignore[method-assign]
+
+        hz = await radio.get_filter_width(receiver=0)
+        # Wire frame: direct 0x1A 0x03 GET with no cmd29 wrap, no receiver byte.
+        assert captured["civ"].hex() == "fefea4e01a03fd"
+        # Decoded: 2-byte BCD 0x24 0x00 → 2400 Hz (regression: was 24 before fix).
+        assert hz == 2400
+
+    @pytest.mark.asyncio
+    async def test_ic9700_direct_bcd_hz_request_is_not_cmd29_wrapped(self) -> None:
+        """IC-9700 (direct_bcd_hz, no cmd29 support): direct GET frame."""
+        radio = _connected_icom(model="IC-9700")
+        captured: dict[str, bytes] = {}
+
+        async def fake_expect(civ: bytes, **_: object) -> CivFrame:
+            captured["civ"] = civ
+            return CivFrame(
+                to_addr=0xE0,
+                from_addr=0xA2,
+                command=0x1A,
+                sub=0x03,
+                data=b"\x24\x00",
+            )
+
+        radio._send_civ_expect = fake_expect  # type: ignore[method-assign]
+
+        hz = await radio.get_filter_width(receiver=0)
+        # Wire frame: direct GET (IC-9700 has no cmd29 at all per profile).
+        assert captured["civ"].hex() == "fefea2e01a03fd"
+        assert hz == 2400
 
 
 # ---------------------------------------------------------------------------
