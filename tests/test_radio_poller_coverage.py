@@ -289,6 +289,54 @@ async def test_execute_event_emitting_commands_and_vfo_paths() -> None:
 
 
 @pytest.mark.asyncio
+async def test_select_vfo_legacy_backend_falls_back_to_set_vfo() -> None:
+    """SelectVfo on backends predating ReceiverBankCapable falls back to set_vfo.
+
+    Issue #1189: backends like ``SerialMockRadio`` only expose the legacy
+    ``set_vfo`` overload.  The poller must not AttributeError on
+    ``radio.select_receiver(...)`` — it must fall back to ``set_vfo`` so
+    SUB selection still reaches the radio.  The DeprecationWarning from
+    ``IcomRadio.set_vfo`` (#1187) is intentional — it signals migration.
+    """
+    events: list[tuple[str, dict]] = []
+    radio = _make_radio(active="MAIN")
+    # Strip the new methods so the legacy fallback is exercised.  Using
+    # ``del`` rather than rebuilding via ``spec=`` keeps the rest of the
+    # ``_make_radio`` wiring (caps, profile, _radio_state) intact.
+    del radio.select_receiver
+    del radio.set_vfo_slot
+    radio.set_vfo = AsyncMock()
+
+    poller = RadioPoller(
+        radio,
+        StateCache(),
+        CommandQueue(),
+        on_state_event=lambda name, data: events.append((name, data)),
+    )
+
+    await poller._execute(SelectVfo("SUB"))  # noqa: SLF001
+
+    radio.set_vfo.assert_awaited_once_with("SUB")
+    assert any(name == "vfo_changed" for name, _ in events)
+
+
+@pytest.mark.asyncio
+async def test_select_vfo_no_capability_logs_and_skips() -> None:
+    """SelectVfo on a backend with neither new methods nor set_vfo: skip cleanly."""
+    radio = _make_radio(active="MAIN")
+    del radio.select_receiver
+    del radio.set_vfo_slot
+    # ``MagicMock`` auto-creates ``set_vfo`` on access; ``del`` removes
+    # it so ``getattr(radio, "set_vfo", None)`` returns ``None``.
+    del radio.set_vfo
+
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+
+    # Must not raise; just no-op + warning log.
+    await poller._execute(SelectVfo("SUB"))  # noqa: SLF001
+
+
+@pytest.mark.asyncio
 async def test_execute_receiver_routed_set_commands_use_backend_receiver_and_target_state() -> (
     None
 ):

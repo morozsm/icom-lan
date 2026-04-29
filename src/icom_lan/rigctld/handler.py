@@ -669,16 +669,29 @@ class RigctldHandler:
         # used to live here is gone.
         if rc >= 2:
             select_receiver = getattr(self._radio, "select_receiver", None)
-            if select_receiver is None:
+            if select_receiver is not None:
+                target = "MAIN" if vfo == "VFOA" else "SUB"
+                await select_receiver(target)
                 return _ok()
             target = "MAIN" if vfo == "VFOA" else "SUB"
-            await select_receiver(target)
         else:
             set_vfo_slot = getattr(self._radio, "set_vfo_slot", None)
-            if set_vfo_slot is None:
+            if set_vfo_slot is not None:
+                slot = "A" if vfo == "VFOA" else "B"
+                await set_vfo_slot(slot)
                 return _ok()
-            slot = "A" if vfo == "VFOA" else "B"
-            await set_vfo_slot(slot)
+            target = "A" if vfo == "VFOA" else "B"
+        # Issue #1189: legacy backends (e.g. SerialMockRadio,
+        # 3rd-party Radio implementers) predate ``ReceiverBankCapable`` /
+        # ``VfoSlotCapable`` and only expose the legacy ``set_vfo``
+        # overload.  Fall back to it so ``V VFOA`` / ``V VFOB`` actually
+        # reach the radio instead of returning a silent ``RPRT 0``.  The
+        # ``DeprecationWarning`` from ``IcomRadio.set_vfo`` (#1187) is
+        # intentional — it signals migration.
+        legacy_set_vfo = getattr(self._radio, "set_vfo", None)
+        if legacy_set_vfo is None:
+            return _err(HamlibError.ENAVAIL)
+        await legacy_set_vfo(target)
         return _ok()
 
     # ------------------------------------------------------------------
