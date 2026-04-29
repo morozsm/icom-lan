@@ -88,7 +88,7 @@ def _make_full_capable_mock() -> _CapableRadio:
     radio.stop_audio_tx_pcm = AsyncMock()
     radio.get_audio_stats = AsyncMock(return_value={})
     radio.start_audio_tx_opus = AsyncMock()
-    radio.stop_audio_tx = AsyncMock()
+    radio.stop_audio_tx_opus = AsyncMock()
     # ScopeCapable
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
@@ -354,7 +354,7 @@ def _make_audio_capable_mock(base: MagicMock | None = None) -> MagicMock:
     radio.stop_audio_tx_pcm = AsyncMock()
     radio.get_audio_stats = AsyncMock(return_value={})
     radio.start_audio_tx_opus = AsyncMock()
-    radio.stop_audio_tx = AsyncMock()
+    radio.stop_audio_tx_opus = AsyncMock()
     return radio
 
 

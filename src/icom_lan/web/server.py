@@ -1116,7 +1116,7 @@ class WebServer:
                 logger.warning("yaesu poller stop timed out")
             self._yaesu_poller = None
 
-        # 2. Stop audio relay (stops AudioBus subscription → stop_audio_rx)
+        # 2. Stop audio relay (stops AudioBus subscription → stop_audio_rx_opus)
         try:
             await asyncio.wait_for(self._audio_broadcaster._stop_relay(), timeout=2.0)
         except (TimeoutError, Exception) as exc:

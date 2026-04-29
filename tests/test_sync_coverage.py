@@ -188,7 +188,7 @@ def test_vfo_dispatch_single_rx_uses_ab_methods() -> None:
     r._loop.close()
 
 
-def test_audio_wrappers_and_deprecated_aliases() -> None:
+def test_audio_wrappers_canonical_only() -> None:
     r = _radio()
 
     def cb(_pkt: object) -> None:
@@ -211,17 +211,6 @@ def test_audio_wrappers_and_deprecated_aliases() -> None:
     r._radio.start_audio_tx_opus.assert_awaited_once()
     r._radio.push_audio_tx_opus.assert_awaited_once_with(b"\xaa\xbb")
     r._radio.stop_audio_tx_opus.assert_awaited_once()
-
-    with pytest.warns(DeprecationWarning):
-        r.start_audio_rx(cb)
-    with pytest.warns(DeprecationWarning):
-        r.stop_audio_rx()
-    with pytest.warns(DeprecationWarning):
-        r.start_audio_tx()
-    with pytest.warns(DeprecationWarning):
-        r.push_audio_tx(b"\x01")
-    with pytest.warns(DeprecationWarning):
-        r.stop_audio_tx()
     r._loop.close()
 
 
@@ -239,3 +228,22 @@ def test_sync_set_split_mode_emits_deprecation_warning() -> None:
 
     r._radio.set_split.assert_awaited_once_with(True)
     r._loop.close()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "start_audio_rx",
+        "stop_audio_rx",
+        "start_audio_tx",
+        "push_audio_tx",
+        "stop_audio_tx",
+    ],
+)
+def test_removed_audio_aliases_raise_attribute_error(name: str) -> None:
+    """Sync aliases removed in #1111 must not exist on icom_lan.sync.IcomRadio."""
+    r = _radio()
+    try:
+        assert not hasattr(r, name)
+    finally:
+        r._loop.close()

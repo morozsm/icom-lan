@@ -39,7 +39,7 @@ def _add_audio_capable(radio: MagicMock) -> MagicMock:
     radio.stop_audio_rx_opus = AsyncMock()
     radio.push_audio_tx_opus = AsyncMock()
     radio.start_audio_tx_opus = AsyncMock()
-    radio.stop_audio_tx = AsyncMock()
+    radio.stop_audio_tx_opus = AsyncMock()
     return radio
 
 

@@ -829,7 +829,7 @@ class RadioPoller:
                 # Stop TX audio stream after PTT, then restart RX
                 if CAP_AUDIO in self._caps:
                     try:
-                        await radio.stop_audio_tx()
+                        await radio.stop_audio_tx_opus()
                         logger.info("poller: TX audio stream stopped")
 
                         # Restart RX audio after TX (IC-7610 doesn't support full duplex)

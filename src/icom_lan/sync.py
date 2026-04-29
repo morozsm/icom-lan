@@ -13,7 +13,6 @@ Example::
 """
 
 import asyncio
-import warnings
 from typing import Any, Callable, Coroutine, TypeVar
 
 from .audio import AudioPacket
@@ -75,17 +74,6 @@ class IcomRadio:
     def _run(self, coro: Coroutine[Any, Any, T]) -> T:
         """Run a coroutine on the internal event loop."""
         return self._loop.run_until_complete(coro)
-
-    @staticmethod
-    def _warn_audio_alias(old_name: str, replacement: str) -> None:
-        warnings.warn(
-            (
-                f"icom_lan.sync.IcomRadio.{old_name}() is deprecated and will be "
-                f"removed after two minor releases; use {replacement}() instead."
-            ),
-            DeprecationWarning,
-            stacklevel=2,
-        )
 
     # ------------------------------------------------------------------
     # Connection
@@ -466,31 +454,6 @@ class IcomRadio:
     def stop_audio_tx_opus(self) -> None:
         """Stop Opus TX audio."""
         self._run(self._radio.stop_audio_tx_opus())
-
-    def start_audio_rx(self, callback: Callable[[AudioPacket | None], None]) -> None:
-        """Deprecated alias for :meth:`start_audio_rx_opus`."""
-        self._warn_audio_alias("start_audio_rx", "start_audio_rx_opus")
-        self.start_audio_rx_opus(callback)
-
-    def stop_audio_rx(self) -> None:
-        """Deprecated alias for :meth:`stop_audio_rx_opus`."""
-        self._warn_audio_alias("stop_audio_rx", "stop_audio_rx_opus")
-        self.stop_audio_rx_opus()
-
-    def start_audio_tx(self) -> None:
-        """Deprecated alias for :meth:`start_audio_tx_opus`."""
-        self._warn_audio_alias("start_audio_tx", "start_audio_tx_opus")
-        self.start_audio_tx_opus()
-
-    def push_audio_tx(self, opus_data: bytes) -> None:
-        """Deprecated alias for :meth:`push_audio_tx_opus`."""
-        self._warn_audio_alias("push_audio_tx", "push_audio_tx_opus")
-        self.push_audio_tx_opus(opus_data)
-
-    def stop_audio_tx(self) -> None:
-        """Deprecated alias for :meth:`stop_audio_tx_opus`."""
-        self._warn_audio_alias("stop_audio_tx", "stop_audio_tx_opus")
-        self.stop_audio_tx_opus()
 
     def get_audio_stats(self) -> dict[str, bool | int | float | str]:
         """Return runtime audio stats for the active stream."""

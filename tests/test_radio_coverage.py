@@ -270,93 +270,27 @@ async def test_soft_reconnect_does_full_connect_when_ctrl_dead(
 
 
 # ---------------------------------------------------------------------------
-# Deprecated audio aliases (lines 823-864)
+# Removed audio aliases (issue #1111) — verify they raise AttributeError
 # ---------------------------------------------------------------------------
 
 
-async def test_stop_audio_rx_alias_calls_stop_audio_rx_opus(radio: IcomRadio) -> None:
-    called = False
-
-    async def _stop() -> None:
-        nonlocal called
-        called = True
-
-    with patch.object(radio, "stop_audio_rx_opus", side_effect=_stop):
-        with pytest.warns(DeprecationWarning, match="stop_audio_rx"):
-            await radio.stop_audio_rx()
-
-    assert called
-
-
-async def test_start_audio_tx_alias_calls_start_audio_tx_opus(radio: IcomRadio) -> None:
-    called = False
-
-    async def _start() -> None:
-        nonlocal called
-        called = True
-
-    with patch.object(radio, "start_audio_tx_opus", side_effect=_start):
-        with pytest.warns(DeprecationWarning, match="start_audio_tx"):
-            await radio.start_audio_tx()
-
-    assert called
-
-
-async def test_stop_audio_tx_alias_calls_stop_audio_tx_opus(radio: IcomRadio) -> None:
-    called = False
-
-    async def _stop() -> None:
-        nonlocal called
-        called = True
-
-    with patch.object(radio, "stop_audio_tx_opus", side_effect=_stop):
-        with pytest.warns(DeprecationWarning, match="stop_audio_tx"):
-            await radio.stop_audio_tx()
-
-    assert called
-
-
-async def test_stop_audio_alias_calls_stop_audio_opus(radio: IcomRadio) -> None:
-    called = False
-
-    async def _stop() -> None:
-        nonlocal called
-        called = True
-
-    with patch.object(radio, "stop_audio_opus", side_effect=_stop):
-        with pytest.warns(DeprecationWarning, match="stop_audio"):
-            await radio.stop_audio()
-
-    assert called
-
-
-async def test_start_audio_alias_calls_start_audio_opus(radio: IcomRadio) -> None:
-    called = False
-
-    async def _start(rx_cb: object, *, tx_enabled: bool = True) -> None:
-        nonlocal called
-        called = True
-
-    with patch.object(radio, "start_audio_opus", side_effect=_start):
-        cb = MagicMock()
-        with pytest.warns(DeprecationWarning, match="start_audio"):
-            await radio.start_audio(cb)
-
-    assert called
-
-
-async def test_push_audio_tx_alias_calls_push_audio_tx_opus(radio: IcomRadio) -> None:
-    called = False
-
-    async def _push(data: bytes) -> None:
-        nonlocal called
-        called = True
-
-    with patch.object(radio, "push_audio_tx_opus", side_effect=_push):
-        with pytest.warns(DeprecationWarning, match="push_audio_tx"):
-            await radio.push_audio_tx(b"\x00\x01")
-
-    assert called
+@pytest.mark.parametrize(
+    "name",
+    [
+        "start_audio_rx",
+        "stop_audio_rx",
+        "start_audio_tx",
+        "push_audio_tx",
+        "stop_audio_tx",
+        "start_audio",
+        "stop_audio",
+    ],
+)
+def test_removed_audio_aliases_raise_attribute_error(
+    radio: IcomRadio, name: str
+) -> None:
+    """Aliases removed in #1111 (overdue from v0.15) must not exist on IcomRadio."""
+    assert not hasattr(radio, name)
 
 
 # ---------------------------------------------------------------------------

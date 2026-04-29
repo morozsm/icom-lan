@@ -7,7 +7,6 @@ Part of the radio.py decomposition (#505). All methods are accessed via
 from __future__ import annotations
 
 import logging
-import warnings
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -43,17 +42,6 @@ class AudioRuntimeMixin(_MixinBase):  # type: ignore[misc]
     # ------------------------------------------------------------------
     # Audio streaming
     # ------------------------------------------------------------------
-
-    @staticmethod
-    def _warn_audio_alias(old_name: str, replacement: str) -> None:
-        warnings.warn(
-            (
-                f"IcomRadio.{old_name}() is deprecated and will be removed after two "
-                f"minor releases; use IcomRadio.{replacement}() instead."
-            ),
-            DeprecationWarning,
-            stacklevel=2,
-        )
 
     async def start_audio_rx_opus(
         self,
@@ -308,43 +296,6 @@ class AudioRuntimeMixin(_MixinBase):  # type: ignore[misc]
         await self.stop_audio_tx_opus()
         await self.stop_audio_rx_opus()
 
-    async def start_audio_rx(
-        self, callback: Callable[[AudioPacket | None], None]
-    ) -> None:
-        """Deprecated alias for :meth:`start_audio_rx_opus`."""
-        self._warn_audio_alias("start_audio_rx", "start_audio_rx_opus")
-        await self.start_audio_rx_opus(callback)
-
-    async def stop_audio_rx(self) -> None:
-        """Deprecated alias for :meth:`stop_audio_rx_opus`."""
-        self._warn_audio_alias("stop_audio_rx", "stop_audio_rx_opus")
-        await self.stop_audio_rx_opus()
-
-    async def start_audio_tx(self) -> None:
-        """Deprecated alias for :meth:`start_audio_tx_opus`."""
-        self._warn_audio_alias("start_audio_tx", "start_audio_tx_opus")
-        await self.start_audio_tx_opus()
-
-    async def push_audio_tx(self, opus_data: bytes) -> None:
-        """Deprecated alias for :meth:`push_audio_tx_opus`."""
-        self._warn_audio_alias("push_audio_tx", "push_audio_tx_opus")
-        await self.push_audio_tx_opus(opus_data)
-
-    async def stop_audio_tx(self) -> None:
-        """Deprecated alias for :meth:`stop_audio_tx_opus`."""
-        self._warn_audio_alias("stop_audio_tx", "stop_audio_tx_opus")
-        await self.stop_audio_tx_opus()
-
-    async def start_audio(
-        self,
-        rx_callback: Callable[[AudioPacket | None], None],
-        *,
-        tx_enabled: bool = True,
-    ) -> None:
-        """Deprecated alias for :meth:`start_audio_opus`."""
-        self._warn_audio_alias("start_audio", "start_audio_opus")
-        await self.start_audio_opus(rx_callback, tx_enabled=tx_enabled)
-
     def get_audio_stats(self) -> dict[str, bool | int | float | str]:
         """Return runtime audio stats for the active stream.
 
@@ -354,11 +305,6 @@ class AudioRuntimeMixin(_MixinBase):  # type: ignore[misc]
         if self._audio_stream is None:
             return AudioStats.inactive().to_dict()
         return self._audio_stream.get_audio_stats()
-
-    async def stop_audio(self) -> None:
-        """Deprecated alias for :meth:`stop_audio_opus`."""
-        self._warn_audio_alias("stop_audio", "stop_audio_opus")
-        await self.stop_audio_opus()
 
     def _get_pcm_transcoder(
         self,

@@ -443,44 +443,6 @@ class TestPowerControl:
 
 class TestAudio:
     @pytest.mark.asyncio
-    async def test_start_audio_rx_alias_warns_and_calls_opus(
-        self, radio: IcomRadio
-    ) -> None:
-        radio._audio_stream = MagicMock()
-        radio._audio_stream.start_rx = AsyncMock()
-
-        with pytest.warns(DeprecationWarning, match="start_audio_rx_opus"):
-            await radio.start_audio_rx(lambda pkt: None)
-
-        radio._audio_stream.start_rx.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_push_audio_tx_alias_warns_and_calls_opus(
-        self, radio: IcomRadio
-    ) -> None:
-        radio._audio_stream = MagicMock()
-        radio._audio_stream.push_tx = AsyncMock()
-
-        with pytest.warns(DeprecationWarning, match="push_audio_tx_opus"):
-            await radio.push_audio_tx(b"\x00" * 10)
-
-        radio._audio_stream.push_tx.assert_awaited_once_with(b"\x00" * 10)
-
-    @pytest.mark.asyncio
-    async def test_start_audio_alias_warns_and_calls_opus(
-        self, radio: IcomRadio
-    ) -> None:
-        radio._audio_stream = MagicMock()
-        radio._audio_stream.start_rx = AsyncMock()
-        radio._audio_stream.start_tx = AsyncMock()
-
-        with pytest.warns(DeprecationWarning, match="start_audio_opus"):
-            await radio.start_audio(lambda pkt: None, tx_enabled=True)
-
-        radio._audio_stream.start_rx.assert_awaited_once()
-        radio._audio_stream.start_tx.assert_awaited_once()
-
-    @pytest.mark.asyncio
     async def test_start_rx_disconnected(self) -> None:
         r = IcomRadio("192.168.1.100")
         with pytest.raises(ConnectionError):

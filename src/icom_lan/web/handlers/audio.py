@@ -595,7 +595,7 @@ class AudioHandler:
                 await self._stop_rx()
             elif direction == "tx":
                 if self._radio and CAP_AUDIO in self._radio.capabilities:
-                    await self._radio.stop_audio_tx()  # type: ignore[attr-defined]
+                    await self._radio.stop_audio_tx_opus()  # type: ignore[attr-defined]
                 self._tx_active = False
                 logger.info("audio: TX stopped")
         elif msg_type == "audio_config":

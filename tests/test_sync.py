@@ -2,8 +2,6 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from icom_lan.sync import IcomRadio
 from icom_lan.types import AudioCodec
 
@@ -47,16 +45,6 @@ class TestSyncContextManager:
 
 
 class TestSyncAudioNaming:
-    def test_start_audio_rx_alias_warns_and_calls_opus(self) -> None:
-        r = IcomRadio("192.168.1.100")
-        r._radio.start_audio_rx_opus = AsyncMock()
-
-        with pytest.warns(DeprecationWarning, match="start_audio_rx_opus"):
-            r.start_audio_rx(lambda pkt: None)
-
-        r._radio.start_audio_rx_opus.assert_awaited_once()
-        r._loop.close()
-
     def test_new_opus_method_calls_async_impl(self) -> None:
         r = IcomRadio("192.168.1.100")
         r._radio.push_audio_tx_opus = AsyncMock()

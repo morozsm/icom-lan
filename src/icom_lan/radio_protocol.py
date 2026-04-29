@@ -16,7 +16,7 @@ Quick start::
 
     # Check optional capabilities at runtime:
     if isinstance(radio, AudioCapable):
-        await radio.start_audio_rx(callback)
+        await radio.start_audio_rx_opus(callback)
 
 Architecture::
 
@@ -572,7 +572,7 @@ class AudioCapable(Protocol):
     async def stop_audio_tx_pcm(self) -> None: ...
     async def get_audio_stats(self) -> dict[str, Any]: ...
     async def start_audio_tx_opus(self) -> None: ...
-    async def stop_audio_tx(self) -> None: ...
+    async def stop_audio_tx_opus(self) -> None: ...
 
 
 @runtime_checkable

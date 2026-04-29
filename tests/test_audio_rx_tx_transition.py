@@ -8,7 +8,7 @@ Expected flow:
   2. PTT ON → stop RX, start TX
   3. PTT OFF → stop TX, restart RX  ← THIS WAS BROKEN
 
-Fix: radio_poller.py PttOff case now calls start_audio_rx_opus() after stop_audio_tx()
+Fix: radio_poller.py PttOff case now calls start_audio_rx_opus() after stop_audio_tx_opus()
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ def _make_audio_capable_radio() -> SimpleNamespace:
         get_audio_stats=AsyncMock(return_value={}),
         # PTT transition methods (used by poller when AudioCapable)
         start_audio_tx_opus=AsyncMock(),
-        stop_audio_tx=AsyncMock(),
+        stop_audio_tx_opus=AsyncMock(),
     )
 
 
@@ -117,14 +117,14 @@ async def test_ptt_off_restarts_rx_audio(
     radio.set_ptt.assert_awaited_once_with(False)
 
     # Verify TX audio stopped
-    radio.stop_audio_tx.assert_awaited_once()
+    radio.stop_audio_tx_opus.assert_awaited_once()
 
     # CRITICAL: Verify RX audio restarted (this was the bug)
     radio.start_audio_rx_opus.assert_awaited_once()
 
     # Verify call order: PTT off → stop TX → start RX
     assert radio.set_ptt.await_count == 1
-    assert radio.stop_audio_tx.await_count == 1
+    assert radio.stop_audio_tx_opus.await_count == 1
     assert radio.start_audio_rx_opus.await_count == 1
 
 
@@ -142,7 +142,7 @@ async def test_ptt_cycle_full_sequence(
     # PTT OFF
     await poller._execute(PttOff())
 
-    assert radio.stop_audio_tx.await_count == 1
+    assert radio.stop_audio_tx_opus.await_count == 1
     assert radio.set_ptt.call_args_list[-1][0][0] is False  # Last call was False
 
     # CRITICAL: RX audio должен быть восстановлен
@@ -155,7 +155,7 @@ async def test_ptt_off_handles_audio_errors_gracefully(
 ) -> None:
     """PTT OFF должен обрабатывать ошибки audio transitions без crash."""
     # Simulate audio method failures
-    radio.stop_audio_tx.side_effect = RuntimeError("TX stop failed")
+    radio.stop_audio_tx_opus.side_effect = RuntimeError("TX stop failed")
     radio.start_audio_rx_opus.side_effect = RuntimeError("RX start failed")
 
     # Should not raise, errors are logged
@@ -179,6 +179,6 @@ async def test_multiple_ptt_cycles(
 
     # Each cycle should call all methods
     assert radio.start_audio_tx_opus.await_count == 3
-    assert radio.stop_audio_tx.await_count == 3
+    assert radio.stop_audio_tx_opus.await_count == 3
     assert radio.start_audio_rx_opus.await_count == 3
     assert radio.set_ptt.await_count == 6  # 3 ON + 3 OFF

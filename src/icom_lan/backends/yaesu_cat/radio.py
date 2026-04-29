@@ -382,7 +382,7 @@ class YaesuCatRadio:
         """No-op: USB audio TX is started via start_audio_tx_pcm."""
         pass
 
-    async def stop_audio_tx(self) -> None:
+    async def stop_audio_tx_opus(self) -> None:
         """Stop TX audio."""
         await self.stop_audio_tx_pcm()
 

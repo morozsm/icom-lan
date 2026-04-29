@@ -1102,7 +1102,7 @@ async def test_audio_broadcaster_subscribe_unsubscribe_lifecycle() -> None:
         stop_audio_tx_pcm=AsyncMock(),
         get_audio_stats=AsyncMock(return_value={}),
         start_audio_tx_opus=AsyncMock(),
-        stop_audio_tx=AsyncMock(),
+        stop_audio_tx_opus=AsyncMock(),
         audio_bus=None,
     )
     bus = AudioBus(radio)
@@ -1138,7 +1138,7 @@ async def test_audio_broadcaster_codec_and_frame_metadata() -> None:
         stop_audio_tx_pcm=AsyncMock(),
         get_audio_stats=AsyncMock(return_value={}),
         start_audio_tx_opus=AsyncMock(),
-        stop_audio_tx=AsyncMock(),
+        stop_audio_tx_opus=AsyncMock(),
         audio_bus=None,
     )
     bus = AudioBus(radio)
@@ -1241,7 +1241,7 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
     radio.capabilities = {"audio"}
     radio.push_audio_tx_opus = AsyncMock()
     radio.start_audio_tx_opus = AsyncMock()
-    radio.stop_audio_tx = AsyncMock()
+    radio.stop_audio_tx_opus = AsyncMock()
     ws = SimpleNamespace(
         recv=AsyncMock(
             side_effect=[
@@ -1276,7 +1276,7 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
     assert handler._tx_active is False
     radio.start_audio_tx_opus.assert_awaited_once()
     radio.push_audio_tx_opus.assert_awaited_once_with(b"\x11\x22")
-    radio.stop_audio_tx.assert_awaited_once()
+    radio.stop_audio_tx_opus.assert_awaited_once()
 
     handler._done.clear()
     frame = b"frame"
@@ -1319,7 +1319,7 @@ async def test_audio_handler_control_and_tx_guard_paths() -> None:
         start_audio_rx_opus = AsyncMock()
         stop_audio_rx_opus = AsyncMock()
         start_audio_tx_opus = AsyncMock()
-        stop_audio_tx = AsyncMock()
+        stop_audio_tx_opus = AsyncMock()
         audio_bus = None
 
     radio = _FakeAudioRadio()
@@ -1347,7 +1347,7 @@ async def test_audio_handler_control_and_tx_guard_paths() -> None:
     await handler._handle_tx_audio(b"\x00" * AUDIO_HEADER_SIZE + b"\x99")
     radio.push_audio_tx_opus.assert_awaited_once_with(b"\x99")
     await handler._handle_control({"type": "audio_stop", "direction": "tx"})
-    radio.stop_audio_tx.assert_awaited_once()
+    radio.stop_audio_tx_opus.assert_awaited_once()
     assert handler._tx_active is False
 
 

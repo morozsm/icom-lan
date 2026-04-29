@@ -52,7 +52,7 @@ def _add_capability_protocols(radio: MagicMock) -> MagicMock:
     radio.stop_audio_tx_pcm = AsyncMock()
     radio.get_audio_stats = AsyncMock(return_value={})
     radio.start_audio_tx_opus = AsyncMock()
-    radio.stop_audio_tx = AsyncMock()
+    radio.stop_audio_tx_opus = AsyncMock()
     # ScopeCapable
     radio.enable_scope = AsyncMock()
     if not hasattr(radio, "disable_scope"):

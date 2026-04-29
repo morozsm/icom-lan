@@ -381,7 +381,7 @@ def mock_radio() -> MagicMock:
     radio.stop_audio_tx_pcm = AsyncMock()
     radio.get_audio_stats = AsyncMock(return_value={})
     radio.start_audio_tx_opus = AsyncMock()
-    radio.stop_audio_tx = AsyncMock()
+    radio.stop_audio_tx_opus = AsyncMock()
     radio.audio_codec = None
     radio.audio_sample_rate = 48000
     # State cache shared between radio and server
