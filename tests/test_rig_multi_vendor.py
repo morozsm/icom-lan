@@ -309,6 +309,28 @@ class TestMultiVendorProfiles:
         assert rig.protocol_type == "civ"
         assert rig.civ_addr == 0x70
 
+    def test_x6100_filter_width_capability_disabled(self):
+        """Regression guard for issue #1159.
+
+        After PR #1157 unified ``set_filter_width`` on a per-mode segmented
+        BCD-index path, the X6100 profile (which has no segment tables and
+        no wfview support) must NOT advertise the ``filter_width`` capability
+        — otherwise every call would raise ``CommandError`` in main HEAD.
+
+        The IC-* rigs (which ship segment tables) must keep the capability.
+        """
+        x6100 = load_rig(RIGS_DIR / "x6100.toml").to_profile()
+        assert "filter_width" not in x6100.capabilities, (
+            "X6100 must NOT advertise filter_width until segment tables are "
+            "verified against hardware (issue #1159)."
+        )
+        # Sanity: confirmed CI-V rigs still expose filter_width.
+        for model_toml in ("ic7300.toml", "ic705.toml", "ic7610.toml", "ic9700.toml"):
+            profile = load_rig(RIGS_DIR / model_toml).to_profile()
+            assert "filter_width" in profile.capabilities, (
+                f"{model_toml} regression: filter_width must remain advertised."
+            )
+
     def test_tx500_protocol_kenwood_cat(self):
         rig = load_rig(RIGS_DIR / "tx500.toml")
         assert rig.protocol_type == "kenwood_cat"

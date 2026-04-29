@@ -18,6 +18,14 @@ type = "civ"
 address = 0x70
 
 [capabilities]
+# NOTE: ``filter_width`` is intentionally NOT advertised. The unified
+# CI-V 0x1A 0x03 handler in ``radio.py`` requires per-mode segment tables
+# (``[filters.width.<MODE>] segments``) decoded with wfview's
+# ``funcFilterWidth`` formula (``icomcommander.cpp:1131``). The Xiegu X6100
+# is a CI-V "IC-705 compatible subset" but its filter-width encoding is
+# undocumented in wfview and unverified on hardware. Until segment tables
+# are confirmed against an X6100, the capability stays disabled to avoid
+# silently sending wrong indices (CI-V SET is fire-and-forget). Issue #1159.
 features = [
     "audio",
     "af_level",
@@ -28,7 +36,6 @@ features = [
     "nb",
     "nr",
     "notch",
-    "filter_width",
     "pbt",
     "tx",
     "split",
