@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from icom_lan.radio_state import RadioState, ReceiverState, VfoSlotState
+from icom_lan.radio_state import (
+    RadioState,
+    ReceiverState,
+    VfoSlotState,
+    YaesuStateExtension,
+)
 
 # ---------------------------------------------------------------------------
 # ReceiverState defaults
@@ -179,8 +184,7 @@ def test_to_dict_structure() -> None:
         "break_in_delay",
         "break_in",
         "cw_spot",
-        "rx_func_mode",
-        "tx_func_mode",
+        "yaesu",
         "dial_lock",
         "drive_gain",
         "monitor_gain",
@@ -450,3 +454,63 @@ class TestVfoSlotState:
         assert rx.vfo_a.mode == "CW"
         assert rx.vfo_a.filter_num == 3
         assert rx.active_slot == "A"
+
+
+# ---------------------------------------------------------------------------
+# State-contract sweep (#1169): cw_spot tri-state + Yaesu extension
+# ---------------------------------------------------------------------------
+
+
+class TestCwSpotTriState:
+    """``cw_spot`` is ``bool | None`` — None means "not populated"."""
+
+    def test_default_is_none(self) -> None:
+        """Icom backends never assign cw_spot — default must be None."""
+        rs = RadioState()
+        assert rs.cw_spot is None
+
+    def test_to_dict_serialises_none(self) -> None:
+        rs = RadioState()
+        d = rs.to_dict()
+        assert d["cw_spot"] is None
+
+    def test_to_dict_serialises_true(self) -> None:
+        rs = RadioState()
+        rs.cw_spot = True
+        assert rs.to_dict()["cw_spot"] is True
+
+    def test_to_dict_serialises_false(self) -> None:
+        rs = RadioState()
+        rs.cw_spot = False
+        assert rs.to_dict()["cw_spot"] is False
+
+
+class TestYaesuStateExtension:
+    """Yaesu-only flags live in ``state.yaesu`` namespace."""
+
+    def test_default_yaesu_is_none(self) -> None:
+        """Generic RadioState (Icom path) leaves yaesu unset."""
+        rs = RadioState()
+        assert rs.yaesu is None
+
+    def test_yaesu_extension_defaults(self) -> None:
+        ext = YaesuStateExtension()
+        assert ext.rx_func_mode is None
+        assert ext.tx_func_mode is None
+
+    def test_yaesu_assigned_namespace(self) -> None:
+        rs = RadioState()
+        rs.yaesu = YaesuStateExtension(rx_func_mode=1, tx_func_mode=0)
+        assert rs.yaesu is not None
+        assert rs.yaesu.rx_func_mode == 1
+        assert rs.yaesu.tx_func_mode == 0
+
+    def test_to_dict_yaesu_none(self) -> None:
+        rs = RadioState()
+        assert rs.to_dict()["yaesu"] is None
+
+    def test_to_dict_yaesu_populated(self) -> None:
+        rs = RadioState()
+        rs.yaesu = YaesuStateExtension(rx_func_mode=1, tx_func_mode=1)
+        d = rs.to_dict()
+        assert d["yaesu"] == {"rx_func_mode": 1, "tx_func_mode": 1}

@@ -27,6 +27,7 @@ from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
 from ...exceptions import ConnectionError as RadioConnectionError
+from ...radio_state import YaesuStateExtension
 
 if TYPE_CHECKING:
     from ..._poller_types import CommandQueue
@@ -782,16 +783,18 @@ class YaesuCatPoller:
             except Exception:
                 logger.debug("YaesuCatPoller: get_cw_spot failed", exc_info=True)
 
-        # -- RX/TX function mode (FR/FT) --
+        # -- RX/TX function mode (FR/FT) — Yaesu-specific extension --
         if "dual_rx" in caps:
+            if state.yaesu is None:
+                state.yaesu = YaesuStateExtension()
             try:
-                state.rx_func_mode = await radio.get_rx_func()
+                state.yaesu.rx_func_mode = await radio.get_rx_func()
             except NotImplementedError:
                 pass
             except Exception:
                 logger.debug("YaesuCatPoller: get_rx_func failed", exc_info=True)
             try:
-                state.tx_func_mode = await radio.get_tx_func()
+                state.yaesu.tx_func_mode = await radio.get_tx_func()
             except NotImplementedError:
                 pass
             except Exception:

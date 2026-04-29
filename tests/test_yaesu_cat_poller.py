@@ -763,8 +763,7 @@ def test_new_fields_in_to_dict() -> None:
     d = state.to_dict()
     for key in (
         "cw_spot",
-        "rx_func_mode",
-        "tx_func_mode",
+        "yaesu",
         "break_in_delay",
         "key_speed",
         "cw_pitch",
@@ -834,8 +833,9 @@ async def test_slow_poll_reads_rx_tx_func_mode() -> None:
 
     radio.get_rx_func.assert_called()
     radio.get_tx_func.assert_called()
-    assert radio.radio_state.rx_func_mode == 1
-    assert radio.radio_state.tx_func_mode == 1
+    assert radio.radio_state.yaesu is not None
+    assert radio.radio_state.yaesu.rx_func_mode == 1
+    assert radio.radio_state.yaesu.tx_func_mode == 1
 
 
 @pytest.mark.asyncio

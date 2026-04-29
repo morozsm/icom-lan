@@ -22,6 +22,7 @@ __all__ = [
     "TxBandEdge",
     "RadioState",
     "VfoSlotState",
+    "YaesuStateExtension",
 ]
 
 
@@ -218,6 +219,27 @@ class ScopeControlsState:
 
 
 @dataclass(slots=True)
+class YaesuStateExtension:
+    """Yaesu-CAT-specific state that has no clean Icom analog.
+
+    Populated by ``YaesuCatPoller``; left as ``None`` on
+    :class:`RadioState` for non-Yaesu backends. Keeping these fields in a
+    dedicated namespace keeps the generic :class:`RadioState` semantically
+    backend-neutral while still making Yaesu-only flags observable to UI
+    consumers (e.g. a Yaesu-specific panel).
+
+    Fields:
+        rx_func_mode: ``FR`` command — 0=dual RX off, 1=single RX.
+        tx_func_mode: ``FT`` command — 0=MAIN TX, 1=SUB TX.
+
+    ``None`` for any field means "not yet polled / unknown".
+    """
+
+    rx_func_mode: int | None = None
+    tx_func_mode: int | None = None
+
+
+@dataclass(slots=True)
 class RadioState:
     """Full radio state: two receivers + global parameters."""
 
@@ -256,14 +278,17 @@ class RadioState:
     compressor_level: int = 0  # 0-255
     monitor_on: bool = False
     break_in_delay: int = 0  # 0-255
-    cw_spot: bool = False
+    # cw_spot tri-state:
+    #   None = not populated by this backend (Icom backends leave it unset)
+    #   bool = explicit value reported by the radio (Yaesu backends populate it)
+    cw_spot: bool | None = None
     break_in: int = 0  # 0=off, 1=semi, 2=full
     dial_lock: bool = False
     drive_gain: int = 0  # 0-255
     monitor_gain: int = 0  # 0-255
     vfo_select: int = 0  # 0=VFO-A/MAIN, 1=VFO-B/SUB
-    rx_func_mode: int = 0  # FR: 0=dual RX off, 1=single RX (Yaesu CAT)
-    tx_func_mode: int = 0  # FT: 0=MAIN TX, 1=SUB TX (Yaesu CAT)
+    # Yaesu-specific extension; None on non-Yaesu backends, populated on Yaesu.
+    yaesu: YaesuStateExtension | None = None
     vox_on: bool = False
     vox_gain: int = 0  # 0-255
     anti_vox_gain: int = 0  # 0-255
@@ -319,8 +344,14 @@ class RadioState:
             "drive_gain": self.drive_gain,
             "monitor_gain": self.monitor_gain,
             "vfo_select": self.vfo_select,
-            "rx_func_mode": self.rx_func_mode,
-            "tx_func_mode": self.tx_func_mode,
+            "yaesu": (
+                {
+                    "rx_func_mode": self.yaesu.rx_func_mode,
+                    "tx_func_mode": self.yaesu.tx_func_mode,
+                }
+                if self.yaesu is not None
+                else None
+            ),
             "vox_on": self.vox_on,
             "vox_gain": self.vox_gain,
             "anti_vox_gain": self.anti_vox_gain,
