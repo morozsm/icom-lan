@@ -480,8 +480,12 @@ class YaesuCatPoller:
                 case SetDualWatch(on=on):
                     await radio.set_dual_watch(on)
 
+                # ── APF (Audio Peak Filter) ──
+                case SetApf(mode=mode, receiver=rx):
+                    await radio.set_audio_peak_filter(mode, receiver=rx)
+
                 # ── IC-7610-specific (not applicable) ──
-                case SetIpPlus() | SetApf() | SetTwinPeak() | SetDigiSel():
+                case SetIpPlus() | SetTwinPeak() | SetDigiSel():
                     pass  # Icom-only DSP features
 
                 case _:

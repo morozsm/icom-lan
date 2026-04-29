@@ -858,3 +858,36 @@ async def test_slow_poll_skips_fr_ft_without_dual_rx() -> None:
 
     radio.get_rx_func.assert_not_called()
     radio.get_tx_func.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Command dispatch — SetApf (formerly dropped as "Icom-only DSP feature")
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_execute_command_set_apf_dispatches_to_radio() -> None:
+    """SetApf must reach radio.set_audio_peak_filter — used to be silently dropped."""
+    from icom_lan._poller_types import SetApf
+
+    radio = make_radio()
+    radio.set_audio_peak_filter = AsyncMock()
+    poller = YaesuCatPoller(radio, callback=lambda s: None, fast_interval=10.0)
+
+    await poller._execute_command(SetApf(mode=1, receiver=0))
+
+    radio.set_audio_peak_filter.assert_awaited_once_with(1, receiver=0)
+
+
+@pytest.mark.asyncio
+async def test_execute_command_set_apf_off_dispatches_to_radio() -> None:
+    """SetApf(mode=0) reaches the canonical entry point too."""
+    from icom_lan._poller_types import SetApf
+
+    radio = make_radio()
+    radio.set_audio_peak_filter = AsyncMock()
+    poller = YaesuCatPoller(radio, callback=lambda s: None, fast_interval=10.0)
+
+    await poller._execute_command(SetApf(mode=0, receiver=0))
+
+    radio.set_audio_peak_filter.assert_awaited_once_with(0, receiver=0)
