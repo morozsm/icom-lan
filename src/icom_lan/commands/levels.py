@@ -110,14 +110,23 @@ def set_rf_power(
 def get_rf_gain(
     to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build a 'read RF gain' CI-V command (0x14 0x02)."""
-    if cmd_map is not None:
-        return _build_from_map(
-            cmd_map, "get_rf_gain", to_addr=to_addr, from_addr=from_addr
-        )
-    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_GAIN)
+    """Build a 'read RF gain' CI-V command (0x14 0x02).
+
+    For SUB receiver, the frame is wrapped in cmd29 (0x29 0x01) — same routing
+    as ``set_rf_gain``.
+    """
+    return _build_level_get(
+        _SUB_RF_GAIN,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=(receiver != RECEIVER_MAIN),
+        cmd_map=cmd_map,
+        cmd_name="get_rf_gain",
+    )
 
 
 def set_rf_gain(
@@ -154,14 +163,23 @@ def set_rf_gain(
 def get_af_level(
     to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build a 'read AF output level' CI-V command (0x14 0x01)."""
-    if cmd_map is not None:
-        return _build_from_map(
-            cmd_map, "get_af_level", to_addr=to_addr, from_addr=from_addr
-        )
-    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL)
+    """Build a 'read AF output level' CI-V command (0x14 0x01).
+
+    For SUB receiver, the frame is wrapped in cmd29 (0x29 0x01) — same routing
+    as ``set_af_level``.
+    """
+    return _build_level_get(
+        _SUB_AF_LEVEL,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=(receiver != RECEIVER_MAIN),
+        cmd_map=cmd_map,
+        cmd_name="get_af_level",
+    )
 
 
 def set_af_level(

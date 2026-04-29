@@ -1650,13 +1650,27 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         await self._send_civ_raw(civ, wait_response=False)
         self._last_power = level
 
-    async def get_rf_gain(self) -> int:
-        """Read the current RF gain level (0-255)."""
+    async def get_rf_gain(self, receiver: int = 0) -> int:
+        """Read the current RF gain level (0-255).
+
+        Routes through cmd29 (0x29 0x01) for the SUB receiver, mirroring
+        ``set_rf_gain``.
+        """
         self._check_connected()
-        civ = get_rf_gain(to_addr=self._radio_addr)
+        self._require_receiver(receiver, operation="get_rf_gain")
+        self._require_cmd29_route(
+            0x14,
+            0x02,
+            receiver=receiver,
+            operation="get_rf_gain",
+        )
+        civ = get_rf_gain(to_addr=self._radio_addr, receiver=receiver)
         try:
             resp = await self._send_civ_expect(
-                civ, key="get_rf_gain", dedupe=True, label="get_rf_gain"
+                civ,
+                key=f"get_rf_gain:{receiver}",
+                dedupe=True,
+                label="get_rf_gain",
             )
             return self._parse_level(resp)
         except TimeoutError:
@@ -1678,13 +1692,27 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         civ = set_rf_gain(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
-    async def get_af_level(self) -> int:
-        """Read the current AF output level (0-255)."""
+    async def get_af_level(self, receiver: int = 0) -> int:
+        """Read the current AF output level (0-255).
+
+        Routes through cmd29 (0x29 0x01) for the SUB receiver, mirroring
+        ``set_af_level``.
+        """
         self._check_connected()
-        civ = get_af_level(to_addr=self._radio_addr)
+        self._require_receiver(receiver, operation="get_af_level")
+        self._require_cmd29_route(
+            0x14,
+            0x01,
+            receiver=receiver,
+            operation="get_af_level",
+        )
+        civ = get_af_level(to_addr=self._radio_addr, receiver=receiver)
         try:
             resp = await self._send_civ_expect(
-                civ, key="get_af_level", dedupe=True, label="get_af_level"
+                civ,
+                key=f"get_af_level:{receiver}",
+                dedupe=True,
+                label="get_af_level",
             )
             return self._parse_level(resp)
         except TimeoutError:

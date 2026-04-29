@@ -544,6 +544,48 @@ class TestCmd29ReceiverRouting:
         assert frame[6] == 0x14
         assert frame[7] == 0x01  # AF level sub
 
+    def test_get_rf_gain_main_no_cmd29(self) -> None:
+        from icom_lan.commands import RECEIVER_MAIN, get_rf_gain
+
+        frame = get_rf_gain(receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x14  # Direct level cmd, no cmd29 prefix
+        assert frame[5] == 0x02  # RF gain sub
+
+    def test_get_rf_gain_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import RECEIVER_SUB, get_rf_gain
+
+        frame = get_rf_gain(receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01  # SUB receiver
+        assert frame[6] == 0x14  # Level command
+        assert frame[7] == 0x02  # RF gain sub
+
+    def test_get_rf_gain_default_is_main(self) -> None:
+        from icom_lan.commands import RECEIVER_MAIN, get_rf_gain
+
+        assert get_rf_gain() == get_rf_gain(receiver=RECEIVER_MAIN)
+
+    def test_get_af_level_main_no_cmd29(self) -> None:
+        from icom_lan.commands import RECEIVER_MAIN, get_af_level
+
+        frame = get_af_level(receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x14
+        assert frame[5] == 0x01  # AF level sub
+
+    def test_get_af_level_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import RECEIVER_SUB, get_af_level
+
+        frame = get_af_level(receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01  # SUB receiver
+        assert frame[6] == 0x14
+        assert frame[7] == 0x01  # AF level sub
+
+    def test_get_af_level_default_is_main(self) -> None:
+        from icom_lan.commands import RECEIVER_MAIN, get_af_level
+
+        assert get_af_level() == get_af_level(receiver=RECEIVER_MAIN)
+
     def test_set_squelch_main_no_cmd29(self) -> None:
         from icom_lan.commands import RECEIVER_MAIN, set_squelch
 

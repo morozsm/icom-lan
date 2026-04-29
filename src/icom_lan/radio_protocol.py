@@ -239,11 +239,27 @@ class Radio(Protocol):
 class LevelsCapable(Protocol):
     """Radio supports setting receiver levels: AF, RF gain, squelch."""
 
+    async def get_af_level(self, receiver: int = 0) -> int:
+        """Get AF (audio) output level (0-255).
+
+        Args:
+            receiver: 0 = main (default), 1 = sub.
+        """
+        ...
+
     async def set_af_level(self, level: int, receiver: int = 0) -> None:
         """Set AF (audio) output level (0-255).
 
         Args:
             level: Level in 0-255 scale.
+            receiver: 0 = main (default), 1 = sub.
+        """
+        ...
+
+    async def get_rf_gain(self, receiver: int = 0) -> int:
+        """Get RF gain level (0-255).
+
+        Args:
             receiver: 0 = main (default), 1 = sub.
         """
         ...
