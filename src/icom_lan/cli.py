@@ -2654,6 +2654,8 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
         tx_device_name = getattr(args, "web_bridge_tx_device", None)
         rx_only = getattr(args, "web_bridge_rx_only", False)
         bridge_label = getattr(args, "web_bridge_label", None)
+        from .audio_bridge import LoopbackNotFoundError
+
         try:
             await server.start_audio_bridge(
                 device_name=device_name,
@@ -2667,11 +2669,26 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
             bridge_info = (
                 f"auto-enabled ({direction})" if is_auto else f"active ({direction})"
             )
-        except Exception as exc:
+        except LoopbackNotFoundError as exc:
             if is_auto:
                 # Graceful degrade — keep serving web UI without the bridge.
                 logger.warning("Audio bridge auto-start failed: %s", exc)
                 bridge_info = "loopback not found, bridge disabled"
+            else:
+                print(f"Error: audio bridge failed: {exc}", file=sys.stderr)
+                print(
+                    "The --bridge flag was explicitly requested with a device. "
+                    "Fix the device configuration or remove --bridge to start without it.",
+                    file=sys.stderr,
+                )
+                return 1
+        except Exception as exc:
+            # Non-loopback failure (unsupported radio audio, missing backend,
+            # runtime error). Surface the actual cause — do NOT mask as a
+            # missing loopback driver.
+            if is_auto:
+                logger.error("Audio bridge auto-start failed (non-loopback): %s", exc)
+                bridge_info = f"disabled: {exc}"
             else:
                 print(f"Error: audio bridge failed: {exc}", file=sys.stderr)
                 print(

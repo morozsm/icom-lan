@@ -790,6 +790,8 @@ async def test_cli_web_no_loopback_graceful(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Auto bridge with no loopback device: warn and continue (no exit 1)."""
+    from icom_lan.audio_bridge import LoopbackNotFoundError
+
     radio = AsyncMock()
 
     class FakeWebServer:
@@ -798,7 +800,7 @@ async def test_cli_web_no_loopback_graceful(
             self.cfg = cfg
 
         async def start_audio_bridge(self, **_kwargs):
-            raise RuntimeError("no loopback device found")
+            raise LoopbackNotFoundError("no loopback device found")
 
         async def serve_forever(self):
             raise asyncio.CancelledError
@@ -813,10 +815,18 @@ async def test_cli_web_no_loopback_graceful(
 
 
 @pytest.mark.asyncio
-async def test_cli_web_explicit_bridge_still_fails(
+async def test_cli_web_unrelated_bridge_failure_surfaces(
     capsys: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Explicit --bridge=NonExistent must fail fast with clear error."""
+    """Auto bridge with a non-loopback failure: surface the real error.
+
+    Issue #1146 — generic ``Exception`` previously masked unrelated
+    failures (unsupported radio audio, missing audio backend, runtime
+    errors) as misleading "loopback not found" messages. The narrowed
+    handler must keep serving (graceful) but expose the actual cause
+    in logs and the bridge_info banner.
+    """
     radio = AsyncMock()
 
     class FakeWebServer:
@@ -825,7 +835,50 @@ async def test_cli_web_explicit_bridge_still_fails(
             self.cfg = cfg
 
         async def start_audio_bridge(self, **_kwargs):
-            raise RuntimeError("device 'NonExistent' not found")
+            raise RuntimeError(
+                "Audio bridge is unavailable: active radio does not support "
+                "audio streaming."
+            )
+
+        async def serve_forever(self):
+            raise asyncio.CancelledError
+
+    args = _web_cmd_args(web_bridge="auto")
+    with (
+        caplog.at_level("ERROR", logger="icom_lan.cli"),
+        patch("icom_lan.web.server.WebServer", FakeWebServer),
+    ):
+        rc = await _cmd_web(radio, args)
+
+    # Web server keeps running.
+    assert rc == 0
+    out = capsys.readouterr().out
+    # Must NOT pretend the loopback driver is missing.
+    assert "loopback not found, bridge disabled" not in out
+    # Must mention the actual cause via logs and/or bridge banner.
+    assert any(
+        "non-loopback" in rec.message
+        and "does not support audio streaming" in rec.message
+        for rec in caplog.records
+    ), f"expected non-loopback error log, got: {[r.message for r in caplog.records]}"
+
+
+@pytest.mark.asyncio
+async def test_cli_web_explicit_bridge_still_fails(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Explicit --bridge=NonExistent must fail fast with clear error."""
+    from icom_lan.audio_bridge import LoopbackNotFoundError
+
+    radio = AsyncMock()
+
+    class FakeWebServer:
+        def __init__(self, _radio, cfg):
+            self.radio = _radio
+            self.cfg = cfg
+
+        async def start_audio_bridge(self, **_kwargs):
+            raise LoopbackNotFoundError("device 'NonExistent' not found")
 
         async def serve_forever(self):
             raise asyncio.CancelledError

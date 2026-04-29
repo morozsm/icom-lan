@@ -58,9 +58,22 @@ __all__ = [
     "BridgeMetrics",
     "BridgeState",
     "BridgeStateChange",
+    "LoopbackNotFoundError",
     "derive_bridge_label",
     "find_loopback_device",
 ]
+
+
+class LoopbackNotFoundError(RuntimeError):
+    """Raised when no virtual loopback audio device can be located.
+
+    Subclass of :class:`RuntimeError` for backward compatibility with
+    callers that catch the generic exception. Use this type to distinguish
+    "loopback driver not installed" (recoverable in auto-bridge mode) from
+    other bridge setup failures (unsupported radio, missing audio backend,
+    runtime errors).
+    """
+
 
 # Audio format constants — must match radio PCM settings
 SAMPLE_RATE = 48000
@@ -372,7 +385,7 @@ class AudioBridge:
         dev = _find_device_in_backend(self._backend, self._device_name)
         if dev is None:
             searched = self._device_name or "BlackHole/Loopback/VB-Cable/PipeWire"
-            raise RuntimeError(
+            raise LoopbackNotFoundError(
                 f"Virtual audio device not found (searched: {searched}). "
                 f"Install a loopback driver: "
                 f"macOS → brew install blackhole-2ch | "
