@@ -1131,6 +1131,166 @@ class YaesuCatRadio:
         """Copy VFO-B to VFO-A."""
         await self._write("vfo_b_to_a")
 
+    # -- ReceiverBankCapable -----------------------------------------------
+
+    @property
+    def receiver_count(self) -> int:
+        """Number of independent receivers exposed by this rig.
+
+        Profile-driven via ``[radio] receiver_count`` in the rig TOML.
+        FTX-1 reports ``2`` (MAIN + SUB); single-RX Yaesu CAT profiles
+        (e.g. FT-710, FT-991A — when added) report ``1``.
+        """
+        return int(self._config.receiver_count)
+
+    @staticmethod
+    def _normalize_receiver(which: int | str) -> int:
+        """Normalize a ``select_receiver`` argument to a 0-based index.
+
+        Accepts integer indices (``0`` / ``1``) or case-insensitive names
+        (``"main"`` / ``"sub"``).  Raises :class:`ValueError` for any other
+        value.
+        """
+        if isinstance(which, str):
+            key = which.strip().lower()
+            if key == "main":
+                return 0
+            if key == "sub":
+                return 1
+            raise ValueError(
+                f"select_receiver: unknown receiver name {which!r} "
+                "(expected 'main' or 'sub')"
+            )
+        if isinstance(which, bool) or not isinstance(which, int):
+            raise ValueError(
+                f"select_receiver: which must be int or str, got {type(which).__name__}"
+            )
+        return int(which)
+
+    async def select_receiver(self, which: int | str) -> None:
+        """Make ``which`` the active receiver for subsequent commands.
+
+        On dual-RX Yaesu CAT rigs (FTX-1) issues ``VS{0|1};`` via the
+        existing ``set_vfo_select`` template.  On single-RX profiles only
+        ``which == 0`` is accepted and the call is a no-op (matching the
+        :class:`~icom_lan.radio_protocol.ReceiverBankCapable` contract).
+        """
+        index = self._normalize_receiver(which)
+        count = self.receiver_count
+        if index < 0 or index >= count:
+            raise ValueError(
+                f"select_receiver: receiver index {index} out of range "
+                f"for receiver_count={count}"
+            )
+        if count <= 1:
+            # Single-RX: nothing to switch.
+            return
+        await self._write("set_vfo_select", vfo=str(index))
+
+    async def get_active_receiver(self) -> int:
+        """Return the index of the currently active receiver.
+
+        Reads ``VS;`` on dual-RX rigs; returns ``0`` on single-RX profiles.
+        """
+        if self.receiver_count <= 1:
+            return 0
+        result = await self._query("get_vfo_select")
+        return int(result["vfo"])
+
+    # -- VfoSlotCapable ----------------------------------------------------
+
+    def _vfo_slot_supported(self) -> bool:
+        """``True`` when the active profile exposes per-receiver A/B slots.
+
+        The FTX-1 family uses ``vfo_scheme = "ab_shared"`` — there is no
+        per-receiver A/B pair (each receiver has a single VFO addressed
+        via ``FA;``/``FB;``).  Single-RX Yaesu CAT rigs use
+        ``vfo_scheme = "ab"`` and route ``FR{vfo};`` through the shared
+        ``set_vfo_select`` / ``get_vfo_select`` plumbing.
+        """
+        return bool(self._config.vfo_scheme == "ab")
+
+    @staticmethod
+    def _slot_to_index(slot: str) -> int:
+        """Convert ``"A"`` / ``"B"`` (case-insensitive) to ``0`` / ``1``."""
+        if not isinstance(slot, str):
+            raise ValueError(f"slot must be str, got {type(slot).__name__}")
+        norm = slot.strip().upper()
+        if norm == "A":
+            return 0
+        if norm == "B":
+            return 1
+        raise ValueError(f"slot must be 'A' or 'B', got {slot!r}")
+
+    def _check_single_receiver(self, receiver: int, *, operation: str) -> None:
+        count = self.receiver_count
+        if receiver < 0 or receiver >= count:
+            raise ValueError(
+                f"{operation}: receiver index {receiver} out of range "
+                f"for receiver_count={count}"
+            )
+
+    async def get_vfo_slot(self, receiver: int = 0) -> str:
+        """Return the active VFO slot (``"A"`` or ``"B"``) for ``receiver``.
+
+        Raises :class:`NotImplementedError` on FTX-1 (``ab_shared`` scheme):
+        the FTX-1 has no per-receiver A/B pair.  Use
+        :meth:`select_receiver` for MAIN/SUB switching instead.
+        """
+        self._check_single_receiver(receiver, operation="get_vfo_slot")
+        if not self._vfo_slot_supported():
+            raise NotImplementedError(
+                f"get_vfo_slot not supported on {self.model} "
+                f"(vfo_scheme={self._config.vfo_scheme!r}); "
+                "use select_receiver() for MAIN/SUB on dual-RX Yaesu rigs"
+            )
+        result = await self._query("get_vfo_select")
+        return "B" if int(result["vfo"]) == 1 else "A"
+
+    async def set_vfo_slot(self, slot: str, receiver: int = 0) -> None:
+        """Make ``slot`` (``"A"`` or ``"B"``) the active VFO on ``receiver``.
+
+        Raises :class:`NotImplementedError` on FTX-1 (``ab_shared`` scheme).
+        """
+        self._check_single_receiver(receiver, operation="set_vfo_slot")
+        index = self._slot_to_index(slot)
+        if not self._vfo_slot_supported():
+            raise NotImplementedError(
+                f"set_vfo_slot not supported on {self.model} "
+                f"(vfo_scheme={self._config.vfo_scheme!r}); "
+                "use select_receiver() for MAIN/SUB on dual-RX Yaesu rigs"
+            )
+        await self._write("set_vfo_select", vfo=str(index))
+
+    async def swap_vfo_ab(self, receiver: int = 0) -> None:
+        """Swap VFO A and VFO B state on ``receiver``.
+
+        Yaesu CAT has no symmetric A↔B swap primitive: FTX-1 ``AB;``/
+        ``BA;`` are MAIN→SUB / SUB→MAIN copies (one-way), and Lab599-style
+        single-RX profiles do not expose a swap command at all.  This
+        method therefore raises :class:`NotImplementedError` on every
+        currently supported Yaesu CAT rig.
+        """
+        self._check_single_receiver(receiver, operation="swap_vfo_ab")
+        raise NotImplementedError(
+            f"swap_vfo_ab not supported on {self.model}: "
+            "Yaesu CAT has no symmetric A↔B swap primitive"
+        )
+
+    async def equalize_vfo_ab(self, receiver: int = 0) -> None:
+        """Copy the active VFO's state to the inactive VFO on ``receiver``.
+
+        Not supported by Yaesu CAT: FTX-1 ``AB;``/``BA;`` copy between
+        receivers (MAIN↔SUB), not between A/B within a receiver, and
+        single-RX Yaesu profiles do not expose an equalize command.
+        Raises :class:`NotImplementedError`.
+        """
+        self._check_single_receiver(receiver, operation="equalize_vfo_ab")
+        raise NotImplementedError(
+            f"equalize_vfo_ab not supported on {self.model}: "
+            "Yaesu CAT has no per-receiver A→B copy primitive"
+        )
+
     # -- D6: TX Stack -------------------------------------------------------
 
     async def get_power(self) -> tuple[int, int]:
