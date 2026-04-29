@@ -536,6 +536,14 @@ class RadioPoller:
         else:
             await self._civ(cmd_byte, sub=sub_byte, data=b"")
 
+    # Per-getter timeout for scope-control fetches.  The IC-7610 scope stream
+    # (~225 pkt/s) sometimes drops individual control responses; a long wait
+    # here would stall the EnableScope hot path and the poller's command-queue
+    # drain.  200 ms is well below the user-visible threshold and an order of
+    # magnitude shorter than the 2.0 s default GET timeout, so a missed reply
+    # is logged at debug and the next getter runs immediately.  See #1181.
+    _SCOPE_GETTER_TIMEOUT: float = 0.2
+
     async def _fetch_scope_controls(self) -> None:
         """Fetch scope control state (span, mode, speed, hold, etc.).
 
@@ -548,6 +556,13 @@ class RadioPoller:
         The public ``get_scope_*`` methods on ``ScopeRuntimeMixin`` add
         the prefix from ``radio_state.scope_controls.receiver`` for
         each affected sub-command.
+
+        Each getter is bounded by ``_SCOPE_GETTER_TIMEOUT``: a dropped
+        scope-control response (common on busy scope streams) only costs
+        that much before the loop continues, instead of blocking the hot
+        path for the full CI-V GET timeout.  Cancellation propagates into
+        ``_send_civ_expect`` whose ``finally`` block unregisters the
+        request-tracker entry, so repeated timeouts do not accumulate.
         """
         from ..radio_protocol import ScopeCapable
 
@@ -579,7 +594,13 @@ class RadioPoller:
         )
         for label, getter in scope_getters:
             try:
-                await getter()
+                await asyncio.wait_for(getter(), timeout=self._SCOPE_GETTER_TIMEOUT)
+            except asyncio.TimeoutError:
+                logger.debug(
+                    "radio-poller: %s timed out after %.0f ms (response dropped)",
+                    label,
+                    self._SCOPE_GETTER_TIMEOUT * 1000,
+                )
             except Exception:
                 logger.debug("radio-poller: %s failed", label, exc_info=True)
             await asyncio.sleep(self._adaptive_gap())
