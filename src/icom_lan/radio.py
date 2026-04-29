@@ -1488,8 +1488,10 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     async def set_filter_width(self, width_hz: int, receiver: int = 0) -> None:
         """Set DSP IF filter width in Hz (CI-V 0x1A 0x03).
 
-        Hz is translated to a profile-defined CI-V index (1-byte BCD) and
-        wrapped via cmd29 when the profile supports it.
+        Hz is translated to a profile-defined 1-byte BCD index (wfview's
+        ``funcFilterWidth`` segmented formula — see ``icomcommander.cpp:1131``)
+        and wrapped via cmd29 only when the profile lists ``[0x1A, 0x03]`` in
+        its cmd29 routes (IC-7610). IC-705 and IC-9700 send the frame directly.
 
         Args:
             width_hz: Filter width in Hz. Bounds and step depend on the
@@ -1521,21 +1523,19 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
                 f"for {mode_name}, got {width_hz}"
             )
 
-        clamped = min(width_hz, 9999)
-        payload_value = clamped
-        if self._profile.filter_width_encoding == "segmented_bcd_index":
-            if rule is None or not rule.segments:
-                raise CommandError(
-                    f"set_filter_width has no filter-width mapping for mode {mode_name}"
-                )
-            try:
-                payload_value = filter_hz_to_index(clamped, segments=rule.segments)
-            except ValueError as exc:
-                raise CommandError(str(exc)) from exc
+        if rule is None or not rule.segments:
+            raise CommandError(
+                f"set_filter_width has no filter-width mapping for mode {mode_name}"
+            )
+        try:
+            payload_value = filter_hz_to_index(width_hz, segments=rule.segments)
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
 
         bcd_index_byte = bcd_encode_value(payload_value, byte_count=1)
         # CI-V 1A 03: 1-byte BCD index (wfview-confirmed). cmd29-wrapped
-        # for receiver routing on dual-RX rigs (IC-7610), direct on single-RX.
+        # for receiver routing on dual-RX rigs (IC-7610), direct on single-RX
+        # (IC-705) and on dual-RX rigs without cmd29 support (IC-9700).
         if self._profile.supports_cmd29(0x1A, 0x03):
             await self.send_civ(
                 0x29,
@@ -1550,15 +1550,12 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     async def get_filter_width(self, receiver: int = 0) -> int:
         """Get DSP IF filter width in Hz (CI-V 0x1A 0x03).
 
-        Branches on the active profile's ``filter_width_encoding``,
-        mirroring :meth:`set_filter_width`:
-
-        * ``segmented_bcd_index`` (IC-7610) — request is cmd29-wrapped, the
-          response payload is a 1-byte BCD index translated to Hz via the
-          active mode's segment table.
-        * ``direct_bcd_hz`` (IC-705, IC-9700) — request is sent directly
-          (no cmd29 wrap); the response payload is a 2-byte BCD value
-          encoding the width in Hz (e.g. ``0x24 0x00`` → 2400 Hz).
+        Per wfview's ``funcFilterWidth`` handler (``icomcommander.cpp:1131``),
+        all Icom rigs return a 1-byte BCD segmented index. The request is
+        cmd29-wrapped only when the profile lists ``[0x1A, 0x03]`` in its
+        cmd29 routes (IC-7610). IC-705 and IC-9700 send the request directly
+        and the response is decoded with the same segmented formula
+        (issue #1156).
 
         Args:
             receiver: 0=MAIN, 1=SUB.
@@ -1569,40 +1566,32 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         self._check_connected()
         self._require_receiver(receiver, operation="get_filter_width")
 
-        encoding = self._profile.filter_width_encoding
-        # CI-V 1A 03: cmd29-wrapped 1-byte BCD index for segmented profiles
-        # (IC-7610), direct 2-byte BCD Hz for direct_bcd_hz profiles
-        # (IC-705, IC-9700). Mirrors the routing/encoding split in
-        # set_filter_width above.
-        if encoding == "segmented_bcd_index" and self._profile.supports_cmd29(
-            0x1A, 0x03
-        ):
+        # CI-V 1A 03: 1-byte BCD index for every Icom rig (wfview-confirmed).
+        # cmd29-wrapped only for receiver routing on dual-RX rigs that list
+        # the route (IC-7610). IC-705/IC-9700 send the request directly.
+        if self._profile.supports_cmd29(0x1A, 0x03):
             civ = get_filter_width(to_addr=self._radio_addr, receiver=receiver)
-            bcd_bytes = 1
         else:
             civ = build_civ_frame(self._radio_addr, CONTROLLER_ADDR, 0x1A, sub=0x03)
-            bcd_bytes = 2
 
         value = await self._get_bcd_level(
             civ,
             key=f"get_filter_width:{receiver}",
             command=0x1A,
             sub=0x03,
-            bcd_bytes=bcd_bytes,
+            bcd_bytes=1,
         )
 
-        if encoding == "segmented_bcd_index":
-            target = self._radio_state.receiver("SUB" if receiver else "MAIN")
-            mode_name = getattr(target, "mode", None)
-            data_mode = int(getattr(target, "data_mode", 0) or 0)
-            rule = self._profile.resolve_filter_rule(mode_name, data_mode=data_mode)
-            if rule is not None and rule.segments:
-                try:
-                    return filter_index_to_hz(value, segments=rule.segments)
-                except ValueError:
-                    # Out-of-band index — return raw value rather than fail.
-                    return value
-        # direct_bcd_hz: the BCD-decoded payload is already Hz.
+        target = self._radio_state.receiver("SUB" if receiver else "MAIN")
+        mode_name = getattr(target, "mode", None)
+        data_mode = int(getattr(target, "data_mode", 0) or 0)
+        rule = self._profile.resolve_filter_rule(mode_name, data_mode=data_mode)
+        if rule is not None and rule.segments:
+            try:
+                return filter_index_to_hz(value, segments=rule.segments)
+            except ValueError:
+                # Out-of-band index — return raw value rather than fail.
+                return value
         return value
 
     async def set_mode(

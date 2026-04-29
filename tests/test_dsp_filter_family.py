@@ -187,21 +187,28 @@ async def test_icom_set_filter_width_rejects_out_of_range() -> None:
 
 
 # ---------------------------------------------------------------------------
-# get_filter_width — branches on profile.filter_width_encoding (issue #1145)
+# get_filter_width — unified 1-byte BCD segmented index per wfview (issue #1156)
 # ---------------------------------------------------------------------------
 
 
-class TestIcomGetFilterWidthProfileBranching:
-    """get_filter_width must branch on encoding, mirroring set_filter_width.
+class TestIcomGetFilterWidthRouting:
+    """get_filter_width: unified 1-byte BCD segmented index for all Icom rigs.
 
-    Regression for #1145: prior code always used a cmd29-wrapped 1-byte BCD
-    GET, which broke ``direct_bcd_hz`` profiles (IC-705, IC-9700) — multi-byte
-    BCD widths like 2400 Hz were truncated to 24.
+    Per wfview's funcFilterWidth handler (icomcommander.cpp:1131), every Icom
+    rig (IC-7610, IC-705, IC-9700, IC-7300) returns a 1-byte BCD index decoded
+    via the same segmented formula:
+        non-AM: pass 0..10 → 50..550 Hz step 50;
+                pass 11..40 → 700..3600 Hz step 100
+        AM:     pass → 200 + pass * 200 Hz
+
+    cmd29 wrapping is per-rig (only IC-7610 lists [0x1A, 0x03] in cmd29 routes).
+    Issue #1156 removed the prior ``direct_bcd_hz`` profile assumption that
+    treated IC-705/IC-9700 as raw 2-byte BCD Hz — wfview-verified incorrect.
     """
 
     @pytest.mark.asyncio
     async def test_ic7610_segmented_index_request_is_cmd29_wrapped(self) -> None:
-        """IC-7610 (segmented_bcd_index): request frame is cmd29-wrapped."""
+        """IC-7610: cmd29-wrapped 1-byte BCD index request and response."""
         radio = _connected_icom(model="IC-7610")
         captured: dict[str, bytes] = {}
 
@@ -222,33 +229,35 @@ class TestIcomGetFilterWidthProfileBranching:
         assert hz == 1600
 
     @pytest.mark.asyncio
-    async def test_ic705_direct_bcd_hz_request_is_not_cmd29_wrapped(self) -> None:
-        """IC-705 (direct_bcd_hz): request frame is direct, NOT cmd29-wrapped."""
+    async def test_ic705_request_is_not_cmd29_wrapped(self) -> None:
+        """IC-705: 1-byte BCD index, NOT cmd29-wrapped (no cmd29 support)."""
         radio = _connected_icom(model="IC-705")
         captured: dict[str, bytes] = {}
 
         async def fake_expect(civ: bytes, **_: object) -> CivFrame:
             captured["civ"] = civ
-            # 2-byte BCD: 0x24 0x00 = 2400 Hz (raw Hz, not index).
+            # 1-byte BCD 0x28 = decimal 28 = USB segment index 28
+            # → 600 + (28 - 10) * 100 = 2400 Hz (wfview formula).
             return CivFrame(
                 to_addr=0xE0,
                 from_addr=0xA4,
                 command=0x1A,
                 sub=0x03,
-                data=b"\x24\x00",
+                data=b"\x28",
             )
 
         radio._send_civ_expect = fake_expect  # type: ignore[method-assign]
+        radio._radio_state.main.mode = "USB"
 
         hz = await radio.get_filter_width(receiver=0)
-        # Wire frame: direct 0x1A 0x03 GET with no cmd29 wrap, no receiver byte.
+        # Wire frame: direct 0x1A 0x03 GET, no cmd29 wrap, no receiver byte.
         assert captured["civ"].hex() == "fefea4e01a03fd"
-        # Decoded: 2-byte BCD 0x24 0x00 → 2400 Hz (regression: was 24 before fix).
+        # Decoded: 1-byte BCD 0x28 → index 28 → 2400 Hz (wfview funcFilterWidth).
         assert hz == 2400
 
     @pytest.mark.asyncio
-    async def test_ic9700_direct_bcd_hz_request_is_not_cmd29_wrapped(self) -> None:
-        """IC-9700 (direct_bcd_hz, no cmd29 support): direct GET frame."""
+    async def test_ic9700_request_is_not_cmd29_wrapped(self) -> None:
+        """IC-9700: 1-byte BCD index, NOT cmd29-wrapped (HasCommand29=false)."""
         radio = _connected_icom(model="IC-9700")
         captured: dict[str, bytes] = {}
 
@@ -259,15 +268,88 @@ class TestIcomGetFilterWidthProfileBranching:
                 from_addr=0xA2,
                 command=0x1A,
                 sub=0x03,
-                data=b"\x24\x00",
+                data=b"\x28",
             )
 
         radio._send_civ_expect = fake_expect  # type: ignore[method-assign]
+        radio._radio_state.main.mode = "USB"
 
         hz = await radio.get_filter_width(receiver=0)
-        # Wire frame: direct GET (IC-9700 has no cmd29 at all per profile).
+        # Wire frame: direct GET (IC-9700 lists no cmd29 routes per profile).
         assert captured["civ"].hex() == "fefea2e01a03fd"
+        # Decoded: 1-byte BCD 0x28 → index 28 → 2400 Hz.
         assert hz == 2400
+
+    @pytest.mark.asyncio
+    async def test_ic705_am_mode_uses_am_segments(self) -> None:
+        """IC-705 AM: pass 0..49 → 200 + pass * 200 Hz (wfview AM branch)."""
+        radio = _connected_icom(model="IC-705")
+
+        async def fake_expect(_civ: bytes, **_: object) -> CivFrame:
+            # 1-byte BCD 0x29 = decimal 29 → AM: 200 + 29 * 200 = 6000 Hz.
+            return CivFrame(
+                to_addr=0xE0,
+                from_addr=0xA4,
+                command=0x1A,
+                sub=0x03,
+                data=b"\x29",
+            )
+
+        radio._send_civ_expect = fake_expect  # type: ignore[method-assign]
+        radio._radio_state.main.mode = "AM"
+
+        hz = await radio.get_filter_width(receiver=0)
+        assert hz == 6000
+
+
+class TestIcomSetFilterWidthRouting:
+    """set_filter_width: unified 1-byte BCD segmented index for all Icom rigs.
+
+    Companion to TestIcomGetFilterWidthRouting — covers issue #1155 (parallel
+    bug to #1145 on the setter side: ``bcd_encode_value(2400, byte_count=1)``
+    raised ValueError on direct_bcd_hz profiles). With direct_bcd_hz removed,
+    every rig now encodes a 1-byte BCD index and only IC-7610 wraps via cmd29.
+    """
+
+    @pytest.mark.asyncio
+    async def test_ic705_set_filter_width_2400_is_direct_index_28(self) -> None:
+        """IC-705 USB 2400 Hz → index 28 (BCD 0x28), direct frame, no cmd29."""
+        radio = _connected_icom(model="IC-705")
+        radio.send_civ = AsyncMock()  # type: ignore[method-assign]
+        radio._radio_state.main.mode = "USB"
+
+        await radio.set_filter_width(2400, receiver=0)
+
+        # Direct CI-V 1A 03 with single BCD byte 0x28 (= decimal 28).
+        radio.send_civ.assert_awaited_once_with(
+            0x1A, sub=0x03, data=b"\x28", wait_response=False
+        )
+
+    @pytest.mark.asyncio
+    async def test_ic9700_set_filter_width_2400_is_direct_index_28(self) -> None:
+        """IC-9700 USB 2400 Hz → index 28, direct frame (HasCommand29=false)."""
+        radio = _connected_icom(model="IC-9700")
+        radio.send_civ = AsyncMock()  # type: ignore[method-assign]
+        radio._radio_state.main.mode = "USB"
+
+        await radio.set_filter_width(2400, receiver=0)
+
+        radio.send_civ.assert_awaited_once_with(
+            0x1A, sub=0x03, data=b"\x28", wait_response=False
+        )
+
+    @pytest.mark.asyncio
+    async def test_ic705_set_filter_width_am_uses_am_segments(self) -> None:
+        """IC-705 AM 6000 Hz → index 29 (200 + 29 * 200 = 6000)."""
+        radio = _connected_icom(model="IC-705")
+        radio.send_civ = AsyncMock()  # type: ignore[method-assign]
+        radio._radio_state.main.mode = "AM"
+
+        await radio.set_filter_width(6000, receiver=0)
+
+        radio.send_civ.assert_awaited_once_with(
+            0x1A, sub=0x03, data=b"\x29", wait_response=False
+        )
 
 
 # ---------------------------------------------------------------------------

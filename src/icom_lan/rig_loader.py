@@ -83,7 +83,7 @@ class RigConfig:
     agc_labels: dict[str, str] | None
     filter_width_min: int = 50
     filter_width_max: int = 9999
-    filter_width_encoding: str = "direct_bcd_hz"
+    filter_width_encoding: str = "segmented_bcd_index"
     filter_config: dict[str, FilterWidthRule] | None = None
     data_mode_count: int = 0
     data_mode_labels: dict[str, str] | None = None
@@ -520,7 +520,7 @@ def load_rig(path: Path) -> RigConfig:
         raise RigLoadError(f"{filename}: [filters].list must not be empty")
     filter_width_min = int(filter_section.get("width_min_hz", 50))
     filter_width_max = int(filter_section.get("width_max_hz", 9999))
-    filter_width_encoding = str(filter_section.get("encoding", "direct_bcd_hz"))
+    filter_width_encoding = str(filter_section.get("encoding", "segmented_bcd_index"))
     filter_config_raw = filter_section.get("width", {})
     filter_config: dict[str, FilterWidthRule] | None = None
     if isinstance(filter_config_raw, dict) and filter_config_raw:
