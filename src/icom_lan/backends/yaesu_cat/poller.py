@@ -712,7 +712,7 @@ class YaesuCatPoller:
         # -- ATT / Preamp --
         if "attenuator" in caps:
             try:
-                state.main.att = await radio.get_attenuator(0)
+                state.main.att = int(await radio.get_attenuator(0))
             except NotImplementedError:
                 pass
             except Exception:

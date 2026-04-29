@@ -404,7 +404,15 @@ async def test_set_squelch(connected_radio):
 async def test_get_attenuator_off(connected_radio):
     connected_radio._transport.query = AsyncMock(return_value="RA00")
     state = await connected_radio.get_attenuator()
-    assert state == 0
+    assert state is False
+    connected_radio._transport.query.assert_called_once_with("RA0;")
+
+
+@pytest.mark.asyncio
+async def test_get_attenuator_on(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="RA01")
+    state = await connected_radio.get_attenuator()
+    assert state is True
     connected_radio._transport.query.assert_called_once_with("RA0;")
 
 
