@@ -197,6 +197,18 @@ class IcomRadio:
             )
         return float(self._run(self._radio.get_swr()))
 
+    def get_alc_meter(self) -> int:
+        """Read the ALC meter (raw 0-255).
+
+        Returns the unscaled meter value mirroring
+        :meth:`MetersCapable.get_alc_meter`.
+        """
+        if CAP_METERS not in self._radio.capabilities:
+            raise AttributeError(
+                "get_alc_meter requires a radio that implements MetersCapable"
+            )
+        return self._run(self._radio.get_alc_meter())
+
     def get_swr_meter(self) -> int:
         """Read the SWR meter (raw 0-255).
 

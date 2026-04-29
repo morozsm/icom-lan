@@ -228,6 +228,25 @@ def test_removed_audio_aliases_raise_attribute_error(name: str) -> None:
         r._loop.close()
 
 
+def test_sync_get_alc_meter_returns_int() -> None:
+    """``sync.IcomRadio.get_alc_meter`` returns the raw 0-255 BCD value
+    from the async ``MetersCapable.get_alc_meter`` (refs #1226)."""
+    r = _radio()
+    r._radio._ctrl_transport = MagicMock()
+    r._radio._ctrl_transport._udp_transport = MagicMock()
+    r._radio._civ_transport = MagicMock()
+    r._radio._conn_state = RadioConnectionState.CONNECTED
+    r._radio.get_alc_meter = AsyncMock(return_value=128)
+
+    try:
+        result = r.get_alc_meter()
+        assert result == 128
+        assert isinstance(result, int)
+        r._radio.get_alc_meter.assert_awaited_once()
+    finally:
+        r._loop.close()
+
+
 def test_sync_get_swr_meter_returns_int() -> None:
     """``sync.IcomRadio.get_swr_meter`` returns the raw 0-255 BCD value
     from the async ``MetersCapable.get_swr_meter`` (refs #1183)."""
