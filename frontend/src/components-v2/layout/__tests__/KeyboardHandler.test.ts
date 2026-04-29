@@ -4,10 +4,6 @@ import { flushSync, mount, unmount } from 'svelte';
 import KeyboardHandler from '../KeyboardHandler.svelte';
 import type { KeyboardConfig, KeyboardActionConfig } from '../keyboard-map';
 
-vi.mock('$lib/stores/ui-version.svelte', () => ({
-  getUiVersion: vi.fn(() => 'v2'),
-}));
-
 describe('KeyboardHandler', () => {
   let components: ReturnType<typeof mount>[] = [];
 

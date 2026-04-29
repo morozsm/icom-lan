@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { getUiVersion } from '$lib/stores/ui-version.svelte';
   import {
     normalizeKeyboardConfig,
     resolveAction,
@@ -62,7 +61,7 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (!enabled || getUiVersion() !== 'v2') return;
+    if (!enabled) return;
     if (shouldIgnoreEvent(document.activeElement)) return;
 
     if (event.key === 'Alt' && keyboardConfig.altHints) {
