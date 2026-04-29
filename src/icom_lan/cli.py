@@ -1995,7 +1995,7 @@ async def _cmd_meter(radio: Radio, args: argparse.Namespace) -> int:
         ("swr", radio.get_swr),
     ]
     if CAP_METERS in radio.capabilities:
-        meter_getters.append(("alc", radio.get_alc))
+        meter_getters.append(("alc", radio.get_alc_meter))
     for name, getter in meter_getters:
         try:
             results[name] = await getter()

@@ -13,6 +13,7 @@ from icom_lan.commands import (
     _CMD_METER,
     _CMD_PTT,
     _SUB_ALC_METER,
+    _SUB_POWER_METER,
     _SUB_PTT,
     _SUB_RF_POWER,
     _SUB_S_METER,
@@ -415,12 +416,54 @@ class TestMeters:
         assert val == 50
 
     @pytest.mark.asyncio
-    async def test_get_alc(
+    async def test_get_alc_meter(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_meter_response(_SUB_ALC_METER, 80))
-        val = await radio.get_alc()
+        val = await radio.get_alc_meter()
         assert val == 80
+
+    @pytest.mark.asyncio
+    async def test_get_alc_deprecated_round_trip(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """Legacy get_alc still works but emits DeprecationWarning and
+        returns the same value as get_alc_meter (issue #1104)."""
+        import warnings as _warnings
+
+        mock_transport.queue_response(_meter_response(_SUB_ALC_METER, 80))
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            val = await radio.get_alc()
+        assert val == 80
+        deprecations = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        assert deprecations, "expected DeprecationWarning from get_alc"
+        assert "get_alc_meter" in str(deprecations[0].message)
+
+    @pytest.mark.asyncio
+    async def test_get_swr_meter(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_meter_response(_SUB_SWR_METER, 50))
+        val = await radio.get_swr_meter()
+        assert val == 50
+
+    @pytest.mark.asyncio
+    async def test_get_power_meter(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_meter_response(_SUB_POWER_METER, 200))
+        val = await radio.get_power_meter()
+        assert val == 200
+
+    def test_meters_capable_protocol_satisfied(self, radio: IcomRadio) -> None:
+        """IcomRadio satisfies the extended MetersCapable protocol (#1104)."""
+        from icom_lan.radio_protocol import MetersCapable
+
+        assert isinstance(radio, MetersCapable)
+        # Spot-check the new methods exist with the expected names.
+        for name in ("get_power_meter", "get_alc_meter", "get_swr_meter"):
+            assert callable(getattr(radio, name)), f"{name} missing"
 
 
 class TestPower:

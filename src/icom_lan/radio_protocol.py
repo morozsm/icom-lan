@@ -339,6 +339,26 @@ class MetersCapable(Protocol):
         """Get Vd meter reading (0-255)."""
         ...
 
+    async def get_power_meter(self) -> int:
+        """Get TX power meter reading (raw 0-255).
+
+        Distinct from :meth:`get_rf_power` (configured/set TX power level)
+        — this returns the live TX output meter.
+        """
+        ...
+
+    async def get_alc_meter(self) -> int:
+        """Get ALC meter reading (raw 0-255)."""
+        ...
+
+    async def get_swr_meter(self) -> int:
+        """Get SWR meter reading (raw 0-255).
+
+        Returns the unscaled meter value. For a calibrated SWR ratio
+        (>= 1.0) use :meth:`get_swr`.
+        """
+        ...
+
 
 @runtime_checkable
 class PowerControlCapable(Protocol):
