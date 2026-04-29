@@ -14,31 +14,47 @@ def test_audio_errors_exported() -> None:
 
 
 def test_public_api_surface() -> None:
-    """__all__ contains only the trimmed public API (~30 symbols)."""
+    """__all__ contains tier-1 (eager) + tier-2 (lazy) public surface.
+
+    See :pep:`562` and Form F sealing (epic #1193) for the tier policy.
+    """
     expected_public = {
         "__version__",
-        # Factory
+        # --- Tier 1: Factory ---
         "create_radio",
-        # Backend configs
+        # --- Tier 1: Backend configs ---
         "BackendConfig",
         "LanBackendConfig",
         "SerialBackendConfig",
         "YaesuCatBackendConfig",
-        # Radio protocol + capabilities
+        # --- Tier 1: Radio + capability protocols ---
         "Radio",
+        "AdvancedControlCapable",
+        "AntennaControlCapable",
         "AudioCapable",
-        "ScopeCapable",
+        "CivCommandCapable",
+        "CwControlCapable",
+        "DspControlCapable",
         "DualReceiverCapable",
         "LevelsCapable",
+        "MemoryCapable",
         "MetersCapable",
-        "PowerControlCapable",
-        "StateNotifyCapable",
-        "CivCommandCapable",
         "ModeInfoCapable",
+        "PowerControlCapable",
+        "ReceiverBankCapable",
         "RecoverableConnection",
-        "AdvancedControlCapable",
+        "RepeaterControlCapable",
+        "RitXitCapable",
+        "ScopeCapable",
+        "SplitCapable",
         "StateCacheCapable",
-        # Exceptions
+        "StateNotifyCapable",
+        "SystemControlCapable",
+        "TransceiverBankCapable",
+        "TransceiverStatusCapable",
+        "VfoSlotCapable",
+        "VoiceControlCapable",
+        # --- Tier 1: Exceptions ---
         "IcomLanError",
         "ConnectionError",
         "AuthenticationError",
@@ -48,19 +64,43 @@ def test_public_api_surface() -> None:
         "AudioCodecBackendError",
         "AudioFormatError",
         "AudioTranscodeError",
-        # Public types
+        # --- Tier 1: Public types/enums ---
         "Mode",
         "AudioCodec",
+        "BreakInMode",
+        # --- Tier 1: Public state types ---
         "RadioState",
         "RadioProfile",
-        # Backward compat
+        "VfoSlotState",
+        "YaesuStateExtension",
+        # --- Tier 2 (lazy): backward-compat facade ---
         "IcomRadio",
+        # --- Tier 2 (lazy): commander internals ---
+        "IcomCommander",
+        "Priority",
+        # --- Tier 2 (lazy): audio primitives ---
+        "AudioStream",
+        "AudioBackend",
+        "PortAudioBackend",
+        "FakeAudioBackend",
+        "AudioConfig",
+        "NoiseGate",
+        "RmsNormalizer",
+        "Limiter",
+        "DspPipeline",
+        "UsbAudioDriver",
     }
     assert set(icom_lan.__all__) == expected_public
 
 
 def test_internal_symbols_still_importable() -> None:
-    """Internal symbols removed from __all__ are still importable by name."""
+    """Internal symbols absent from __all__ are still importable by name.
+
+    These are tier-2 lazy targets (resolved via PEP 562 ``__getattr__``)
+    that we don't promote to the documented public surface. They remain
+    accessible for backward compatibility — ``hasattr`` triggers the
+    lazy hook and resolves the underlying symbol.
+    """
     internal_symbols = [
         "build_civ_frame",
         "parse_civ_frame",
@@ -71,7 +111,6 @@ def test_internal_symbols_still_importable() -> None:
         "RECEIVER_MAIN",
         "RECEIVER_SUB",
         "IcomTransport",
-        "IcomCommander",
         "ScopeAssembler",
         "ScopeFrame",
         "PacketHeader",
