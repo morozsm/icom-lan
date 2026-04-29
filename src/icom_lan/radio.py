@@ -1550,8 +1550,15 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     async def get_filter_width(self, receiver: int = 0) -> int:
         """Get DSP IF filter width in Hz (CI-V 0x1A 0x03).
 
-        The CI-V index is translated to Hz using the active profile's
-        filter rule for the current mode.
+        Branches on the active profile's ``filter_width_encoding``,
+        mirroring :meth:`set_filter_width`:
+
+        * ``segmented_bcd_index`` (IC-7610) — request is cmd29-wrapped, the
+          response payload is a 1-byte BCD index translated to Hz via the
+          active mode's segment table.
+        * ``direct_bcd_hz`` (IC-705, IC-9700) — request is sent directly
+          (no cmd29 wrap); the response payload is a 2-byte BCD value
+          encoding the width in Hz (e.g. ``0x24 0x00`` → 2400 Hz).
 
         Args:
             receiver: 0=MAIN, 1=SUB.
@@ -1562,26 +1569,41 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         self._check_connected()
         self._require_receiver(receiver, operation="get_filter_width")
 
-        index = await self._get_bcd_level(
-            get_filter_width(to_addr=self._radio_addr, receiver=receiver),
+        encoding = self._profile.filter_width_encoding
+        # CI-V 1A 03: cmd29-wrapped 1-byte BCD index for segmented profiles
+        # (IC-7610), direct 2-byte BCD Hz for direct_bcd_hz profiles
+        # (IC-705, IC-9700). Mirrors the routing/encoding split in
+        # set_filter_width above.
+        if encoding == "segmented_bcd_index" and self._profile.supports_cmd29(
+            0x1A, 0x03
+        ):
+            civ = get_filter_width(to_addr=self._radio_addr, receiver=receiver)
+            bcd_bytes = 1
+        else:
+            civ = build_civ_frame(self._radio_addr, CONTROLLER_ADDR, 0x1A, sub=0x03)
+            bcd_bytes = 2
+
+        value = await self._get_bcd_level(
+            civ,
             key=f"get_filter_width:{receiver}",
             command=0x1A,
             sub=0x03,
-            bcd_bytes=1,
+            bcd_bytes=bcd_bytes,
         )
 
-        if self._profile.filter_width_encoding == "segmented_bcd_index":
+        if encoding == "segmented_bcd_index":
             target = self._radio_state.receiver("SUB" if receiver else "MAIN")
             mode_name = getattr(target, "mode", None)
             data_mode = int(getattr(target, "data_mode", 0) or 0)
             rule = self._profile.resolve_filter_rule(mode_name, data_mode=data_mode)
             if rule is not None and rule.segments:
                 try:
-                    return filter_index_to_hz(index, segments=rule.segments)
+                    return filter_index_to_hz(value, segments=rule.segments)
                 except ValueError:
                     # Out-of-band index — return raw value rather than fail.
-                    return index
-        return index
+                    return value
+        # direct_bcd_hz: the BCD-decoded payload is already Hz.
+        return value
 
     async def set_mode(
         self, mode: Mode | str, filter_width: int | None = None, receiver: int = 0
