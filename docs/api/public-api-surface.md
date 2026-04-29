@@ -70,6 +70,125 @@ When extending the library or writing integration code, prefer importing from th
 
 ---
 
+## Stability tiers
+
+Effective from **v0.19**. Every public symbol in the package belongs to exactly
+one tier. The tier governs the breakage policy, the recommended import path,
+and whether the symbol is allowed in production code outside its owning
+subsystem.
+
+### Tier 1 — Stable
+
+Public API. Breaking changes require a **major version bump**
+(semver-strict). Symbols are loaded eagerly by `icom_lan/__init__.py` and
+available directly via `from icom_lan import …`.
+
+**Backend factory and configs**
+
+- `__version__`
+- `create_radio`
+- `BackendConfig`, `LanBackendConfig`, `SerialBackendConfig`,
+  `YaesuCatBackendConfig`
+
+**Capability protocols (from `icom_lan.radio_protocol`)**
+
+- `Radio`
+- `LevelsCapable`, `MetersCapable`, `PowerControlCapable`,
+  `StateNotifyCapable`
+- `AudioCapable`, `CivCommandCapable`, `ModeInfoCapable`, `ScopeCapable`
+- `DualReceiverCapable`, `ReceiverBankCapable`, `TransceiverBankCapable`,
+  `VfoSlotCapable`
+- `StateCacheCapable`, `RecoverableConnection`
+- `DspControlCapable`, `AntennaControlCapable`, `CwControlCapable`,
+  `VoiceControlCapable`
+- `SystemControlCapable`, `RepeaterControlCapable`, `AdvancedControlCapable`
+- `TransceiverStatusCapable`, `RitXitCapable`, `MemoryCapable`
+- `SplitCapable` (new in v0.19)
+
+**Exceptions (from `icom_lan.exceptions`)**
+
+- `IcomLanError`, `AudioCodecBackendError`, `AudioError`, `AudioFormatError`
+- `AudioTranscodeError`, `AuthenticationError`, `CommandError`
+- `ConnectionError`, `TimeoutError`
+
+**Public types (from `icom_lan.types`)**
+
+- `Mode`, `AudioCodec`, `BreakInMode`, `Meter` (and the other symbols
+  currently re-exported from `icom_lan.types`)
+
+**Public state types**
+
+- `RadioState`, `RadioProfile`, `VfoSlotState`, `YaesuStateExtension`
+
+Example (valid):
+
+```python
+from icom_lan import create_radio, Radio, LanBackendConfig, MetersCapable
+```
+
+### Tier 2 — Best-effort
+
+Available via `from icom_lan import …`, but loaded lazily through PEP 562
+`__getattr__` so they do not pull their subsystem into memory until the name
+is actually accessed. Breaking changes require a **CHANGELOG note plus a
+minor version bump**. No semver guarantee — these may be reshaped or moved
+without a major version.
+
+- `IcomRadio`, `IcomCommander`, `Priority`
+- Audio primitives: `audio.backend.AudioBackend`,
+  `audio.backend.PortAudioBackend`, `audio.backend.FakeAudioBackend`
+- DSP utilities: `audio.dsp.NoiseGate`, `audio.dsp.RmsNormalizer`,
+  `audio.dsp.Limiter`, `audio.dsp.DspPipeline`
+- Audio configuration and devices: `audio.config.AudioConfig`,
+  `audio.usb_driver.UsbAudioDriver` (and similar audio-stream primitives)
+
+Example (valid, lazy-loaded):
+
+```python
+from icom_lan import IcomRadio, IcomCommander  # tier-2 — works, but no semver guarantee
+```
+
+### Tier 3 — Internal
+
+Subject to change without notice. **Not** re-exported from the top-level
+package. Importing these from production source outside the owning
+subsystem triggers ruff `TID251`. Tests are exempt (see existing
+`tests/* per-file-ignores` in `pyproject.toml`).
+
+- `icom_lan.web.*` — internal to the web subsystem
+- `icom_lan.rigctld.*` — internal to the rigctld subsystem
+- `icom_lan.cli` — internal to the CLI
+- `icom_lan.radio.IcomRadio` — legacy direct-import path (use tier-2
+  re-export from `icom_lan` instead)
+- Most underscore-prefixed modules (`_connection_state`,
+  `_shared_state_runtime`, …)
+
+Example (invalid — flagged by `TID251` outside the owning subsystem):
+
+```python
+from icom_lan.web.handlers import ControlHandler  # tier-3 — forbidden in production
+from icom_lan.rigctld.server import RigctldServer  # tier-3 — forbidden in production
+```
+
+### Migration policy
+
+- **Promote tier 2 → tier 1.** Cite real-world usage in a PR; the tier-1
+  list grows by addition and is reviewed in the open. CHANGELOG entry under
+  `### Added`.
+- **Demote tier 1 → tier 2.** Requires a major version bump. CHANGELOG
+  entry under `### Changed`.
+- **Remove a tier-1 symbol.** Requires a major version bump **and** a
+  two-minor-release deprecation cycle (`DeprecationWarning` for at least
+  two minor releases before removal).
+- **Add a new tier-1 symbol.** PR + CHANGELOG entry under `### Added`. The
+  symbol must be re-exported from `icom_lan/__init__.py` and listed in this
+  document.
+- **Tier 2 / tier 3 changes.** May happen in any minor release with a
+  CHANGELOG note. No deprecation cycle is required, but a one-release
+  warning is preferred when a tier-2 symbol is being removed entirely.
+
+---
+
 ## Summary
 
 - **Use for new code**: `create_radio`, `Radio`, backend configs, capability protocols, exceptions, `RadioState`, profiles, and `sync.IcomRadio` for blocking use.
