@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+import warnings
+from typing import TYPE_CHECKING, Any
 
 from ._builders import (
     _build_level_get,
@@ -979,8 +980,26 @@ def set_vox_delay(
     )
 
 
-# Backward-compat aliases
-get_power = get_rf_power
-set_power = set_rf_power
-get_sql = get_squelch
-set_sql = set_squelch
+# Backward-compat aliases — DEPRECATED in v0.19, will be removed in v0.20.
+# Use the canonical builders directly: get_rf_power, set_rf_power,
+# get_squelch, set_squelch.
+_DEPRECATED_ALIASES: dict[str, str] = {
+    "get_power": "get_rf_power",
+    "set_power": "set_rf_power",
+    "get_sql": "get_squelch",
+    "set_sql": "set_squelch",
+}
+
+
+def __getattr__(name: str) -> Any:
+    """Emit ``DeprecationWarning`` for legacy alias access (PEP 562)."""
+    canonical = _DEPRECATED_ALIASES.get(name)
+    if canonical is not None:
+        warnings.warn(
+            f"icom_lan.commands.levels.{name} is deprecated since v0.19 and "
+            f"will be removed in v0.20; use {canonical} instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return globals()[canonical]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
