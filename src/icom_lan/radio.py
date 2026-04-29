@@ -2840,9 +2840,9 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
             return 18 if self._attenuator_state else 0
         raise CommandError("Radio returned empty attenuator response")
 
-    async def get_attenuator(self) -> bool:
+    async def get_attenuator(self, receiver: int = 0) -> bool:
         """Read attenuator state (compat wrapper)."""
-        return (await self.get_attenuator_level()) > 0
+        return (await self.get_attenuator_level(receiver)) > 0
 
     async def set_attenuator_level(
         self, db: int, receiver: int = RECEIVER_MAIN

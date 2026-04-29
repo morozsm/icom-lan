@@ -173,7 +173,7 @@ class YaesuRouting:
         if level == "PREAMP":
             return RigctldResponse(values=[str(await radio.get_preamp())])
         if level == "ATT":
-            return RigctldResponse(values=[str(await radio.get_attenuator())])
+            return RigctldResponse(values=[str(int(await radio.get_attenuator()))])
 
         return _err(HamlibError.EINVAL)
 

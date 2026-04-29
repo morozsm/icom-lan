@@ -863,10 +863,10 @@ class YaesuCatRadio:
 
     # -- D2: RF Front-End ---------------------------------------------------
 
-    async def get_attenuator(self, receiver: int = 0) -> int:
-        """Get attenuator state (0 = OFF, 1 = ON)."""
+    async def get_attenuator(self, receiver: int = 0) -> bool:
+        """Get attenuator state (False = OFF, True = ON)."""
         result = await self._query("get_attenuator")
-        return int(result["state"])
+        return bool(int(result["state"]))
 
     async def set_attenuator(self, state: int, receiver: int = 0) -> None:
         """Set attenuator state (0 = OFF, 1 = ON)."""

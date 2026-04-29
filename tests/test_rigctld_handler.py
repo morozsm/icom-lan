@@ -2521,3 +2521,35 @@ async def test_get_split_vfo_dual_rx_reflects_active_sub(
     resp = await dual_rx_handler.execute(get_cmd("get_split_vfo"))
     assert resp.ok
     assert resp.values == ["1", "VFOB"]
+
+
+# ---------------------------------------------------------------------------
+# Yaesu routing — ATT level (issue #1105 regression guard)
+# ---------------------------------------------------------------------------
+
+
+def _yaesu_handler(get_attenuator_value: bool) -> RigctldHandler:
+    """Build a handler with a Yaesu-tagged radio so create_routing returns YaesuRouting."""
+    radio = AsyncMock()
+    radio.backend_id = "yaesu_cat"
+    radio.capabilities = set()
+    radio.get_attenuator = AsyncMock(return_value=get_attenuator_value)
+    return RigctldHandler(radio, RigctldConfig())
+
+
+@pytest.mark.asyncio
+async def test_yaesu_routing_get_level_att_on_returns_one() -> None:
+    """get_level ATT returns "1" for True — bool must be cast to int (#1105)."""
+    handler = _yaesu_handler(get_attenuator_value=True)
+    resp = await handler.execute(get_cmd("get_level", "ATT"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_routing_get_level_att_off_returns_zero() -> None:
+    """get_level ATT returns "0" for False — bool must be cast to int (#1105)."""
+    handler = _yaesu_handler(get_attenuator_value=False)
+    resp = await handler.execute(get_cmd("get_level", "ATT"))
+    assert resp.ok
+    assert resp.values == ["0"]
