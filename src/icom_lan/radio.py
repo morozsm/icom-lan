@@ -50,7 +50,10 @@ from .commands import (
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
     _level_bcd_decode,
+    bcd_encode_value,
     build_civ_frame,
+    filter_hz_to_index,
+    filter_index_to_hz,
     build_memory_clear,
     build_memory_contents_set,
     build_memory_mode_set,
@@ -88,6 +91,7 @@ from .commands import (
     get_drive_gain,
     get_dual_watch,
     get_filter_shape,
+    get_filter_width,
     get_id_meter,
     get_ip_plus,
     get_key_speed,
@@ -372,6 +376,8 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
             # Filter / DSP
             "get_filter",
             "set_filter",
+            "get_filter_width",
+            "set_filter_width",
             "get_filter_shape",
             "set_filter_shape",
             "set_nb",
@@ -1459,15 +1465,123 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         # Use 0x26 0x01 (unselected receiver mode) — no VFO swap needed.
         return await self._get_unselected_mode()
 
-    async def get_filter(self) -> int | None:
-        """Get current mode filter number (1-3) when available."""
-        _, filt = await self.get_mode_info()
-        return filt if filt is not None else self._filter_width
+    async def get_filter(self, receiver: int = 0) -> int | None:
+        """Get current mode filter number (1-3) when available.
+
+        Args:
+            receiver: 0=MAIN, 1=SUB.
+        """
+        _, filt = await self.get_mode_info(receiver=receiver)
+        if filt is not None:
+            return filt
+        # Fallback: only MAIN has the legacy ``_filter_width`` cache; SUB
+        # falls back to ``None`` rather than returning MAIN's cached value.
+        if receiver == RECEIVER_MAIN:
+            return self._filter_width
+        return None
 
     async def set_filter(self, filter_width: int, receiver: int = 0) -> None:
         """Set filter number (1-3) while keeping current mode unchanged."""
         mode_name, _ = await self.get_mode(receiver=receiver)
         await self.set_mode(mode_name, filter_width=filter_width, receiver=receiver)
+
+    async def set_filter_width(self, width_hz: int, receiver: int = 0) -> None:
+        """Set DSP IF filter width in Hz (CI-V 0x1A 0x03).
+
+        Hz is translated to a profile-defined CI-V index (1-byte BCD) and
+        wrapped via cmd29 when the profile supports it.
+
+        Args:
+            width_hz: Filter width in Hz. Bounds and step depend on the
+                current mode's profile rule.
+            receiver: 0=MAIN, 1=SUB.
+        """
+        self._check_connected()
+        self._require_receiver(receiver, operation="set_filter_width")
+
+        target = self._radio_state.receiver("SUB" if receiver else "MAIN")
+        mode_name = getattr(target, "mode", None)
+        data_mode = int(getattr(target, "data_mode", 0) or 0)
+        rule = self._profile.resolve_filter_rule(mode_name, data_mode=data_mode)
+
+        min_hz = self._profile.filter_width_min
+        max_hz = self._profile.filter_width_max
+        if rule is not None:
+            if rule.fixed:
+                raise CommandError(
+                    f"set_filter_width is unsupported for fixed-width mode {mode_name}"
+                )
+            if rule.min_hz is not None:
+                min_hz = rule.min_hz
+            if rule.max_hz is not None:
+                max_hz = rule.max_hz
+        if not min_hz <= width_hz <= max_hz:
+            raise CommandError(
+                f"set_filter_width value must be {min_hz}-{max_hz} Hz "
+                f"for {mode_name}, got {width_hz}"
+            )
+
+        clamped = min(width_hz, 9999)
+        payload_value = clamped
+        if self._profile.filter_width_encoding == "segmented_bcd_index":
+            if rule is None or not rule.segments:
+                raise CommandError(
+                    f"set_filter_width has no filter-width mapping for mode {mode_name}"
+                )
+            try:
+                payload_value = filter_hz_to_index(clamped, segments=rule.segments)
+            except ValueError as exc:
+                raise CommandError(str(exc)) from exc
+
+        bcd_index_byte = bcd_encode_value(payload_value, byte_count=1)
+        # CI-V 1A 03: 1-byte BCD index (wfview-confirmed). cmd29-wrapped
+        # for receiver routing on dual-RX rigs (IC-7610), direct on single-RX.
+        if self._profile.supports_cmd29(0x1A, 0x03):
+            await self.send_civ(
+                0x29,
+                data=bytes([receiver, 0x1A, 0x03]) + bcd_index_byte,
+                wait_response=False,
+            )
+        else:
+            await self.send_civ(
+                0x1A, sub=0x03, data=bcd_index_byte, wait_response=False
+            )
+
+    async def get_filter_width(self, receiver: int = 0) -> int:
+        """Get DSP IF filter width in Hz (CI-V 0x1A 0x03).
+
+        The CI-V index is translated to Hz using the active profile's
+        filter rule for the current mode.
+
+        Args:
+            receiver: 0=MAIN, 1=SUB.
+
+        Returns:
+            Filter width in Hz.
+        """
+        self._check_connected()
+        self._require_receiver(receiver, operation="get_filter_width")
+
+        index = await self._get_bcd_level(
+            get_filter_width(to_addr=self._radio_addr, receiver=receiver),
+            key=f"get_filter_width:{receiver}",
+            command=0x1A,
+            sub=0x03,
+            bcd_bytes=1,
+        )
+
+        if self._profile.filter_width_encoding == "segmented_bcd_index":
+            target = self._radio_state.receiver("SUB" if receiver else "MAIN")
+            mode_name = getattr(target, "mode", None)
+            data_mode = int(getattr(target, "data_mode", 0) or 0)
+            rule = self._profile.resolve_filter_rule(mode_name, data_mode=data_mode)
+            if rule is not None and rule.segments:
+                try:
+                    return filter_index_to_hz(index, segments=rule.segments)
+                except ValueError:
+                    # Out-of-band index — return raw value rather than fail.
+                    return index
+        return index
 
     async def set_mode(
         self, mode: Mode | str, filter_width: int | None = None, receiver: int = 0

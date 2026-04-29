@@ -30,7 +30,6 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Callable
 
-from ..commands import bcd_encode_value, filter_hz_to_index
 from ..exceptions import CommandError
 from ..exceptions import ConnectionError as RadioConnectionError
 from ..capabilities import (
@@ -780,63 +779,9 @@ class RadioPoller:
                     raise CommandError(
                         f"set_filter_width value must be 50-10000 Hz, got {width}"
                     )
-                _fw_target = (
-                    self._radio_state.sub
-                    if self._radio_state and rx != 0
-                    else self._radio_state.main
-                    if self._radio_state
-                    else None
-                )
-                mode_name = getattr(_fw_target, "mode", None)
-                data_mode = int(getattr(_fw_target, "data_mode", 0) or 0)
-                rule = self._profile.resolve_filter_rule(mode_name, data_mode=data_mode)
-                min_hz = self._profile.filter_width_min
-                max_hz = self._profile.filter_width_max
-                if rule is not None:
-                    if rule.fixed:
-                        raise CommandError(
-                            "set_filter_width is unsupported for fixed-width mode "
-                            f"{mode_name}"
-                        )
-                    if rule.min_hz is not None:
-                        min_hz = rule.min_hz
-                    if rule.max_hz is not None:
-                        max_hz = rule.max_hz
-                if not min_hz <= width <= max_hz:
-                    raise CommandError(
-                        f"set_filter_width value must be {min_hz}-{max_hz} Hz for {mode_name}, got {width}"
-                    )
-
-                clamped = min(width, 9999)
-                payload_value = clamped
-                if self._profile.filter_width_encoding == "segmented_bcd_index":
-                    if rule is None or not rule.segments:
-                        raise CommandError(
-                            f"set_filter_width has no filter-width mapping for mode {mode_name}"
-                        )
-                    try:
-                        payload_value = filter_hz_to_index(
-                            clamped, segments=rule.segments
-                        )
-                    except ValueError as exc:
-                        raise CommandError(str(exc)) from exc
-
-                bcd_index_byte = bcd_encode_value(payload_value, byte_count=1)
-                # CI-V 1A 03 SET format: <FIL_number> <width_index_BCD>
-                # FIL number: 01=FIL1, 02=FIL2, 03=FIL3
-                logger.info(
-                    "set_filter_width: mode=%s, width=%d Hz, index=%d, bcd=0x%s, rx=%d",
-                    mode_name,
-                    width,
-                    payload_value,
-                    bcd_index_byte.hex(),
-                    rx,
-                )
-                # CI-V 1A 03: 1-byte BCD index, cmd29-wrapped for receiver
-                if self._profile.supports_cmd29(0x1A, 0x03):
-                    await self._civ(0x29, data=bytes([rx, 0x1A, 0x03]) + bcd_index_byte)
-                else:
-                    await self._civ(0x1A, sub=0x03, data=bcd_index_byte)
+                # Hz↔index translation, profile-aware bounds + cmd29 wrapping
+                # are owned by the backend (P2-04). Issue #1101.
+                await radio.set_filter_width(width, receiver=rx)
                 if self._radio_state:
                     target = (
                         self._radio_state.sub if rx != 0 else self._radio_state.main

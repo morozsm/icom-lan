@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from ...audio import AudioPacket
 from ...audio.usb_driver import UsbAudioDriver
 from ...command_spec import CatCommandSpec
+from ...commands import hz_to_table_index, table_index_to_hz
 from ...types import AudioCodec, BreakInMode
 from ...exceptions import AudioFormatError, CommandError
 from ...exceptions import ConnectionError as RadioConnectionError
@@ -965,23 +966,62 @@ class YaesuCatRadio:
 
     # -- D4: Filters --------------------------------------------------------
 
+    def _filter_width_table(self, receiver: int = 0) -> tuple[int, ...] | None:
+        """Return the filter-width table for the current mode, or None."""
+        profile = self.profile
+        if profile.filter_width_encoding != "table_index":
+            return None
+        target = self._state.receiver("SUB" if receiver else "MAIN")
+        mode = getattr(target, "mode", None)
+        rule = profile.resolve_filter_rule(mode)
+        if rule and rule.table:
+            return rule.table
+        return None
+
     async def get_filter_width(self, receiver: int = 0) -> int:
-        """Get filter width index (SH0/SH1).
+        """Get filter width in Hz (SH0/SH1).
+
+        Translates the radio's table-index code to Hz using the active
+        profile's filter rule for the current mode. When no table is
+        defined, the raw index is returned (compat fallback).
 
         Args:
             receiver: 0=MAIN, 1=SUB.
 
         Returns:
-            Width index (0-22, mode-dependent mapping).
+            Filter width in Hz.
         """
         cmd = "get_filter_width" if receiver == 0 else "get_filter_width_sub"
         result = await self._query(cmd)
-        return int(result["code"])
+        index = int(result["code"])
+        target = self._state.receiver("SUB" if receiver else "MAIN")
+        mode = getattr(target, "mode", None)
+        rule = (
+            self.profile.resolve_filter_rule(mode)
+            if self.profile.filter_width_encoding == "table_index"
+            else None
+        )
+        if rule and rule.fixed and rule.defaults:
+            return rule.defaults[0]
+        table = self._filter_width_table(receiver)
+        if table is None:
+            return index
+        try:
+            return table_index_to_hz(index, table=table)
+        except ValueError:
+            return index
 
-    async def set_filter_width(self, value: int, receiver: int = 0) -> None:
-        """Set filter width index (SH0/SH1)."""
+    async def set_filter_width(self, width_hz: int, receiver: int = 0) -> None:
+        """Set filter width in Hz (SH0/SH1).
+
+        Translates Hz to the radio's table-index code using the active
+        profile's filter rule for the current mode. When no table is
+        defined, ``width_hz`` is sent as the raw index (compat fallback).
+        """
         cmd = "set_filter_width" if receiver == 0 else "set_filter_width_sub"
-        await self._write(cmd, code=value)
+        table = self._filter_width_table(receiver)
+        index = width_hz if table is None else hz_to_table_index(width_hz, table=table)
+        await self._write(cmd, code=index)
 
     async def get_if_shift(self, receiver: int = 0) -> int:
         """Get IF shift offset in Hz (signed, IS0).
@@ -1494,6 +1534,10 @@ class YaesuCatRadio:
 
     async def set_filter(self, filter_num: int, receiver: int = 0) -> None:
         raise NotImplementedError("Filter select (Icom) not supported on Yaesu radios")
+
+    async def get_filter(self, receiver: int = 0) -> int | None:
+        """Yaesu rigs do not expose discrete FIL1/2/3 — return ``None``."""
+        return None
 
     async def set_filter_shape(self, shape: int, receiver: int = 0) -> None:
         raise NotImplementedError("Filter shape (Icom) not supported on Yaesu radios")
