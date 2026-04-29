@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `set_split(...)` (`SplitCapable` protocol) — the canonical name introduced
   in #1108. Deprecation was announced in v0.19; this is the scheduled v0.20
   cleanup.
+- **`IcomRadio.get_alc` / `sync.IcomRadio.get_alc` (#1207)** — deprecated in
+  v0.19 (#1129), removed per schedule. Use `get_alc_meter`
+  (`MetersCapable`).
 
 ## [0.19.0] — 2026-04-29
 

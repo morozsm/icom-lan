@@ -434,23 +434,6 @@ class TestMeters:
         assert val == 80
 
     @pytest.mark.asyncio
-    async def test_get_alc_deprecated_round_trip(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """Legacy get_alc still works but emits DeprecationWarning and
-        returns the same value as get_alc_meter (issue #1104)."""
-        import warnings as _warnings
-
-        mock_transport.queue_response(_meter_response(_SUB_ALC_METER, 80))
-        with _warnings.catch_warnings(record=True) as caught:
-            _warnings.simplefilter("always")
-            val = await radio.get_alc()
-        assert val == 80
-        deprecations = [w for w in caught if issubclass(w.category, DeprecationWarning)]
-        assert deprecations, "expected DeprecationWarning from get_alc"
-        assert "get_alc_meter" in str(deprecations[0].message)
-
-    @pytest.mark.asyncio
     async def test_get_swr_meter(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:

@@ -341,7 +341,6 @@ def mock_radio() -> MagicMock:
     radio.get_filter = AsyncMock(return_value=1)
     radio.get_s_meter = AsyncMock(return_value=42)
     radio.get_swr = AsyncMock(return_value=10)
-    radio.get_alc = AsyncMock(return_value=5)
     radio.get_rf_gain = AsyncMock(return_value=200)
     radio.get_af_level = AsyncMock(return_value=180)
     radio.get_attenuator_level = AsyncMock(return_value=0)
@@ -2454,7 +2453,6 @@ class TestRadioPoller:
         radio.get_s_meter = AsyncMock(return_value=42)
         radio.get_rf_power = AsyncMock(return_value=100)
         radio.get_swr = AsyncMock(return_value=10)
-        radio.get_alc = AsyncMock(return_value=5)
         radio.get_rf_gain = AsyncMock(return_value=128)
         radio.get_af_level = AsyncMock(return_value=64)
         radio.get_attenuator_level = AsyncMock(return_value=0)
@@ -2659,6 +2657,7 @@ class TestSwitchScopeReceiver:
         # Canonical dual-RX VFO methods on ``DualReceiverCapable`` (post-#1114).
         radio.swap_main_sub = AsyncMock()
         radio.equalize_main_sub = AsyncMock()
+
         # Receiver-tier methods (issue #1170 / #1172).  Make
         # ``select_receiver`` mirror the wire-level CI-V the runtime would
         # emit so existing assertions on ``send_civ(0x07, …)`` still apply.

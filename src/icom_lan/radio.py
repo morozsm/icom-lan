@@ -17,7 +17,6 @@ import logging
 import os
 import socket as _socket
 import time
-import warnings
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -457,7 +456,6 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
             "get_s_meter",
             "get_swr",
             "get_swr_meter",
-            "get_alc",
             "get_alc_meter",
             "get_rf_power",
             "set_rf_power",
@@ -2666,21 +2664,6 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         civ = get_alc(to_addr=self._radio_addr)
         resp = await self._send_civ_expect(civ, label="get_alc_meter")
         return parse_meter_response(resp)
-
-    async def get_alc(self) -> int:
-        """Read the ALC meter value (0-255).
-
-        .. deprecated::
-            Use :meth:`get_alc_meter` instead. This alias is kept for
-            backward compatibility and will be removed in a future
-            release.
-        """
-        warnings.warn(
-            "IcomRadio.get_alc is deprecated; use get_alc_meter instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return await self.get_alc_meter()
 
     async def set_ptt(self, on: bool) -> None:
         """Toggle PTT (Push-To-Talk).

@@ -186,7 +186,7 @@ class TestMeters:
         assert 0 <= swr <= 255
         print(f"SWR meter: {swr} ✓")
 
-    async def test_get_alc(self, radio: IcomRadio) -> None:
+    async def test_get_alc_meter(self, radio: IcomRadio) -> None:
         """Read ALC value.
 
         On some radios/firmware, ALC may not respond reliably in pure RX state.
@@ -194,7 +194,7 @@ class TestMeters:
         (guarded by ICOM_ALLOW_PTT=1).
         """
         try:
-            alc = await self._read_with_retry(radio, "ALC", radio.get_alc)
+            alc = await self._read_with_retry(radio, "ALC", radio.get_alc_meter)
         except IcomTimeoutError:
             if not _flag_enabled("ICOM_ALLOW_PTT"):
                 pytest.skip(
@@ -204,7 +204,7 @@ class TestMeters:
             await radio.set_ptt(True)
             try:
                 await asyncio.sleep(0.05)
-                alc = await self._read_with_retry(radio, "ALC/PTT", radio.get_alc)
+                alc = await self._read_with_retry(radio, "ALC/PTT", radio.get_alc_meter)
             finally:
                 await radio.set_ptt(False)
 
@@ -799,7 +799,7 @@ class TestSoak:
                 await op("get_power", r.get_power)
                 await op("get_s_meter", r.get_s_meter)
                 await op("get_swr", r.get_swr)
-                await op("get_alc", r.get_alc)
+                await op("get_alc_meter", r.get_alc_meter)
 
                 if cycle % 5 == 0:
                     await op(

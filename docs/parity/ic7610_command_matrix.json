@@ -1224,7 +1224,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:get_alc",
-        "icom_lan.radio:CoreRadio.get_alc"
+        "icom_lan.radio:CoreRadio.get_alc_meter"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_alc"
