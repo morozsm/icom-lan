@@ -927,3 +927,27 @@ async def test_serial_backend_unchanged_on_ptt_toggle() -> None:
         assert emission in serial_set
         # PTT state must not change which command is emitted at given index.
         assert emission == rx_emissions[poll_idx]
+
+
+# ----------------------------------------------------------------------
+# SetPower unit-tag (#1168)
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_setpower_icom_poller_accepts_raw_255() -> None:
+    """Default SetPower(unit='raw_255') flows to radio.set_rf_power on Icom."""
+    radio = _make_radio()
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    await poller._execute(SetPower(level=128))  # noqa: SLF001
+    radio.set_rf_power.assert_awaited_once_with(128)
+
+
+@pytest.mark.asyncio
+async def test_setpower_icom_poller_rejects_watts_unit() -> None:
+    """Icom poller raises ValueError on unit='watts' and never calls set_rf_power."""
+    radio = _make_radio()
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    with pytest.raises(ValueError, match="raw_255"):
+        await poller._execute(SetPower(level=50, unit="watts"))  # noqa: SLF001
+    radio.set_rf_power.assert_not_awaited()

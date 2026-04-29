@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 __all__ = [
     "Command",
@@ -175,7 +175,20 @@ class SetFilterShape:
 
 @dataclass(frozen=True, slots=True)
 class SetPower:
+    """Set TX RF power.
+
+    The ``unit`` tag disambiguates the level scale between backends:
+
+    - ``"raw_255"`` (default) — Icom CI-V scale, integer 0-255.
+    - ``"watts"`` — Yaesu CAT scale, integer watts (PC command, 0-999).
+
+    Each backend's poller verifies the unit matches its expected scale and
+    rejects mismatches with a clear ``ValueError``. The default keeps existing
+    Icom call sites unchanged (no migration churn).
+    """
+
     level: int
+    unit: Literal["raw_255", "watts"] = "raw_255"
 
 
 @dataclass(frozen=True, slots=True)

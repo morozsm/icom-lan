@@ -892,3 +892,42 @@ async def test_execute_command_set_apf_off_dispatches_to_radio() -> None:
     await poller._execute_command(SetApf(mode=0, receiver=0))
 
     radio.set_audio_peak_filter.assert_awaited_once_with(0, receiver=0)
+
+
+# ---------------------------------------------------------------------------
+# Command dispatch — SetPower unit-tag (#1168)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_execute_command_set_power_watts_unit_dispatches_to_radio() -> None:
+    """SetPower(unit='watts') flows directly to radio.set_power(watts)."""
+    from icom_lan._poller_types import SetPower
+
+    radio = make_radio()
+    radio.set_power = AsyncMock()
+    poller = YaesuCatPoller(radio, callback=lambda s: None, fast_interval=10.0)
+
+    await poller._execute_command(SetPower(level=50, unit="watts"))
+
+    radio.set_power.assert_awaited_once_with(50)
+
+
+@pytest.mark.asyncio
+async def test_execute_command_set_power_raw_255_unit_rejected(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Default SetPower(unit='raw_255') is rejected by Yaesu poller and logs warning."""
+    import logging
+
+    from icom_lan._poller_types import SetPower
+
+    radio = make_radio()
+    radio.set_power = AsyncMock()
+    poller = YaesuCatPoller(radio, callback=lambda s: None, fast_interval=10.0)
+
+    with caplog.at_level(logging.WARNING, logger="icom_lan.backends.yaesu_cat.poller"):
+        await poller._execute_command(SetPower(level=200))  # default unit='raw_255'
+
+    radio.set_power.assert_not_awaited()
+    assert any("SetPower" in r.message or "failed" in r.message for r in caplog.records)

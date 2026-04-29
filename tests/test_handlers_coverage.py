@@ -328,7 +328,13 @@ def _scope_frame() -> ScopeFrame:
         ),
         ("ptt", {"state": True}, PttOn, {}, {"state": True}),
         ("ptt", {"state": False}, PttOff, {}, {"state": False}),
-        ("set_rf_power", {"level": 88}, SetPower, {"level": 88}, {"level": 88}),
+        (
+            "set_rf_power",
+            {"level": 88},
+            SetPower,
+            {"level": 88, "unit": "raw_255"},
+            {"level": 88},
+        ),
         (
             "set_rf_gain",
             {"level": 77, "receiver": 1},
@@ -616,6 +622,30 @@ async def test_enqueue_command_variants(
     assert isinstance(cmd, expected_type)
     for key, value in expected_attrs.items():
         assert getattr(cmd, key) == value
+
+
+async def test_enqueue_set_rf_power_yaesu_tags_watts_unit() -> None:
+    """Yaesu CAT backend → SetPower(unit='watts'); Icom default → 'raw_255'."""
+    queue = _QueueRecorder()
+    server = SimpleNamespace(command_queue=queue)
+
+    radio = _capable_radio()
+    radio.backend_id = "yaesu_cat"
+    handler = _control_handler(radio=radio, server=server)
+    await handler._enqueue_command("set_rf_power", {"level": 50})
+    assert isinstance(queue.items[-1], SetPower)
+    assert queue.items[-1].level == 50
+    assert queue.items[-1].unit == "watts"
+
+    queue2 = _QueueRecorder()
+    server2 = SimpleNamespace(command_queue=queue2)
+    radio2 = _capable_radio()
+    radio2.backend_id = "icom_lan"
+    handler2 = _control_handler(radio=radio2, server=server2)
+    await handler2._enqueue_command("set_rf_power", {"level": 200})
+    assert isinstance(queue2.items[-1], SetPower)
+    assert queue2.items[-1].level == 200
+    assert queue2.items[-1].unit == "raw_255"
 
 
 async def test_enqueue_command_errors() -> None:

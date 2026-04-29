@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from ...profiles import RadioProfile
 from ...radio_state import RadioState
@@ -1259,7 +1259,14 @@ class ControlHandler:
                         "(missing power_control capability)"
                     )
                 level = int(params["level"])
-                q.put(SetPower(level))
+                # Tag the unit per backend: Yaesu CAT expects watts (PC
+                # command, 0-999), Icom expects raw 0-255 CI-V scale.
+                unit: Literal["raw_255", "watts"] = (
+                    "watts"
+                    if getattr(radio, "backend_id", "") == "yaesu_cat"
+                    else "raw_255"
+                )
+                q.put(SetPower(level, unit=unit))
                 return {"level": level}
             case "set_powerstat":
                 if radio is None:
