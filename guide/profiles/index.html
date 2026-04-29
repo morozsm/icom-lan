@@ -1972,34 +1972,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../internals/cli-design/" class="md-nav__link">
         
   
@@ -2537,10 +2509,10 @@
 <a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="n">snapshot</span> <span class="o">=</span> <span class="k">await</span> <span class="n">apply_profile</span><span class="p">(</span><span class="n">radio</span><span class="p">,</span> <span class="n">contest_20m</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="sync-api-synchronous-wrapper">Sync API (Synchronous Wrapper)<a class="headerlink" href="#sync-api-synchronous-wrapper" title="Permanent link">&para;</a></h2>
-<p>For non-async code, use the <code>SyncIcomRadio</code> wrapper:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.sync</span><span class="w"> </span><span class="kn">import</span> <span class="n">SyncIcomRadio</span>
+<p>For non-async code, use the synchronous <code>IcomRadio</code> wrapper:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.sync</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">SyncIcomRadio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">snapshot</span> <span class="o">=</span> <span class="n">radio</span><span class="o">.</span><span class="n">prepare_ic705_data_profile</span><span class="p">(</span><span class="n">frequency_hz</span><span class="o">=</span><span class="mi">145_500_000</span><span class="p">)</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># ... operate ...</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">radio</span><span class="o">.</span><span class="n">restore_ic705_data_profile</span><span class="p">(</span><span class="n">snapshot</span><span class="p">)</span>

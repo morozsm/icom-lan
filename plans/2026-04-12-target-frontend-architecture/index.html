@@ -1,0 +1,3415 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Python library for controlling Icom transceivers over LAN">
+      
+      
+      
+        <link rel="canonical" href="https://morozsm.github.io/icom-lan/plans/2026-04-12-target-frontend-architecture/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Target Frontend Architecture — ADR - icom-lan</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#target-frontend-architecture-adr" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="icom-lan" class="md-header__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            icom-lan
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Target Frontend Architecture — ADR
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/connection/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/public-api-surface/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../internals/architecture/" class="md-tabs__link">
+          
+  
+  
+  Internals
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="icom-lan" class="md-nav__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    icom-lan
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/connection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supported Radios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/rig-profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rig Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Setup Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Radio Setup Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic7610-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-7610 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic705-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-705 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic7300-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-7300 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic9700-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-9700 USB & LAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../opuslib-macos-fix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    opuslib macOS Fix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/web-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI-V Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IcomRadio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/audio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types & Enums
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/backends-icom7610/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Icom 7610 Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rig-loader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rig Loader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rigctld/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rigctld
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/scope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/web/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internals
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Internals
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../radio-protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../capabilities-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PERFORMANCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUDIO_STREAMING_PROFILE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Streaming Profile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SECURITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layer-1-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layer 1: Runtime
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Layer 1: Runtime">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-owns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it owns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-it-must-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it must not do
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frontendruntime-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FrontendRuntime interface
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audiocontroller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AudioController
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scopecontroller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ScopeController
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#systemcontroller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SystemController
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layer-2-view-model-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layer 2: View-model adapters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Layer 2: View-model adapters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapter-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapter location
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-adapters-replace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What adapters replace
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layer-3-semantic-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layer 3: Semantic components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Layer 3: Semantic components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#contract_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#semantic-component-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic component list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#svelte-5-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Svelte 5 pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layer-4-presentation-skin-theme-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layer 4: Presentation (Skin + Theme + Layout)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Layer 4: Presentation (Skin + Theme + Layout)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-independent-knobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three independent knobs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skin-implementation-svelte-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Skin implementation (Svelte 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skin-resolution-and-lazy-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Skin resolution and lazy loading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#app-entry-point-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App entry point (target)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#layout-slot-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout slot model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#theme-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target-file-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target file structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-invariants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architectural invariants
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architectural invariants">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inv-1-single-rx-playback-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INV-1: Single RX playback path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inv-2-single-scope-ownership-per-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INV-2: Single scope ownership per type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inv-3-scopefalse-audiotrue-is-first-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INV-3: scope=false + audio=true is first-class
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inv-4-capability-gating-precedes-presentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INV-4: Capability gating precedes presentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inv-5-mountunmount-does-not-change-transport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INV-5: Mount/unmount does not change transport
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inv-6-no-runtime-imports-in-presentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INV-6: No runtime imports in presentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#import-boundary-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import boundary rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Import boundary rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#allowed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allowed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#forbidden" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Forbidden
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eslint-enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eslint enforcement
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anti-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anti-patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Anti-patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-skin-imports-runtime-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Skin imports runtime directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-theme-contains-behavior-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Theme contains behavior flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-layout-decides-transport-based-on-mount-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Layout decides transport based on mount state
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-semantic-component-accepts-escape-hatches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Semantic component accepts escape hatches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-lcd-treated-as-special-case" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. LCD treated as special case
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-duplicated-protocol-parsing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Duplicated protocol parsing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-coexistence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration coexistence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationship-to-existing-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship to existing code
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="target-frontend-architecture-adr">Target Frontend Architecture — ADR<a class="headerlink" href="#target-frontend-architecture-adr" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-04-12
+<strong>Status:</strong> Approved for implementation
+<strong>Synthesizes:</strong> <code>#643</code> (runtime contract), <code>#646</code> (presentation architecture)
+<strong>Informed by:</strong> <code>#641</code> (audit), <code>#642</code> (audio trace), <code>#644</code> (parity matrix), <code>#645</code> (migration plan)
+<strong>Base commit:</strong> <code>d87f50a</code> (<code>feat/642-audio-debug-logging</code>)</p>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">&para;</a></h2>
+<p>Single authoritative reference for the unified frontend architecture. All implementation issues (<code>#647</code>–<code>#653</code>) should be judged against this document.</p>
+<p>This ADR is executable: it contains concrete TypeScript interfaces, Svelte 5 patterns, file layout, and enforcement rules. It is not a vision doc — it is a build spec.</p>
+<hr />
+<h2 id="architecture-overview">Architecture overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h2>
+<p>Four layers, strict one-way dependency:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌────────────��─────────────��──────────────────────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  SKIN + LAYOUT + THEME                              │  ← visual shell
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│  (amber-lcd, desktop-v2, mobile, future skins)      │
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├─────────────────��───────────────────────────��───────┤
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│  SEMANTIC COMPONENTS                                │  ← behavior contracts
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│  (VfoDisplay, MeterPanel, RxAudioControl, ...)      │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├───────────────���─────────────────────────��───────────┤
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│  VIEW-MODEL ADAPTERS                                │  ← pure functions
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│  (toVfoProps, toMeterProps, toRxAudioProps, ...)     │
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├───────────────────────────────────────────────���─────┤
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│  RUNTIME                                            │  ← singleton, no DOM
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│  (transport, audio, scope, state, commands)          │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>└─────────────────────────────────────────────────────┘
+</code></pre></div>
+<p><strong>Rule:</strong> each layer depends only on the layer below. Never upward, never across.</p>
+<hr />
+<h2 id="layer-1-runtime">Layer 1: Runtime<a class="headerlink" href="#layer-1-runtime" title="Permanent link">&para;</a></h2>
+<h3 id="what-it-owns">What it owns<a class="headerlink" href="#what-it-owns" title="Permanent link">&para;</a></h3>
+<p>All stateful side effects:</p>
+<ul>
+<li>HTTP bootstrap (polling, capabilities fetch)</li>
+<li>Control WebSocket (<code>/api/v1/ws</code>) lifecycle</li>
+<li>Audio WebSocket (<code>/api/v1/audio</code>) lifecycle</li>
+<li>Scope WebSocket (<code>/api/v1/scope</code>, <code>/api/v1/audio-scope</code>) lifecycle</li>
+<li>Browser <code>AudioContext</code> and playback/mic lifecycle</li>
+<li>Binary frame parsing (scope, audio)</li>
+<li>Command dispatch and optimistic state patches</li>
+<li>Reconnect logic and connection health</li>
+<li>Capability normalization</li>
+</ul>
+<h3 id="what-it-must-not-do">What it must not do<a class="headerlink" href="#what-it-must-not-do" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Import Svelte components</li>
+<li>Reference DOM elements</li>
+<li>Know about skins, themes, or layouts</li>
+<li>Contain presentation logic</li>
+</ul>
+<h3 id="frontendruntime-interface">FrontendRuntime interface<a class="headerlink" href="#frontendruntime-interface" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">FrontendRuntime</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="c1">// Reactive state (Svelte 5 $state internally)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">state</span><span class="o">:</span><span class="w"> </span><span class="kt">RadioState</span><span class="p">;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">capabilities</span><span class="o">:</span><span class="w"> </span><span class="kt">Capabilities</span><span class="p">;</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">connection</span><span class="o">:</span><span class="w"> </span><span class="kt">ConnectionStatus</span><span class="p">;</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">layoutPreference</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;auto&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;lcd&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;standard&#39;</span><span class="p">;</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">isMobile</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="c1">// Controllers</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">audio</span><span class="o">:</span><span class="w"> </span><span class="kt">AudioController</span><span class="p">;</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">scope</span><span class="o">:</span><span class="w"> </span><span class="kt">ScopeController</span><span class="p">;</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">system</span><span class="o">:</span><span class="w"> </span><span class="kt">SystemController</span><span class="p">;</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="c1">// Single command dispatch entry point</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="nx">cmd</span><span class="p">(</span><span class="nx">command</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">params?</span><span class="o">:</span><span class="w"> </span><span class="kt">Record</span><span class="o">&lt;</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">unknown</span><span class="o">&gt;</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="audiocontroller">AudioController<a class="headerlink" href="#audiocontroller" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">AudioController</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">rxEnabled</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">txEnabled</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">monitorMode</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;live&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;radio&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;mute&#39;</span><span class="p">;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">volume</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span><span class="w">          </span><span class="c1">// 0..1</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">wsConnected</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">txSupported</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nx">setMonitorMode</span><span class="p">(</span><span class="nx">mode</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;live&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;radio&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;mute&#39;</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nx">setVolume</span><span class="p">(</span><span class="nx">v</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="nx">startTx</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="kt">string</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="o">&gt;</span><span class="p">;</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nx">stopTx</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">}</span>
+</code></pre></div>
+<p>Owns: <code>/api/v1/audio</code> WS, <code>RxPlayer</code>, <code>TxMic</code>, codec negotiation, <code>AudioContext</code> lifecycle.</p>
+<p>Does not own: AF level radio command — that goes through <code>cmd()</code>.</p>
+<h3 id="scopecontroller">ScopeController<a class="headerlink" href="#scopecontroller" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">ScopeController</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">hardwareScopeAvailable</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">audioScopeAvailable</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">activeScope</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;hardware&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;audio-fft&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">scopeFrame</span><span class="o">:</span><span class="w"> </span><span class="kt">ScopeFrame</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">audioScopeFrame</span><span class="o">:</span><span class="w"> </span><span class="kt">AudioScopeFrame</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="p">}</span>
+</code></pre></div>
+<p>Owns: <code>/api/v1/scope</code> and <code>/api/v1/audio-scope</code> WS connections, binary frame parsing.</p>
+<p>Presentation components consume <code>scopeFrame</code>/<code>audioScopeFrame</code> — they never open channels.</p>
+<h3 id="systemcontroller">SystemController<a class="headerlink" href="#systemcontroller" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">SystemController</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nx">powerOn</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="ow">void</span><span class="o">&gt;</span><span class="p">;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nx">powerOff</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="ow">void</span><span class="o">&gt;</span><span class="p">;</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nx">connect</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="ow">void</span><span class="o">&gt;</span><span class="p">;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nx">disconnect</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="ow">void</span><span class="o">&gt;</span><span class="p">;</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nx">identifyFrequency</span><span class="p">(</span><span class="nx">freqHz</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">EibiResult</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="o">&gt;</span><span class="p">;</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+</code></pre></div>
+<p>Owns: all HTTP calls to backend (<code>/api/v1/radio/power</code>, <code>/api/v1/eibi/identify</code>, etc.).</p>
+<hr />
+<h2 id="layer-2-view-model-adapters">Layer 2: View-model adapters<a class="headerlink" href="#layer-2-view-model-adapters" title="Permanent link">&para;</a></h2>
+<h3 id="contract">Contract<a class="headerlink" href="#contract" title="Permanent link">&para;</a></h3>
+<p>Adapters are <strong>pure functions</strong>. No side effects, no subscriptions, no imports from transport/audio/WS.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kr">type</span><span class="w"> </span><span class="nx">Adapter</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nx">state</span><span class="o">:</span><span class="w"> </span><span class="kt">RadioState</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nx">caps</span><span class="o">:</span><span class="w"> </span><span class="kt">Capabilities</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nx">audio</span><span class="o">:</span><span class="w"> </span><span class="kt">AudioController</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nx">receiver</span><span class="o">?:</span><span class="w"> </span><span class="s1">&#39;main&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;sub&#39;</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">T</span><span class="p">;</span>
+</code></pre></div>
+<p>Each adapter returns a typed view-model with:</p>
+<ul>
+<li>derived display values</li>
+<li>semantic callbacks (bound from runtime controllers)</li>
+</ul>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">VfoViewModel</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nx">freqHz</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nx">mode</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nx">filter</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nx">dataMode</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nx">isActive</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nx">badges</span><span class="o">:</span><span class="w"> </span><span class="kt">Badge</span><span class="p">[];</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nx">onFreqChange</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">hz</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="nx">onModeChange</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">mode</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="nx">onFilterChange</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">filter</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="p">}</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">RxAudioViewModel</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span><span class="nx">monitorMode</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;live&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;radio&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;mute&#39;</span><span class="p">;</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span><span class="nx">hasLiveAudio</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span><span class="nx">volume</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">  </span><span class="nx">muted</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">  </span><span class="nx">onMonitorModeChange</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">mode</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">  </span><span class="nx">onVolumeChange</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">v</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="p">}</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">MeterViewModel</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">  </span><span class="nx">sMeter</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">  </span><span class="nx">swr</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="w">  </span><span class="nx">power</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="w">  </span><span class="nx">alc</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a><span class="w">  </span><span class="nx">comp</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a><span class="w">  </span><span class="nx">activeTxMeter</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;swr&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;power&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;alc&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;comp&#39;</span><span class="p">;</span>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="p">}</span>
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a>
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a><span class="kd">interface</span><span class="w"> </span><span class="nx">ScopeViewModel</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="w">  </span><span class="nx">available</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a><span class="w">  </span><span class="nx">frame</span><span class="o">:</span><span class="w"> </span><span class="kt">ScopeFrame</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="w">  </span><span class="nx">onTuneToFreq</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">hz</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="w">  </span><span class="nx">onSpanChange</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">span</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="ow">void</span><span class="p">;</span>
+<a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="adapter-location">Adapter location<a class="headerlink" href="#adapter-location" title="Permanent link">&para;</a></h3>
+<p><code>frontend/src/adapters/</code> — one file per domain (vfo, audio, meter, scope, rf, tx, memory, system).</p>
+<h3 id="what-adapters-replace">What adapters replace<a class="headerlink" href="#what-adapters-replace" title="Permanent link">&para;</a></h3>
+<p>The existing <code>state-adapter.ts</code> and <code>command-bus.ts</code> are the embryonic form of this layer. Migration should refactor them into the adapter pattern, not duplicate alongside.</p>
+<hr />
+<h2 id="layer-3-semantic-components">Layer 3: Semantic components<a class="headerlink" href="#layer-3-semantic-components" title="Permanent link">&para;</a></h2>
+<h3 id="contract_1">Contract<a class="headerlink" href="#contract_1" title="Permanent link">&para;</a></h3>
+<p>A semantic component represents a <strong>radio concept</strong> with a stable typed interface.</p>
+<p>Rules:</p>
+<ul>
+<li>receives only semantic props and callbacks</li>
+<li>no transport imports (<code>sendCommand</code>, <code>getChannel</code>, <code>audioManager</code>)</li>
+<li>no backend endpoint knowledge</li>
+<li>no concrete skin assumptions</li>
+<li>framework-level logic only (event handling, conditional rendering, a11y)</li>
+</ul>
+<h3 id="semantic-component-list">Semantic component list<a class="headerlink" href="#semantic-component-list" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Props (key fields)</th>
+<th>Callbacks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>VfoDisplay</code></td>
+<td>freq, mode, filter, dataMode, badges</td>
+<td>onFreqChange, onModeChange, onFilterChange</td>
+</tr>
+<tr>
+<td><code>RxAudioControl</code></td>
+<td>monitorMode, hasLiveAudio, volume, muted</td>
+<td>onMonitorModeChange, onVolumeChange</td>
+</tr>
+<tr>
+<td><code>TxControl</code></td>
+<td>pttActive, txEnabled, txSupported</td>
+<td>onPttToggle, onStartTx, onStopTx</td>
+</tr>
+<tr>
+<td><code>MeterPanel</code></td>
+<td>sMeter, swr, power, alc, comp</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>ScopeSurface</code></td>
+<td>available, frame</td>
+<td>onTuneToFreq, onSpanChange</td>
+</tr>
+<tr>
+<td><code>BandSelector</code></td>
+<td>currentBand, bands</td>
+<td>onBandChange</td>
+</tr>
+<tr>
+<td><code>ModeSelector</code></td>
+<td>currentMode, modes</td>
+<td>onModeChange</td>
+</tr>
+<tr>
+<td><code>FilterSelector</code></td>
+<td>currentFilter, filters</td>
+<td>onFilterChange</td>
+</tr>
+<tr>
+<td><code>RfFrontEnd</code></td>
+<td>att, preamp, nb, nr, rfGain, squelch</td>
+<td>onChange per field</td>
+</tr>
+<tr>
+<td><code>DspControl</code></td>
+<td>notch, tpf, contour</td>
+<td>onChange per field</td>
+</tr>
+<tr>
+<td><code>MemoryControl</code></td>
+<td>channels, activeChannel</td>
+<td>onRecall, onStore, onClear</td>
+</tr>
+<tr>
+<td><code>StatusIndicator</code></td>
+<td>connected, radioReady, wsHealth</td>
+<td>onReconnect</td>
+</tr>
+</tbody>
+</table>
+<h3 id="svelte-5-pattern">Svelte 5 pattern<a class="headerlink" href="#svelte-5-pattern" title="Permanent link">&para;</a></h3>
+<p>Semantic components use <code>children: Snippet</code> or typed props — no <code>&lt;slot&gt;</code>. Skins provide concrete rendering.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>&lt;!-- semantic/RxAudioControl.svelte --&gt;
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>&lt;script lang=&quot;ts&quot;&gt;
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  interface Props {
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    monitorMode: &#39;live&#39; | &#39;radio&#39; | &#39;mute&#39;;
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    hasLiveAudio: boolean;
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    volume: number;
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    muted: boolean;
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    onMonitorModeChange: (mode: string) =&gt; void;
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    onVolumeChange: (v: number) =&gt; void;
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>  }
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>  let { monitorMode, hasLiveAudio, volume, muted,
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>        onMonitorModeChange, onVolumeChange }: Props = $props();
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>&lt;/script&gt;
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>&lt;!-- Semantic components can render directly or delegate to skin --&gt;
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>&lt;!-- The key constraint: no runtime imports above --&gt;
+</code></pre></div>
+<hr />
+<h2 id="layer-4-presentation-skin-theme-layout">Layer 4: Presentation (Skin + Theme + Layout)<a class="headerlink" href="#layer-4-presentation-skin-theme-layout" title="Permanent link">&para;</a></h2>
+<h3 id="three-independent-knobs">Three independent knobs<a class="headerlink" href="#three-independent-knobs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Knob</th>
+<th>Changes</th>
+<th>Mechanism</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Theme</strong></td>
+<td>Colors, fonts, spacing, shadows</td>
+<td>CSS custom properties</td>
+<td><code>dracula.css</code>, <code>nord.css</code>, <code>crt-green.css</code></td>
+</tr>
+<tr>
+<td><strong>Skin</strong></td>
+<td>Visual implementation of semantic components</td>
+<td>Concrete Svelte components</td>
+<td><code>AmberFrequency</code> vs <code>IndustrialFrequency</code></td>
+</tr>
+<tr>
+<td><strong>Layout</strong></td>
+<td>Spatial arrangement of components on screen</td>
+<td>Grid/flex composition in skin top-level</td>
+<td><code>DesktopGrid</code> vs <code>MobileTabs</code> vs <code>LcdColumn</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Theme</strong> does not change component identity.
+<strong>Skin</strong> does not change behavior contracts.
+<strong>Layout</strong> does not change transport ownership.</p>
+<h3 id="skin-implementation-svelte-5">Skin implementation (Svelte 5)<a class="headerlink" href="#skin-implementation-svelte-5" title="Permanent link">&para;</a></h3>
+<p>Each skin is a concrete Svelte component receiving <code>FrontendRuntime</code> as its single prop:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>&lt;!-- skins/amber-lcd/LcdSkin.svelte --&gt;
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>&lt;script lang=&quot;ts&quot;&gt;
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  import type { FrontendRuntime } from &#39;../../runtime/types&#39;;
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  import { toVfoProps, toRxAudioProps, toMeterProps } from &#39;../../adapters&#39;;
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>  import AmberFrequency from &#39;./AmberFrequency.svelte&#39;;
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>  import AmberMeter from &#39;./AmberMeter.svelte&#39;;
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>  import AmberAudioStrip from &#39;./AmberAudioStrip.svelte&#39;;
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>  import LcdFrame from &#39;./LcdFrame.svelte&#39;;
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>  interface Props { runtime: FrontendRuntime }
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>  let { runtime }: Props = $props();
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>  const vfo = $derived(toVfoProps(runtime.state, runtime.capabilities, runtime.audio, &#39;main&#39;));
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>  const audio = $derived(toRxAudioProps(runtime.state, runtime.capabilities, runtime.audio));
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>  const meter = $derived(toMeterProps(runtime.state, runtime.capabilities));
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>&lt;/script&gt;
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>&lt;LcdFrame&gt;
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>  &lt;AmberFrequency freq={vfo.freqHz} mode={vfo.mode} /&gt;
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>  &lt;AmberMeter sMeter={meter.sMeter} /&gt;
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>  &lt;AmberAudioStrip
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>    mode={audio.monitorMode}
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>    volume={audio.volume}
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>    onModeChange={audio.onMonitorModeChange}
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>    onVolumeChange={audio.onVolumeChange}
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>  /&gt;
+<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>&lt;/LcdFrame&gt;
+</code></pre></div>
+<h3 id="skin-resolution-and-lazy-loading">Skin resolution and lazy loading<a class="headerlink" href="#skin-resolution-and-lazy-loading" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1">// skins/registry.ts</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kr">type</span><span class="w"> </span><span class="nx">SkinId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;desktop-v2&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;amber-lcd&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;mobile&#39;</span><span class="p">;</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kd">function</span><span class="w"> </span><span class="nx">resolveSkinId</span><span class="p">(</span><span class="nx">ctx</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nx">capabilities</span><span class="o">:</span><span class="w"> </span><span class="kt">Capabilities</span><span class="p">;</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="nx">userPreference</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;auto&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;lcd&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;standard&#39;</span><span class="p">;</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span><span class="nx">isMobile</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="p">;</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="p">})</span><span class="o">:</span><span class="w"> </span><span class="nx">SkinId</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">isMobile</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">&#39;mobile&#39;</span><span class="p">;</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">userPreference</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;lcd&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">&#39;amber-lcd&#39;</span><span class="p">;</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">userPreference</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;standard&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s1">&#39;desktop-v2&#39;</span><span class="p">;</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">ctx</span><span class="p">.</span><span class="nx">capabilities</span><span class="p">.</span><span class="nx">scope</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;desktop-v2&#39;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;amber-lcd&#39;</span><span class="p">;</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="p">}</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="kd">const</span><span class="w"> </span><span class="nx">SKIN_LOADERS</span><span class="o">:</span><span class="w"> </span><span class="kt">Record</span><span class="o">&lt;</span><span class="nx">SkinId</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="p">{</span><span class="w"> </span><span class="nx">default</span><span class="o">:</span><span class="w"> </span><span class="kt">Component</span><span class="w"> </span><span class="p">}</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">  </span><span class="s1">&#39;desktop-v2&#39;</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">import</span><span class="p">(</span><span class="s1">&#39;./desktop-v2/DesktopSkin.svelte&#39;</span><span class="p">),</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">  </span><span class="s1">&#39;amber-lcd&#39;</span><span class="o">:</span><span class="w">  </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">import</span><span class="p">(</span><span class="s1">&#39;./amber-lcd/LcdSkin.svelte&#39;</span><span class="p">),</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">  </span><span class="s1">&#39;mobile&#39;</span><span class="o">:</span><span class="w">     </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">import</span><span class="p">(</span><span class="s1">&#39;./mobile/MobileSkin.svelte&#39;</span><span class="p">),</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="p">};</span>
+</code></pre></div>
+<h3 id="app-entry-point-target">App entry point (target)<a class="headerlink" href="#app-entry-point-target" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>&lt;!-- App.svelte --&gt;
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>&lt;script lang=&quot;ts&quot;&gt;
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>  import { runtime } from &#39;./runtime&#39;;
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>  import { resolveSkinId, loadSkin } from &#39;./skins/registry&#39;;
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>  const skinId = $derived(resolveSkinId({
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    capabilities: runtime.capabilities,
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    userPreference: runtime.layoutPreference,
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    isMobile: runtime.isMobile,
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>  }));
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>  let SkinComponent = $state(null);
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>  $effect(() =&gt; {
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    loadSkin(skinId).then(c =&gt; { SkinComponent = c; });
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>  });
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>&lt;/script&gt;
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>{#if SkinComponent}
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>  &lt;SkinComponent {runtime} /&gt;
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>{:else}
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>  &lt;div class=&quot;loading&quot;&gt;Loading...&lt;/div&gt;
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>{/if}
+</code></pre></div>
+<h3 id="layout-slot-model">Layout slot model<a class="headerlink" href="#layout-slot-model" title="Permanent link">&para;</a></h3>
+<p>Each skin's layout arranges semantic components into named zones:</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Desktop V2</th>
+<th>LCD</th>
+<th>Mobile</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>header</code></td>
+<td>VfoHeader + StatusBar</td>
+<td>StatusBar</td>
+<td>Compact VFO + status</td>
+</tr>
+<tr>
+<td><code>leftRail</code></td>
+<td>Band, mode, filter, RF groups</td>
+<td>LeftSidebar</td>
+<td>— (tabbed)</td>
+</tr>
+<tr>
+<td><code>centerPrimary</code></td>
+<td>Hardware scope</td>
+<td>AmberLcdDisplay</td>
+<td>Scope or LCD</td>
+</tr>
+<tr>
+<td><code>centerSecondary</code></td>
+<td>Audio FFT / waterfall</td>
+<td>Audio FFT (if available)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>rightRail</code></td>
+<td>Audio, DSP, TX, CW groups</td>
+<td>RightSidebar</td>
+<td>— (tabbed)</td>
+</tr>
+<tr>
+<td><code>bottomDock</code></td>
+<td>Meters, DX cluster</td>
+<td>—</td>
+<td>Bottom bar</td>
+</tr>
+<tr>
+<td><code>overlay</code></td>
+<td>Modals, freq entry, settings</td>
+<td>Same</td>
+<td>Same</td>
+</tr>
+</tbody>
+</table>
+<p>Skins are not required to fill all slots. Empty slots render nothing.</p>
+<h3 id="theme-architecture">Theme architecture<a class="headerlink" href="#theme-architecture" title="Permanent link">&para;</a></h3>
+<p>Unchanged from current system — 20+ CSS variable themes, applied via <code>data-theme</code> attribute:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="o">[</span><span class="nt">data-theme</span><span class="o">=</span><span class="s2">&quot;dracula&quot;</span><span class="o">]</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nv">--bg</span><span class="p">:</span><span class="w"> </span><span class="mh">#282a36</span><span class="p">;</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nv">--panel</span><span class="p">:</span><span class="w"> </span><span class="mh">#44475a</span><span class="p">;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nv">--text</span><span class="p">:</span><span class="w"> </span><span class="mh">#f8f8f2</span><span class="p">;</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="nv">--accent</span><span class="p">:</span><span class="w"> </span><span class="mh">#bd93f9</span><span class="p">;</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="c">/* ... */</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="p">}</span>
+</code></pre></div>
+<p>Themes are orthogonal to skins. Any theme can be applied to any skin (within reason — amber-lcd may have its own locked theme token set).</p>
+<hr />
+<h2 id="target-file-structure">Target file structure<a class="headerlink" href="#target-file-structure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>frontend/src/
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── runtime/                          # Layer 1
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>│   ├── index.ts                      # createRuntime(), singleton export
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>│   ├── types.ts                      # FrontendRuntime, controller interfaces
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>│   ├── audio-controller.ts           # AudioController implementation
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>│   ├── scope-controller.ts           # ScopeController implementation
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>│   ├── system-controller.ts          # SystemController implementation
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>│   ├── command-dispatcher.ts         # cmd() + optimistic patches
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>│   ├── connection-monitor.ts         # health, reconnect, backoff
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>│   └── capability-resolver.ts        # normalize caps into stable flags
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>│
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>├── adapters/                         # Layer 2
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>│   ├── index.ts                      # re-export all adapters
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>│   ├── vfo.ts
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>│   ├── audio.ts
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>│   ├── meter.ts
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>│   ├── scope.ts
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>│   ├── rf.ts
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>│   ├── tx.ts
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>│   ├── memory.ts
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>│   └── system.ts
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>│
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>├── semantic/                         # Layer 3
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>│   ├── VfoDisplay.svelte
+<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>│   ├── RxAudioControl.svelte
+<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>│   ├── TxControl.svelte
+<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>│   ├── MeterPanel.svelte
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>│   ├── ScopeSurface.svelte
+<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a>│   ├── BandSelector.svelte
+<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a>│   ├── ModeSelector.svelte
+<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a>│   ├── FilterSelector.svelte
+<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a>│   ├── RfFrontEnd.svelte
+<a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a>│   ├── DspControl.svelte
+<a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a>│   ├── MemoryControl.svelte
+<a id="__codelineno-12-35" name="__codelineno-12-35" href="#__codelineno-12-35"></a>│   └── StatusIndicator.svelte
+<a id="__codelineno-12-36" name="__codelineno-12-36" href="#__codelineno-12-36"></a>│
+<a id="__codelineno-12-37" name="__codelineno-12-37" href="#__codelineno-12-37"></a>├── primitives/                       # Shared visual atoms
+<a id="__codelineno-12-38" name="__codelineno-12-38" href="#__codelineno-12-38"></a>│   ├── SegmentedButton.svelte
+<a id="__codelineno-12-39" name="__codelineno-12-39" href="#__codelineno-12-39"></a>│   ├── Knob.svelte
+<a id="__codelineno-12-40" name="__codelineno-12-40" href="#__codelineno-12-40"></a>│   ├── LinearMeter.svelte
+<a id="__codelineno-12-41" name="__codelineno-12-41" href="#__codelineno-12-41"></a>│   ├── SevenSegment.svelte
+<a id="__codelineno-12-42" name="__codelineno-12-42" href="#__codelineno-12-42"></a>│   ├── FrequencyDigits.svelte
+<a id="__codelineno-12-43" name="__codelineno-12-43" href="#__codelineno-12-43"></a>│   ├── CanvasRenderer.svelte
+<a id="__codelineno-12-44" name="__codelineno-12-44" href="#__codelineno-12-44"></a>│   ├── PanelFrame.svelte
+<a id="__codelineno-12-45" name="__codelineno-12-45" href="#__codelineno-12-45"></a>│   └── StatusPill.svelte
+<a id="__codelineno-12-46" name="__codelineno-12-46" href="#__codelineno-12-46"></a>│
+<a id="__codelineno-12-47" name="__codelineno-12-47" href="#__codelineno-12-47"></a>├── skins/                            # Layer 4 — visual implementations
+<a id="__codelineno-12-48" name="__codelineno-12-48" href="#__codelineno-12-48"></a>│   ├── registry.ts                   # resolveSkinId(), loadSkin()
+<a id="__codelineno-12-49" name="__codelineno-12-49" href="#__codelineno-12-49"></a>│   ├── desktop-v2/
+<a id="__codelineno-12-50" name="__codelineno-12-50" href="#__codelineno-12-50"></a>│   │   ├── DesktopSkin.svelte
+<a id="__codelineno-12-51" name="__codelineno-12-51" href="#__codelineno-12-51"></a>│   │   ├── DesktopVfo.svelte
+<a id="__codelineno-12-52" name="__codelineno-12-52" href="#__codelineno-12-52"></a>│   │   ├── DesktopMeter.svelte
+<a id="__codelineno-12-53" name="__codelineno-12-53" href="#__codelineno-12-53"></a>│   │   └── ...
+<a id="__codelineno-12-54" name="__codelineno-12-54" href="#__codelineno-12-54"></a>│   ├── amber-lcd/
+<a id="__codelineno-12-55" name="__codelineno-12-55" href="#__codelineno-12-55"></a>│   │   ├── LcdSkin.svelte
+<a id="__codelineno-12-56" name="__codelineno-12-56" href="#__codelineno-12-56"></a>│   │   ├── AmberFrequency.svelte
+<a id="__codelineno-12-57" name="__codelineno-12-57" href="#__codelineno-12-57"></a>│   │   ├── AmberMeter.svelte
+<a id="__codelineno-12-58" name="__codelineno-12-58" href="#__codelineno-12-58"></a>│   │   └── ...
+<a id="__codelineno-12-59" name="__codelineno-12-59" href="#__codelineno-12-59"></a>│   └── mobile/
+<a id="__codelineno-12-60" name="__codelineno-12-60" href="#__codelineno-12-60"></a>│       ├── MobileSkin.svelte
+<a id="__codelineno-12-61" name="__codelineno-12-61" href="#__codelineno-12-61"></a>│       ├── CompactVfo.svelte
+<a id="__codelineno-12-62" name="__codelineno-12-62" href="#__codelineno-12-62"></a>│       └── ...
+<a id="__codelineno-12-63" name="__codelineno-12-63" href="#__codelineno-12-63"></a>│
+<a id="__codelineno-12-64" name="__codelineno-12-64" href="#__codelineno-12-64"></a>├── themes/                           # CSS tokens
+<a id="__codelineno-12-65" name="__codelineno-12-65" href="#__codelineno-12-65"></a>│   ├── tokens.css                    # base design tokens
+<a id="__codelineno-12-66" name="__codelineno-12-66" href="#__codelineno-12-66"></a>│   ├── dark.css
+<a id="__codelineno-12-67" name="__codelineno-12-67" href="#__codelineno-12-67"></a>│   ├── dracula.css
+<a id="__codelineno-12-68" name="__codelineno-12-68" href="#__codelineno-12-68"></a>│   ├── nord.css
+<a id="__codelineno-12-69" name="__codelineno-12-69" href="#__codelineno-12-69"></a>│   └── ...
+<a id="__codelineno-12-70" name="__codelineno-12-70" href="#__codelineno-12-70"></a>│
+<a id="__codelineno-12-71" name="__codelineno-12-71" href="#__codelineno-12-71"></a>├── stores/                           # Svelte 5 reactive stores (kept)
+<a id="__codelineno-12-72" name="__codelineno-12-72" href="#__codelineno-12-72"></a>│   └── ...                           # migrated into runtime/ over time
+<a id="__codelineno-12-73" name="__codelineno-12-73" href="#__codelineno-12-73"></a>│
+<a id="__codelineno-12-74" name="__codelineno-12-74" href="#__codelineno-12-74"></a>├── lib/                              # Shared utilities (non-runtime)
+<a id="__codelineno-12-75" name="__codelineno-12-75" href="#__codelineno-12-75"></a>│   ├── renderers/                    # Canvas engines (framework-agnostic)
+<a id="__codelineno-12-76" name="__codelineno-12-76" href="#__codelineno-12-76"></a>│   ├── utils/                        # Formatting, smoothing, etc.
+<a id="__codelineno-12-77" name="__codelineno-12-77" href="#__codelineno-12-77"></a>│   ├── data/                         # ARRL band plan, etc.
+<a id="__codelineno-12-78" name="__codelineno-12-78" href="#__codelineno-12-78"></a>│   └── gestures/                     # Touch gesture recognizers
+<a id="__codelineno-12-79" name="__codelineno-12-79" href="#__codelineno-12-79"></a>│
+<a id="__codelineno-12-80" name="__codelineno-12-80" href="#__codelineno-12-80"></a>└── App.svelte                        # Entry point → skin resolver
+</code></pre></div>
+<hr />
+<h2 id="architectural-invariants">Architectural invariants<a class="headerlink" href="#architectural-invariants" title="Permanent link">&para;</a></h2>
+<p>These must hold at all times after migration. Violation = regression.</p>
+<h3 id="inv-1-single-rx-playback-path">INV-1: Single RX playback path<a class="headerlink" href="#inv-1-single-rx-playback-path" title="Permanent link">&para;</a></h3>
+<p>All layouts route through the same <code>AudioController</code>. Codec negotiation, WS subscription, decoding, volume, and mute are layout-independent.</p>
+<h3 id="inv-2-single-scope-ownership-per-type">INV-2: Single scope ownership per type<a class="headerlink" href="#inv-2-single-scope-ownership-per-type" title="Permanent link">&para;</a></h3>
+<p>Hardware scope and audio FFT are owned by <code>ScopeController</code>. Layouts choose whether and where to render — never whether to connect.</p>
+<h3 id="inv-3-scopefalse-audiotrue-is-first-class">INV-3: <code>scope=false + audio=true</code> is first-class<a class="headerlink" href="#inv-3-scopefalse-audiotrue-is-first-class" title="Permanent link">&para;</a></h3>
+<p>Absence of hardware scope must never alter audio behavior. LCD fallback is a presentation concern, not a runtime concern.</p>
+<h3 id="inv-4-capability-gating-precedes-presentation">INV-4: Capability gating precedes presentation<a class="headerlink" href="#inv-4-capability-gating-precedes-presentation" title="Permanent link">&para;</a></h3>
+<p>Panels do not independently decide whether backend capability exists. Runtime/adapters expose stable booleans (<code>hasLiveAudio</code>, <code>hasHardwareScope</code>, <code>hasTx</code>).</p>
+<h3 id="inv-5-mountunmount-does-not-change-transport">INV-5: Mount/unmount does not change transport<a class="headerlink" href="#inv-5-mountunmount-does-not-change-transport" title="Permanent link">&para;</a></h3>
+<p>Swapping layouts or mounting/unmounting visual components must not start or stop transports.</p>
+<h3 id="inv-6-no-runtime-imports-in-presentation">INV-6: No runtime imports in presentation<a class="headerlink" href="#inv-6-no-runtime-imports-in-presentation" title="Permanent link">&para;</a></h3>
+<p>Presentation components (semantic, skins, primitives) must not import from <code>runtime/</code>, <code>$lib/transport/</code>, or <code>$lib/audio/audio-manager</code>. Enforced by eslint.</p>
+<hr />
+<h2 id="import-boundary-rules">Import boundary rules<a class="headerlink" href="#import-boundary-rules" title="Permanent link">&para;</a></h2>
+<h3 id="allowed">Allowed<a class="headerlink" href="#allowed" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Component type</th>
+<th>May import from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Runtime</td>
+<td><code>$lib/transport</code>, <code>$lib/audio</code>, stores, types</td>
+</tr>
+<tr>
+<td>Adapters</td>
+<td>Runtime types (read-only), utilities</td>
+</tr>
+<tr>
+<td>Semantic</td>
+<td>Adapter types, primitives, Svelte, types</td>
+</tr>
+<tr>
+<td>Skins</td>
+<td>Semantic, primitives, adapters, themes, Svelte</td>
+</tr>
+<tr>
+<td>Primitives</td>
+<td>Themes, Svelte, types</td>
+</tr>
+</tbody>
+</table>
+<h3 id="forbidden">Forbidden<a class="headerlink" href="#forbidden" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Component type</th>
+<th>Must NOT import from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Semantic</td>
+<td><code>runtime/</code>, <code>$lib/transport/</code>, <code>$lib/audio/audio-manager</code></td>
+</tr>
+<tr>
+<td>Skins</td>
+<td><code>runtime/</code> (except <code>FrontendRuntime</code> type via props), transport, audio</td>
+</tr>
+<tr>
+<td>Primitives</td>
+<td>Runtime, adapters, transport, audio, stores</td>
+</tr>
+</tbody>
+</table>
+<h3 id="eslint-enforcement">eslint enforcement<a class="headerlink" href="#eslint-enforcement" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>{
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>  &quot;rules&quot;: {
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    &quot;no-restricted-imports&quot;: [&quot;error&quot;, {
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>      &quot;patterns&quot;: [{
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>        &quot;group&quot;: [&quot;$lib/transport/*&quot;, &quot;$lib/audio/audio-manager&quot;],
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>        &quot;message&quot;: &quot;Use adapter props. See ADR 2026-04-12.&quot;
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>      }]
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    }]
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>  },
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>  &quot;overrides&quot;: [{
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>    &quot;files&quot;: [&quot;src/runtime/**&quot;, &quot;src/adapters/**&quot;],
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>    &quot;rules&quot;: { &quot;no-restricted-imports&quot;: &quot;off&quot; }
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>  }]
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>}
+</code></pre></div>
+<hr />
+<h2 id="anti-patterns">Anti-patterns<a class="headerlink" href="#anti-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="1-skin-imports-runtime-directly">1. Skin imports runtime directly<a class="headerlink" href="#1-skin-imports-runtime-directly" title="Permanent link">&para;</a></h3>
+<p>Turns skins into hidden behavior forks. Skin receives <code>FrontendRuntime</code> as a prop from <code>App.svelte</code> — it never imports the singleton.</p>
+<h3 id="2-theme-contains-behavior-flags">2. Theme contains behavior flags<a class="headerlink" href="#2-theme-contains-behavior-flags" title="Permanent link">&para;</a></h3>
+<p>Theme is for tokens only. Feature decisions belong in runtime/adapters.</p>
+<h3 id="3-layout-decides-transport-based-on-mount-state">3. Layout decides transport based on mount state<a class="headerlink" href="#3-layout-decides-transport-based-on-mount-state" title="Permanent link">&para;</a></h3>
+<p>This is the current root cause of drift. Runtime owns transport lifecycle; layout only renders data.</p>
+<h3 id="4-semantic-component-accepts-escape-hatches">4. Semantic component accepts escape hatches<a class="headerlink" href="#4-semantic-component-accepts-escape-hatches" title="Permanent link">&para;</a></h3>
+<p>Props like <code>rawWsData</code> or <code>onRawCommand</code> destroy the semantic boundary. If a semantic component needs new behavior, extend the adapter.</p>
+<h3 id="5-lcd-treated-as-special-case">5. LCD treated as special case<a class="headerlink" href="#5-lcd-treated-as-special-case" title="Permanent link">&para;</a></h3>
+<p>LCD is a skin + layout variant over shared runtime. It is not a separate code path. No <code>if (isLcd)</code> in runtime or adapters.</p>
+<h3 id="6-duplicated-protocol-parsing">6. Duplicated protocol parsing<a class="headerlink" href="#6-duplicated-protocol-parsing" title="Permanent link">&para;</a></h3>
+<p>Scope frame parsing, audio header parsing — all binary protocol logic lives in runtime controllers. Never in rendering components.</p>
+<hr />
+<h2 id="migration-coexistence">Migration coexistence<a class="headerlink" href="#migration-coexistence" title="Permanent link">&para;</a></h2>
+<p>During Phases 4-5, old and new code coexist:</p>
+<ol>
+<li>New skins live in <code>skins/</code> — existing <code>components-v2/</code> untouched initially</li>
+<li>Feature flag <code>?skin=unified</code> in <code>App.svelte</code> activates new path</li>
+<li>Old layouts remain default until parity gate passes</li>
+<li>Phase 6 removes old layouts after confirmation</li>
+</ol>
+<hr />
+<h2 id="evidence-gates">Evidence gates<a class="headerlink" href="#evidence-gates" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>After phase</th>
+<th>Gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 0</td>
+<td>RX audio failure classified with evidence; eslint guardrails active</td>
+</tr>
+<tr>
+<td>Phase 2</td>
+<td>One controller-owned audio/scope path; no presentation-owned WS connections</td>
+</tr>
+<tr>
+<td>Phase 3</td>
+<td>Semantic component contracts stable for both desktop and LCD</td>
+</tr>
+<tr>
+<td>Before Phase 6</td>
+<td>All 4 capability scenarios pass; Scenario B (<code>scope=false + audio=true</code>) explicitly verified; manual hardware validation</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="relationship-to-existing-code">Relationship to existing code<a class="headerlink" href="#relationship-to-existing-code" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Current code</th>
+<th>Target equivalent</th>
+<th>Migration action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lib/audio/audio-manager.ts</code></td>
+<td><code>runtime/audio-controller.ts</code></td>
+<td>Refactor into controller with same internal logic</td>
+</tr>
+<tr>
+<td><code>components-v2/wiring/state-adapter.ts</code></td>
+<td><code>adapters/*.ts</code></td>
+<td>Split into per-domain adapters</td>
+</tr>
+<tr>
+<td><code>components-v2/wiring/command-bus.ts</code></td>
+<td><code>runtime/command-dispatcher.ts</code> + adapter callbacks</td>
+<td>Extract command dispatch to runtime, bind callbacks in adapters</td>
+</tr>
+<tr>
+<td><code>lib/stores/*.svelte.ts</code></td>
+<td><code>runtime/</code> internal state</td>
+<td>Stores become implementation detail of runtime</td>
+</tr>
+<tr>
+<td><code>lib/transport/ws-client.ts</code></td>
+<td><code>runtime/</code> internal</td>
+<td>Transport is private to runtime</td>
+</tr>
+<tr>
+<td><code>components-v2/layout/RadioLayout.svelte</code></td>
+<td><code>skins/desktop-v2/DesktopSkin.svelte</code></td>
+<td>Rewrite as skin</td>
+</tr>
+<tr>
+<td><code>components-v2/layout/LcdLayout.svelte</code></td>
+<td><code>skins/amber-lcd/LcdSkin.svelte</code></td>
+<td>Rewrite as skin</td>
+</tr>
+<tr>
+<td><code>components-v2/panels/*.svelte</code></td>
+<td><code>semantic/*.svelte</code> + <code>skins/*/</code> visual parts</td>
+<td>Split semantic contract from visual implementation</td>
+</tr>
+<tr>
+<td><code>components-v2/theme/</code></td>
+<td><code>themes/</code></td>
+<td>Move as-is</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
+<p>This architecture guarantees:</p>
+<ul>
+<li><strong>New skin</strong> = new directory in <code>skins/</code>, zero changes to runtime/adapters/semantic</li>
+<li><strong>New radio capability</strong> = changes in runtime + adapter, zero changes to skins</li>
+<li><strong>Audio bug</strong> = fixed in one place (<code>runtime/audio-controller.ts</code>), works identically in all skins</li>
+<li><strong>Behavioral parity</strong> = enforced architecturally (one runtime, one adapter set) and by eslint</li>
+<li><strong>No code duplication</strong> = protocol parsing once in runtime, semantic logic once in adapters, visual variants only in skins</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/morozsm/icom-lan" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

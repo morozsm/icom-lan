@@ -1208,6 +1208,39 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#mobile-headsetlock-screen-controls-do-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mobile headset/lock-screen controls do nothing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-ui-polling-appears-slower-on-low-battery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web UI polling appears slower on low battery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mobile-v2-gestures-are-not-available" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mobile v2 gestures are not available
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1351,6 +1384,17 @@
     <span class="md-ellipsis">
       
         CI-V Commands Timeout During Scope/Waterfall
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#udp-errors-in-logs-peerhostport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDP Errors in Logs (peer=&lt;host:port&gt;)
       
     </span>
   </a>
@@ -2260,34 +2304,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../internals/cli-design/" class="md-nav__link">
         
   
@@ -2571,6 +2587,39 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#mobile-headsetlock-screen-controls-do-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mobile headset/lock-screen controls do nothing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-ui-polling-appears-slower-on-low-battery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web UI polling appears slower on low battery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mobile-v2-gestures-are-not-available" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mobile v2 gestures are not available
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2714,6 +2763,17 @@
     <span class="md-ellipsis">
       
         CI-V Commands Timeout During Scope/Waterfall
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#udp-errors-in-logs-peerhostport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UDP Errors in Logs (peer=&lt;host:port&gt;)
       
     </span>
   </a>
@@ -2926,7 +2986,7 @@
 <li><strong>CI-V port negotiation failed</strong> — this usually means the conninfo exchange didn't complete properly</li>
 <li><strong>Radio busy</strong> — another application may be holding the CI-V stream</li>
 <li><strong>Network congestion</strong> — try increasing the timeout</li>
-<li><strong>Command pacing too aggressive for current link/rig state</strong> — increase <code>ICOM_CIV_MIN_INTERVAL_MS</code> (e.g., 50-80)</li>
+<li><strong>Command pacing too aggressive for current link/rig state</strong> — increase <code>ICOM_CIV_MIN_INTERVAL_MS</code> (e.g., 50-80) for LAN, or <code>ICOM_SERIAL_CIV_MIN_INTERVAL_MS</code> for serial backend</li>
 </ol>
 <p><strong>Debug:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -2937,7 +2997,7 @@
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># This will show the full handshake sequence</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">freq</span> <span class="o">=</span> <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">get_frequency</span><span class="p">()</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">freq</span> <span class="o">=</span> <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">get_freq</span><span class="p">()</span>
 </code></pre></div>
 <p>Look for:
 - <code>Status: civ_port=50002</code> — confirms port negotiation succeeded
@@ -2983,6 +3043,34 @@ regular command responses. The serial backend enforces a deterministic guardrail
 requests are rejected intentionally.</p>
 <p><strong>Fix:</strong> Wait for <code>radio_ready=true</code> in state updates before retrying manual connect.
 Do not spam reconnect requests from frontend automation loops.</p>
+<h3 id="mobile-headsetlock-screen-controls-do-nothing">Mobile headset/lock-screen controls do nothing<a class="headerlink" href="#mobile-headsetlock-screen-controls-do-nothing" title="Permanent link">&para;</a></h3>
+<p><strong>Symptom:</strong> Volume/media buttons do not tune frequency and play/pause does not toggle PTT.</p>
+<p><strong>Cause:</strong> Browser does not expose the MediaSession API (<code>navigator.mediaSession</code>), so handlers are not registered.</p>
+<p><strong>Fixes:</strong></p>
+<ol>
+<li>Verify behavior in a browser/platform with MediaSession support.</li>
+<li>Use on-screen controls as fallback (expected behavior on unsupported browsers).</li>
+</ol>
+<h3 id="web-ui-polling-appears-slower-on-low-battery">Web UI polling appears slower on low battery<a class="headerlink" href="#web-ui-polling-appears-slower-on-low-battery" title="Permanent link">&para;</a></h3>
+<p><strong>Symptom:</strong> State updates arrive less frequently on mobile devices with low battery.</p>
+<p><strong>Cause:</strong> Frontend intentionally increases <code>/api/v1/state</code> polling interval when battery is low and not charging:</p>
+<ul>
+<li>10–20% -&gt; 2x interval</li>
+<li>&lt;=10% -&gt; 4x interval</li>
+</ul>
+<p><strong>Fixes / Notes:</strong></p>
+<ol>
+<li>Charge device to restore normal polling cadence.</li>
+<li>This optimization is skipped automatically on browsers without Battery Status API support.</li>
+</ol>
+<h3 id="mobile-v2-gestures-are-not-available">Mobile v2 gestures are not available<a class="headerlink" href="#mobile-v2-gestures-are-not-available" title="Permanent link">&para;</a></h3>
+<p><strong>Symptom:</strong> Swipe-to-dismiss bottom sheets and touch-first mobile layout are missing.</p>
+<p><strong>Cause:</strong> UI version defaults to v1 unless v2 is selected.</p>
+<p><strong>Fixes:</strong></p>
+<ol>
+<li>Open Web UI with <code>?ui=v2</code> query parameter.</li>
+<li>Keep v2 selected in localStorage for subsequent sessions.</li>
+</ol>
 <h2 id="command-issues">Command Issues<a class="headerlink" href="#command-issues" title="Permanent link">&para;</a></h2>
 <h3 id="radio-rejected-set_frequency">"Radio rejected set_frequency"<a class="headerlink" href="#radio-rejected-set_frequency" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom:</strong> <code>CommandError: Radio rejected set_frequency(999999999)</code></p>
@@ -3063,6 +3151,47 @@ Do not spam reconnect requests from frontend automation loops.</p>
 at a time. Scope data (~225 packets/sec) would queue ahead of command responses.</p>
 <p><strong>Solution:</strong> Upgrade to v0.8.0+. The drain-all RX pattern processes all queued
 packets each iteration.</p>
+<h2 id="udp-errors-in-logs-peerhostport">UDP Errors in Logs (<code>peer=&lt;host:port&gt;</code>)<a class="headerlink" href="#udp-errors-in-logs-peerhostport" title="Permanent link">&para;</a></h2>
+<p><strong>Symptom:</strong> log lines like:</p>
+<ul>
+<li><code>UDP error [peer=192.168.55.40:50002] (#1): ...</code></li>
+<li><code>UDP error [peer=192.168.55.40:50001] (#100, suppressed 97): ...</code></li>
+</ul>
+<p><strong>What changed:</strong> transport logs now include the remote endpoint in each UDP error
+line. This helps distinguish which logical channel is failing.</p>
+<p><strong>Port mapping (defaults):</strong></p>
+<ul>
+<li><code>:50001</code> -&gt; control/keepalive channel</li>
+<li><code>:50002</code> -&gt; CI-V command/state channel</li>
+<li><code>:50003</code> -&gt; audio channel</li>
+</ul>
+<p>These are Icom's factory defaults and match the vast majority of deployments.
+If the radio's menu has been changed, or the client was started with a custom
+<code>--control-port</code> / <code>ICOM_PORT</code> (see <code>src/icom_lan/cli.py</code>), the actual ports may
+differ — CI-V and audio ports can also be reassigned by the radio's status
+report (see <code>src/icom_lan/_control_phase.py</code>). In that case, substitute your
+session's ports in the filters below.</p>
+<p><strong>How to interpret quickly:</strong></p>
+<ol>
+<li>Mostly <code>:50003</code> errors -&gt; audio path issue (network jitter/loss, remote link).</li>
+<li>Repeated <code>:50002</code> errors -&gt; command/state instability; expect CI-V retries/timeouts.</li>
+<li><code>:50001</code> errors -&gt; session-level risk (keepalive/control path), reconnect likely.</li>
+</ol>
+<p><strong>Important logging behavior:</strong></p>
+<ul>
+<li>First 3 UDP errors are logged individually.</li>
+<li>After that, logs are throttled and emitted every 100th event
+  (<code>suppressed 97</code>) to avoid log storms.</li>
+</ul>
+<p><strong>Runbook:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Keep only UDP diagnostics from the daemon log</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>rg<span class="w"> </span><span class="s2">&quot;UDP error|UDP connection lost&quot;</span><span class="w"> </span>logs/icom-lan.log
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Focus on CI-V channel failures only (replace 50002 if your session uses a custom CI-V port)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>rg<span class="w"> </span><span class="s2">&quot;peer=.*:50002&quot;</span><span class="w"> </span>logs/icom-lan.log
+</code></pre></div>
+<p>If only one peer/port is noisy, troubleshoot that path first (audio, CI-V, or
+control) instead of treating it as a generic network failure.</p>
 <h2 id="reconnect-after-disconnect-takes-too-long">Reconnect After Disconnect Takes Too Long<a class="headerlink" href="#reconnect-after-disconnect-takes-too-long" title="Permanent link">&para;</a></h2>
 <p><strong>Symptom:</strong> After clicking Disconnect then Connect, the radio doesn't respond
 for 30-60 seconds.</p>
@@ -3100,11 +3229,11 @@ latency connections, this may still be insufficient — consider a local deploym
 </ul>
 <p><strong>Cause:</strong> On macOS, <code>opuslib</code> may fail to locate Homebrew <code>libopus</code> automatically.</p>
 <p><strong>Fixes:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Install libopus via Homebrew</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>brew<span class="w"> </span>install<span class="w"> </span>opus
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Apply project patch for opuslib path detection</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>python<span class="w"> </span>scripts/patch_opuslib_macos.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Install libopus via Homebrew</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>brew<span class="w"> </span>install<span class="w"> </span>opus
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Apply project patch for opuslib path detection</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>python<span class="w"> </span>scripts/patch_opuslib_macos.py
 </code></pre></div>
 <p>Then restart the app and retest TX audio. See detailed notes:
 <code>docs/opuslib-macos-fix.md</code>.</p>
@@ -3116,13 +3245,13 @@ latency connections, this may still be insufficient — consider a local deploym
 2. Radio not powered on
 3. Wrong device path</p>
 <p><strong>Solutions:</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># List available serial devices (macOS)</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ls<span class="w"> </span>-l<span class="w"> </span>/dev/cu.usbserial-*
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Linux</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>ls<span class="w"> </span>-l<span class="w"> </span>/dev/ttyUSB*
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Wait 5-10 seconds after power-on for device to appear</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># List available serial devices (macOS)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>ls<span class="w"> </span>-l<span class="w"> </span>/dev/cu.usbserial-*
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Linux</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>ls<span class="w"> </span>-l<span class="w"> </span>/dev/ttyUSB*
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># Wait 5-10 seconds after power-on for device to appear</span>
 </code></pre></div></p>
 <h3 id="ci-v-usb-port-must-be-set-to-ci-v-not-remote">"CI-V USB Port must be set to CI-V, not REMOTE"<a class="headerlink" href="#ci-v-usb-port-must-be-set-to-ci-v-not-remote" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom:</strong> Serial connection opens, but CI-V commands fail with timeout or NAK.</p>
@@ -3143,15 +3272,16 @@ latency connections, this may still be insufficient — consider a local deploym
 2. Wrong device name
 3. sounddevice/numpy not installed</p>
 <p><strong>Solutions:</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># List available audio devices</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>icom-lan<span class="w"> </span>--list-audio-devices
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>icom-lan<span class="w"> </span>--list-audio-devices<span class="w"> </span>--json
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># Check radio settings:</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Menu → Set → Connectors → USB Audio → USB Audio (RX/TX) → Enabled</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="c1"># Install serial + USB audio dependencies if missing</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;icom-lan[serial,bridge]&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># List available audio devices</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>icom-lan<span class="w"> </span>--list-audio-devices
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>icom-lan<span class="w"> </span>--list-audio-devices<span class="w"> </span>--json
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Check radio settings:</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="c1"># Menu → Set → Connectors → USB Audio → USB Audio (RX/TX) → Enabled</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="c1"># Audio dependencies ship with the core install (since v0.19); the legacy</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="c1"># `[bridge]` extra still resolves but is now a no-op alias.</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan
 </code></pre></div></p>
 <h3 id="scope-over-serial-requires-baudrate-115200_1">"Scope over serial requires baudrate &gt;= 115200"<a class="headerlink" href="#scope-over-serial-requires-baudrate-115200_1" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom:</strong> <code>CommandError</code> when calling <code>enable_scope()</code> or <code>capture_scope_frame()</code> on serial backend with baud &lt; 115200.</p>
@@ -3160,11 +3290,11 @@ latency connections, this may still be insufficient — consider a local deploym
 1. <strong>Recommended:</strong> Set CI-V USB Baud Rate to 115200 or higher in radio settings:
    - Menu → Set → Connectors → CI-V → CI-V USB Baud Rate → <strong>115200</strong>
 2. <strong>Override</strong> (use with caution for debugging only):
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD</span><span class="o">=</span><span class="m">1</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--serial-baud<span class="w"> </span><span class="m">19200</span><span class="w"> </span>scope
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD</span><span class="o">=</span><span class="m">1</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--serial-baud<span class="w"> </span><span class="m">19200</span><span class="w"> </span>scope
 </code></pre></div>
    Python API:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">config</span> <span class="o">=</span> <span class="n">SerialBackendConfig</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">allow_low_baud_scope</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">config</span> <span class="o">=</span> <span class="n">SerialBackendConfig</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">allow_low_baud_scope</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
    The library will log a warning about increased timeout risk.</p>
 <h3 id="serial-ci-v-commands-time-out-under-load">Serial CI-V commands time out under load<a class="headerlink" href="#serial-ci-v-commands-time-out-under-load" title="Permanent link">&para;</a></h3>
@@ -3173,12 +3303,12 @@ latency connections, this may still be insufficient — consider a local deploym
 1. Baud rate too low for combined traffic
 2. CI-V pacing too aggressive</p>
 <p><strong>Solutions:</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Increase serial CI-V pacing interval (default 50 ms)</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_CIV_MIN_INTERVAL_MS</span><span class="o">=</span><span class="m">80</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Or use higher baud rate (radio setting)</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Menu → Set → Connectors → CI-V → CI-V USB Baud Rate → 115200</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Increase serial CI-V pacing interval (default 50 ms)</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_CIV_MIN_INTERVAL_MS</span><span class="o">=</span><span class="m">80</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1"># Or use higher baud rate (radio setting)</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="c1"># Menu → Set → Connectors → CI-V → CI-V USB Baud Rate → 115200</span>
 </code></pre></div></p>
 <h3 id="usb-audio-rx-works-but-tx-does-not">USB audio RX works, but TX does not<a class="headerlink" href="#usb-audio-rx-works-but-tx-does-not" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom:</strong> Can hear radio RX audio, but transmit from computer does not work.</p>
@@ -3187,31 +3317,31 @@ latency connections, this may still be insufficient — consider a local deploym
 2. PTT not activated
 3. Wrong TX device selected</p>
 <p><strong>Solutions:</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Check radio setting:</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># Menu → Set → Connectors → USB Audio → USB Audio TX → Enabled</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Verify TX device name matches RX</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>icom-lan<span class="w"> </span>--list-audio-devices
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Explicitly set TX device</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--tx-device<span class="w"> </span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="w"> </span>audio<span class="w"> </span>tx<span class="w"> </span>--in<span class="w"> </span>test.wav
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c1"># Ensure PTT is active during TX (library handles this automatically for audio tx)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Check radio setting:</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="c1"># Menu → Set → Connectors → USB Audio → USB Audio TX → Enabled</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Verify TX device name matches RX</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>icom-lan<span class="w"> </span>--list-audio-devices
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Explicitly set TX device</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--tx-device<span class="w"> </span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="w"> </span>audio<span class="w"> </span>tx<span class="w"> </span>--in<span class="w"> </span>test.wav
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c1"># Ensure PTT is active during TX (library handles this automatically for audio tx)</span>
 </code></pre></div></p>
 <h3 id="permission-denied-on-devcuusbserial-">Permission denied on /dev/cu.usbserial-*<a class="headerlink" href="#permission-denied-on-devcuusbserial-" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom:</strong> <code>PermissionError</code> when opening serial device.</p>
 <p><strong>Cause:</strong> User lacks permissions (rare on macOS, more common on Linux).</p>
 <p><strong>Solutions:</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Linux: add user to dialout group</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-a<span class="w"> </span>-G<span class="w"> </span>dialout<span class="w"> </span><span class="nv">$USER</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># Logout/login required</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># macOS: check ownership (typically world-readable by default)</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>ls<span class="w"> </span>-l<span class="w"> </span>/dev/cu.usbserial-*
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Should show: crw-rw-rw- root wheel</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="c1"># Temporary workaround (not recommended for production)</span>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">666</span><span class="w"> </span>/dev/cu.usbserial-XXXXXX
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Linux: add user to dialout group</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-a<span class="w"> </span>-G<span class="w"> </span>dialout<span class="w"> </span><span class="nv">$USER</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="c1"># Logout/login required</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># macOS: check ownership (typically world-readable by default)</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>ls<span class="w"> </span>-l<span class="w"> </span>/dev/cu.usbserial-*
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Should show: crw-rw-rw- root wheel</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="c1"># Temporary workaround (not recommended for production)</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">666</span><span class="w"> </span>/dev/cu.usbserial-XXXXXX
 </code></pre></div></p>
 
 

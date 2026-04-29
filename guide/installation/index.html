@@ -562,10 +562,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-audio-support" class="md-nav__link">
+  <a href="#optional-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Optional: Audio Support
+        Optional Dependencies
       
     </span>
   </a>
@@ -1986,34 +1986,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../internals/cli-design/" class="md-nav__link">
         
   
@@ -2253,10 +2225,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#optional-audio-support" class="md-nav__link">
+  <a href="#optional-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Optional: Audio Support
+        Optional Dependencies
       
     </span>
   </a>
@@ -2348,7 +2320,7 @@
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Python 3.11+</strong></li>
-<li>An Icom radio with LAN/WiFi connectivity (IC-7610, IC-705, IC-7300, IC-9700, etc.)</li>
+<li>An Icom radio with LAN/WiFi connectivity (IC-7610, IC-705, IC-9700, etc.) or USB serial (IC-7300, IC-7610, etc.)</li>
 <li>Network access to the radio (same LAN/subnet)</li>
 </ul>
 <h2 id="install-from-pypi">Install from PyPI<a class="headerlink" href="#install-from-pypi" title="Permanent link">&para;</a></h2>
@@ -2365,11 +2337,19 @@
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>icom-lan
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
 </code></pre></div>
-<h2 id="optional-audio-support">Optional: Audio Support<a class="headerlink" href="#optional-audio-support" title="Permanent link">&para;</a></h2>
-<p>For Opus codec audio streaming:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan<span class="o">[</span>audio<span class="o">]</span>
+<h2 id="optional-dependencies">Optional Dependencies<a class="headerlink" href="#optional-dependencies" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan<span class="o">[</span>scope<span class="o">]</span><span class="w">    </span><span class="c1"># Scope PNG rendering (pillow)</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan<span class="o">[</span>tls<span class="o">]</span><span class="w">      </span><span class="c1"># HTTPS with auto-generated certs (cryptography)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan<span class="o">[</span>webrtc<span class="o">]</span><span class="w">   </span><span class="c1"># WebRTC audio transport (aiortc)</span>
 </code></pre></div>
-<p>This installs <code>opuslib</code> for Opus codec support. Not required for PCM/uLaw audio.</p>
+<div class="admonition note">
+<p class="admonition-title">Audio bridge included by default (since v0.19)</p>
+<p><code>opuslib</code>, <code>sounddevice</code>, and <code>numpy</code> are now part of the core install.
+<code>pip install icom-lan</code> is enough for the Web UI, audio bridge, and Opus
+codec support — no extras needed.</p>
+<p>The legacy <code>[audio]</code> and <code>[bridge]</code> extras are preserved as no-op
+aliases so existing install commands keep working.</p>
+</div>
 <h2 id="verify-installation">Verify Installation<a class="headerlink" href="#verify-installation" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Check the CLI is available</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>icom-lan<span class="w"> </span>--help
@@ -2393,10 +2373,10 @@
 <li><strong>Menu → Set → Network → Network User</strong> — create credentials</li>
 </ol>
 <h3 id="ic-7300">IC-7300<a class="headerlink" href="#ic-7300" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Requires the <strong>optional LAN module</strong> or use via IC-7610's second CI-V port</li>
-<li>Same network settings menu structure</li>
-</ol>
+<p>The IC-7300 does <strong>not</strong> have LAN/WiFi connectivity. Use the <strong>USB serial backend</strong> instead:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-7300<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-XXXXX<span class="w"> </span>status
+</code></pre></div>
+<p>See the <a href="../ic7300-usb-setup/">IC-7300 USB Setup guide</a> for details.</p>
 <div class="admonition tip">
 <p class="admonition-title">Static IP Recommended</p>
 <p>Assign a static IP to your radio to avoid connection issues after DHCP lease changes.</p>

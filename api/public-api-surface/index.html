@@ -1289,6 +1289,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#stability-tiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stability tiers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stability tiers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-stable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 — Stable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-best-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2 — Best-effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-internal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3 — Internal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration policy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#summary" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1964,34 +2025,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../internals/cli-design/" class="md-nav__link">
         
   
@@ -2270,6 +2303,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#stability-tiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stability tiers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stability tiers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-stable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 — Stable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-best-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2 — Best-effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-internal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3 — Internal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration policy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#summary" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2456,6 +2550,109 @@
 <li><strong>Scope</strong>: <code>ScopeAssembler</code>, <code>ScopeFrame</code> — scope assembly; scope rendering (<code>SCOPE_THEMES</code>, <code>amplitude_to_color</code>, <code>render_scope_image</code>, etc.) when Pillow is available.</li>
 </ul>
 <p>When extending the library or writing integration code, prefer importing from the modules that define these symbols (e.g. <code>icom_lan.commands</code>, <code>icom_lan.transport</code>) rather than relying on <code>icom_lan</code> re-exports, so that future narrowing of the top-level <code>__all__</code> does not break your code.</p>
+<hr />
+<h2 id="stability-tiers">Stability tiers<a class="headerlink" href="#stability-tiers" title="Permanent link">&para;</a></h2>
+<p>Effective from <strong>v0.19</strong>. Every public symbol in the package belongs to exactly
+one tier. The tier governs the breakage policy, the recommended import path,
+and whether the symbol is allowed in production code outside its owning
+subsystem.</p>
+<h3 id="tier-1-stable">Tier 1 — Stable<a class="headerlink" href="#tier-1-stable" title="Permanent link">&para;</a></h3>
+<p>Public API. Breaking changes require a <strong>major version bump</strong>
+(semver-strict). Symbols are loaded eagerly by <code>icom_lan/__init__.py</code> and
+available directly via <code>from icom_lan import …</code>.</p>
+<p><strong>Backend factory and configs</strong></p>
+<ul>
+<li><code>__version__</code></li>
+<li><code>create_radio</code></li>
+<li><code>BackendConfig</code>, <code>LanBackendConfig</code>, <code>SerialBackendConfig</code>,
+  <code>YaesuCatBackendConfig</code></li>
+</ul>
+<p><strong>Capability protocols (from <code>icom_lan.radio_protocol</code>)</strong></p>
+<ul>
+<li><code>Radio</code></li>
+<li><code>LevelsCapable</code>, <code>MetersCapable</code>, <code>PowerControlCapable</code>,
+  <code>StateNotifyCapable</code></li>
+<li><code>AudioCapable</code>, <code>CivCommandCapable</code>, <code>ModeInfoCapable</code>, <code>ScopeCapable</code></li>
+<li><code>DualReceiverCapable</code>, <code>ReceiverBankCapable</code>, <code>TransceiverBankCapable</code>,
+  <code>VfoSlotCapable</code></li>
+<li><code>StateCacheCapable</code>, <code>RecoverableConnection</code></li>
+<li><code>DspControlCapable</code>, <code>AntennaControlCapable</code>, <code>CwControlCapable</code>,
+  <code>VoiceControlCapable</code></li>
+<li><code>SystemControlCapable</code>, <code>RepeaterControlCapable</code>, <code>AdvancedControlCapable</code></li>
+<li><code>TransceiverStatusCapable</code>, <code>RitXitCapable</code>, <code>MemoryCapable</code></li>
+<li><code>SplitCapable</code> (new in v0.19)</li>
+</ul>
+<p><strong>Exceptions (from <code>icom_lan.exceptions</code>)</strong></p>
+<ul>
+<li><code>IcomLanError</code>, <code>AudioCodecBackendError</code>, <code>AudioError</code>, <code>AudioFormatError</code></li>
+<li><code>AudioTranscodeError</code>, <code>AuthenticationError</code>, <code>CommandError</code></li>
+<li><code>ConnectionError</code>, <code>TimeoutError</code></li>
+</ul>
+<p><strong>Public types (from <code>icom_lan.types</code>)</strong></p>
+<ul>
+<li><code>Mode</code>, <code>AudioCodec</code>, <code>BreakInMode</code>, <code>Meter</code> (and the other symbols
+  currently re-exported from <code>icom_lan.types</code>)</li>
+</ul>
+<p><strong>Public state types</strong></p>
+<ul>
+<li><code>RadioState</code>, <code>RadioProfile</code>, <code>VfoSlotState</code>, <code>YaesuStateExtension</code></li>
+</ul>
+<p>Example (valid):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span><span class="p">,</span> <span class="n">Radio</span><span class="p">,</span> <span class="n">LanBackendConfig</span><span class="p">,</span> <span class="n">MetersCapable</span>
+</code></pre></div>
+<h3 id="tier-2-best-effort">Tier 2 — Best-effort<a class="headerlink" href="#tier-2-best-effort" title="Permanent link">&para;</a></h3>
+<p>Available via <code>from icom_lan import …</code>, but loaded lazily through PEP 562
+<code>__getattr__</code> so they do not pull their subsystem into memory until the name
+is actually accessed. Breaking changes require a <strong>CHANGELOG note plus a
+minor version bump</strong>. No semver guarantee — these may be reshaped or moved
+without a major version.</p>
+<ul>
+<li><code>IcomRadio</code>, <code>IcomCommander</code>, <code>Priority</code></li>
+<li>Audio primitives: <code>audio.backend.AudioBackend</code>,
+  <code>audio.backend.PortAudioBackend</code>, <code>audio.backend.FakeAudioBackend</code></li>
+<li>DSP utilities: <code>audio.dsp.NoiseGate</code>, <code>audio.dsp.RmsNormalizer</code>,
+  <code>audio.dsp.Limiter</code>, <code>audio.dsp.DspPipeline</code></li>
+<li>Audio configuration and devices: <code>audio.config.AudioConfig</code>,
+  <code>audio.usb_driver.UsbAudioDriver</code> (and similar audio-stream primitives)</li>
+</ul>
+<p>Example (valid, lazy-loaded):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span><span class="p">,</span> <span class="n">IcomCommander</span>  <span class="c1"># tier-2 — works, but no semver guarantee</span>
+</code></pre></div>
+<h3 id="tier-3-internal">Tier 3 — Internal<a class="headerlink" href="#tier-3-internal" title="Permanent link">&para;</a></h3>
+<p>Subject to change without notice. <strong>Not</strong> re-exported from the top-level
+package. Importing these from production source outside the owning
+subsystem triggers ruff <code>TID251</code>. Tests are exempt (see existing
+<code>tests/* per-file-ignores</code> in <code>pyproject.toml</code>).</p>
+<ul>
+<li><code>icom_lan.web.*</code> — internal to the web subsystem</li>
+<li><code>icom_lan.rigctld.*</code> — internal to the rigctld subsystem</li>
+<li><code>icom_lan.cli</code> — internal to the CLI</li>
+<li><code>icom_lan.radio.IcomRadio</code> — legacy direct-import path (use tier-2
+  re-export from <code>icom_lan</code> instead)</li>
+<li>Most underscore-prefixed modules (<code>_connection_state</code>,
+  <code>_shared_state_runtime</code>, …)</li>
+</ul>
+<p>Example (invalid — flagged by <code>TID251</code> outside the owning subsystem):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.web.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ControlHandler</span>  <span class="c1"># tier-3 — forbidden in production</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.server</span><span class="w"> </span><span class="kn">import</span> <span class="n">RigctldServer</span>  <span class="c1"># tier-3 — forbidden in production</span>
+</code></pre></div>
+<h3 id="migration-policy">Migration policy<a class="headerlink" href="#migration-policy" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Promote tier 2 → tier 1.</strong> Cite real-world usage in a PR; the tier-1
+  list grows by addition and is reviewed in the open. CHANGELOG entry under
+  <code>### Added</code>.</li>
+<li><strong>Demote tier 1 → tier 2.</strong> Requires a major version bump. CHANGELOG
+  entry under <code>### Changed</code>.</li>
+<li><strong>Remove a tier-1 symbol.</strong> Requires a major version bump <strong>and</strong> a
+  two-minor-release deprecation cycle (<code>DeprecationWarning</code> for at least
+  two minor releases before removal).</li>
+<li><strong>Add a new tier-1 symbol.</strong> PR + CHANGELOG entry under <code>### Added</code>. The
+  symbol must be re-exported from <code>icom_lan/__init__.py</code> and listed in this
+  document.</li>
+<li><strong>Tier 2 / tier 3 changes.</strong> May happen in any minor release with a
+  CHANGELOG note. No deprecation cycle is required, but a one-release
+  warning is preferred when a tier-2 symbol is being removed entirely.</li>
+</ul>
 <hr />
 <h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
 <ul>

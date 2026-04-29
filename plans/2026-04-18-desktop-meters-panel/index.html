@@ -1,0 +1,2950 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Python library for controlling Icom transceivers over LAN">
+      
+      
+      
+        <link rel="canonical" href="https://morozsm.github.io/icom-lan/plans/2026-04-18-desktop-meters-panel/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Desktop Bottom-Dock Redesign — Unified Meters Dashboard - icom-lan</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#desktop-bottom-dock-redesign-unified-meters-dashboard" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="icom-lan" class="md-header__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            icom-lan
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Desktop Bottom-Dock Redesign — Unified Meters Dashboard
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/connection/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/public-api-surface/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../internals/architecture/" class="md-tabs__link">
+          
+  
+  
+  Internals
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="icom-lan" class="md-nav__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    icom-lan
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/connection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supported Radios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/rig-profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rig Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Setup Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Radio Setup Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic7610-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-7610 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic705-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-705 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic7300-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-7300 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic9700-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-9700 USB & LAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../opuslib-macos-fix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    opuslib macOS Fix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/web-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI-V Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IcomRadio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/audio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types & Enums
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/backends-icom7610/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Icom 7610 Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rig-loader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rig Loader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rigctld/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rigctld
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/scope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/web/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internals
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Internals
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../radio-protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../capabilities-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PERFORMANCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUDIO_STREAMING_PROFILE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Streaming Profile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SECURITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-meter-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Meter Inventory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-layout-proposal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Layout Proposal
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Layout Proposal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dimensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#priority-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Priority / ordering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dual-rx-vs-single-rx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dual-RX vs single-RX
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ascii-wireframe-ic-7610-tx-active" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ASCII wireframe — IC-7610, TX active
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ascii-wireframe-ic-7610-rx-idle-no-tx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ASCII wireframe — IC-7610, RX idle (no TX)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tile-anatomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tile anatomy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-audio-scope-filter-curve-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Audio-scope / filter-curve integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. States
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-visual-language" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Visual language
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Visual language">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#typography" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Typography
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#colors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Colors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#peak-hold-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Peak-hold indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Interaction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-integration-with-top-vfo-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Integration with top VFO header
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Integration with top VFO header">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#removed-from-dock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed from dock
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s-meter-in-the-new-dock-yes-keep-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S-meter in the new dock — yes, keep it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#net-change-per-radiolayoutsvelte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Net change per RadioLayout.svelte
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-atomic-implementation-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Atomic implementation issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Atomic implementation issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#issue-a-add-metersdockpanel-component-with-core-tiles-po-swr-alc-s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue A — Add MetersDockPanel component with core tiles (Po, SWR, ALC, S)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-b-replace-bottom-dock-in-radiolayout-remove-duplicates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue B — Replace bottom-dock in RadioLayout + remove duplicates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-c-add-idvdcomp-tiles-capability-gating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue C — Add Id/Vd/COMP tiles + capability gating
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-d-add-peak-hold-fault-highlighting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue D — Add peak-hold + fault highlighting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-open-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Open questions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-token-additions-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix — Token additions summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="desktop-bottom-dock-redesign-unified-meters-dashboard">Desktop Bottom-Dock Redesign — Unified Meters Dashboard<a class="headerlink" href="#desktop-bottom-dock-redesign-unified-meters-dashboard" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-04-18
+<strong>Status:</strong> Design proposal (no code changes)
+<strong>Author:</strong> UX/UI design pass
+<strong>Scope:</strong> <code>desktop-v2</code> skin only (amber-lcd and mobile skins untouched)</p>
+<hr />
+<h2 id="1-context">1. Context<a class="headerlink" href="#1-context" title="Permanent link">&para;</a></h2>
+<p>The desktop bottom dock (<code>frontend/src/components-v2/layout/RadioLayout.svelte</code>
+lines 254–298) currently renders three cards: an RX1 summary
+(<code>receiver-summary-card-main</code>), an RX2 summary or an audio FFT scope
+(<code>audio-scope-dock-card</code> → <code>AudioSpectrumPanel</code>), and a <code>DockMeterPanel</code>
+showing S/SWR/Po with a radio-button toggle. The VFO header already shows
+frequency, mode, filter, and a full-width S-meter for both receivers in
+~156 px at the top of the layout, so the two summary cards are pure
+duplication and the meter panel is undersized and incomplete (no ALC, no
+Id/Vd, no TEMP, no peak-hold, no capability gating). The IC-7610 exposes
+S, Po, SWR, ALC, COMP, Vd, Id via 0x15-family commands
+(<code>src/icom_lan/commands/meters.py</code>), all already surfaced in runtime state
+(<code>frontend/src/lib/types/state.ts</code> lines 103–108: <code>compMeter</code>, <code>vdMeter</code>,
+<code>idMeter</code>, <code>powerMeter</code>, <code>swrMeter</code>, <code>alcMeter</code>). The dock must become a
+proper TX-telemetry and station-health dashboard — TX metering is
+life-safety adjacent (SWR spikes, ALC overdrive, final-PA protection) and
+must be legible at desk distance without squinting.</p>
+<p><strong>Correction to the brief (from user).</strong> The widget in the current dock
+(<code>AudioSpectrumPanel</code>) is a <strong>combined instrument</strong>, not just an AF FFT.
+It renders, overlaid on a single canvas:
+1. AF FFT spectrum (receive audio frequency content).
+2. RX filter passband shape (bandwidth + shoulders).
+3. PBT (passband tuning) shift indicator.
+4. For radios that support them (e.g. FTX-1): notch and contour filter
+   indicators.</p>
+<p>This composite widget is a deliberate design, and it must be preserved
+as-is. No decomposition into separate panels. The decision below is
+about <strong>where the combined widget lives</strong>, not what it shows.</p>
+<hr />
+<h2 id="2-meter-inventory">2. Meter Inventory<a class="headerlink" href="#2-meter-inventory" title="Permanent link">&para;</a></h2>
+<p>Source field names are from <code>RadioState</code> in
+<code>frontend/src/lib/types/state.ts</code>. Availability rows reflect IC-7610
+(primary target) and a generic "other radio" column that describes the
+capability-gated fallback behavior.</p>
+<table>
+<thead>
+<tr>
+<th>Meter</th>
+<th>Unit</th>
+<th>Source</th>
+<th>State field</th>
+<th>IC-7610</th>
+<th>Other radios</th>
+<th>Idle (RX)</th>
+<th>Active (TX)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>S</strong></td>
+<td>S-units + dB over S9</td>
+<td>RX</td>
+<td><code>sValue</code> (main), <code>subSValue</code></td>
+<td>yes</td>
+<td>yes (universal)</td>
+<td>live, primary</td>
+<td>dimmed (not relevant)</td>
+</tr>
+<tr>
+<td><strong>Po</strong></td>
+<td>W (0–100 %)</td>
+<td>TX</td>
+<td><code>powerMeter</code></td>
+<td>yes</td>
+<td>usually yes</td>
+<td>zero / dim</td>
+<td>live, primary</td>
+</tr>
+<tr>
+<td><strong>SWR</strong></td>
+<td>ratio (1.0–∞)</td>
+<td>TX</td>
+<td><code>swrMeter</code></td>
+<td>yes</td>
+<td>usually yes</td>
+<td>zero / dim</td>
+<td>live, <strong>alarm when &gt; 2.0</strong></td>
+</tr>
+<tr>
+<td><strong>ALC</strong></td>
+<td>% of limit</td>
+<td>TX</td>
+<td><code>alcMeter</code></td>
+<td>yes</td>
+<td>usually yes</td>
+<td>zero / dim</td>
+<td>live, <strong>warn when in red zone</strong></td>
+</tr>
+<tr>
+<td><strong>COMP</strong></td>
+<td>dB compression</td>
+<td>TX (SSB)</td>
+<td><code>compMeter</code></td>
+<td>yes (SSB only)</td>
+<td>varies</td>
+<td>zero / dim</td>
+<td>live <strong>only when compressor on</strong> (<code>compressorOn</code>)</td>
+</tr>
+<tr>
+<td><strong>Id</strong></td>
+<td>A drain current</td>
+<td>TX</td>
+<td><code>idMeter</code></td>
+<td>yes</td>
+<td>mid/high-end only</td>
+<td>zero / dim</td>
+<td>live, informational</td>
+</tr>
+<tr>
+<td><strong>Vd</strong></td>
+<td>V drain voltage</td>
+<td>TX</td>
+<td><code>vdMeter</code></td>
+<td>yes</td>
+<td>mid/high-end only</td>
+<td><strong>always live</strong> (shows ≈13.8 V on RX too)</td>
+<td>live</td>
+</tr>
+<tr>
+<td><strong>TEMP</strong></td>
+<td>relative 0–100</td>
+<td>shared</td>
+<td><em>(not in state yet — see open question Q4)</em></td>
+<td>available over 0x15 on many rigs, <strong>not exposed by IC-7610 CI-V</strong></td>
+<td>varies</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Normalization.</strong> Raw values 0–255 are already normalized via
+<code>meter-utils.ts</code> (<code>normalize</code>, <code>formatSMeter</code>, <code>formatSwr</code>,
+<code>formatPowerWatts</code>, <code>formatAlc</code>). COMP/Id/Vd need formatters added
+(<code>formatCompDb</code>, <code>formatAmps</code>, <code>formatVolts</code>) — belongs in that same file.</p>
+<p><strong>Capability gating.</strong> A meter tile is shown only when its state field
+is defined (<code>!== undefined</code>) AND, for COMP, when <code>compressorOn === true</code>.
+Radios that don't report Id/Vd simply hide those tiles; the grid
+re-flows. No "N/A" placeholders — absent meters disappear.</p>
+<hr />
+<h2 id="3-layout-proposal">3. Layout Proposal<a class="headerlink" href="#3-layout-proposal" title="Permanent link">&para;</a></h2>
+<h3 id="strategy">Strategy<a class="headerlink" href="#strategy" title="Permanent link">&para;</a></h3>
+<p>Replace the three-card dock with <strong>one full-width <code>MetersDockPanel</code></strong>
+that always shows all capability-available meters simultaneously as a
+horizontal grid of tiles. No more source-selector toggle — this is a
+dashboard, not a single-reading panel. The audio FFT scope moves (see
+§4).</p>
+<h3 id="dimensions">Dimensions<a class="headerlink" href="#dimensions" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Dock height: <strong>144 px</strong> total (up from 112 px).</li>
+<li>+32 px buys us two-line tiles: big value on top, proper label + bar
+    below. Current 112 px is cramped even for the truncated S/Po/SWR
+    triad.</li>
+<li>This is ≈9 % of a 1440 × 900 laptop screen — still modest relative
+    to the spectrum plot which owns the middle.</li>
+<li>Horizontal padding: 12 px (matches <code>.bottom-dock</code> existing
+  <code>gap: 12px</code>).</li>
+<li>Tile grid: <code>display: grid; grid-template-columns: repeat(auto-fit,
+  minmax(132px, 1fr)); gap: 8px;</code> — tiles self-size down to 132 px min,
+  typically 6 tiles fit at 1440 px width at ≈220 px each.</li>
+<li>Tile internal padding: 10 px top/bottom, 12 px left/right.</li>
+</ul>
+<h3 id="priority-ordering">Priority / ordering<a class="headerlink" href="#priority-ordering" title="Permanent link">&para;</a></h3>
+<p>Tiles render in fixed priority order so muscle memory survives
+capability changes. Left → right:</p>
+<ol>
+<li><strong>Po</strong> (TX primary)</li>
+<li><strong>SWR</strong> (TX safety)</li>
+<li><strong>ALC</strong> (TX correctness)</li>
+<li><strong>COMP</strong> (SSB only, compressor on)</li>
+<li><strong>Id</strong> (PA health)</li>
+<li><strong>Vd</strong> (PSU health)</li>
+<li><strong>S</strong> (optional duplicate — see §8)</li>
+<li><strong>TEMP</strong> (if ever exposed)</li>
+</ol>
+<h3 id="dual-rx-vs-single-rx">Dual-RX vs single-RX<a class="headerlink" href="#dual-rx-vs-single-rx" title="Permanent link">&para;</a></h3>
+<p>The meters are station-level, not per-receiver — SWR/Po/ALC/Id/Vd apply
+to the single PA regardless of dual watch. So the dock is identical for
+single- and dual-RX radios. (The top VFO header already handles
+dual-RX.) No second row of tiles for RX2.</p>
+<h3 id="ascii-wireframe-ic-7610-tx-active">ASCII wireframe — IC-7610, TX active<a class="headerlink" href="#ascii-wireframe-ic-7610-tx-active" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌────────────────────────────────────────────────────────────────────────────────────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  STATION METERS                                                       TX ●             │  ← 20px title row
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬──────────┤
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   Po       │   SWR      │   ALC      │   COMP     │   Id       │   Vd       │   S      │
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│  78 W      │  1.3       │  42 %      │  6 dB      │  15.2 A    │  13.8 V    │  —       │
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│  ▓▓▓▓▓▓▓░░ │  ▓▓▓░░░░░░ │  ▓▓▓▓▓░░░ │  ▓▓▓░░░░░░ │  ▓▓▓▓░░░░ │  ▓▓▓▓▓▓▓▓ │          │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│  peak 82W  │  peak 1.5  │  peak 55%  │            │            │            │          │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴──────────┘
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   ← 144 px tall, full-width, ~220 px per tile at 1440 px wide →
+</code></pre></div>
+<h3 id="ascii-wireframe-ic-7610-rx-idle-no-tx">ASCII wireframe — IC-7610, RX idle (no TX)<a class="headerlink" href="#ascii-wireframe-ic-7610-rx-idle-no-tx" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌────────────────────────────────────────────────────────────────────────────────────────┐
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│  STATION METERS                                                       RX               │
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬──────────┤
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│   Po       │   SWR      │   ALC      │   COMP     │   Id       │   Vd       │   S      │
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│  —         │  —         │  —         │  —         │  —         │  13.8 V    │  S7      │
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│  (dimmed)  │  (dimmed)  │  (dimmed)  │  (dimmed)  │  (dimmed)  │  ▓▓▓▓▓▓▓▓ │ ▓▓▓▓░░░░ │
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│            │            │            │            │            │            │          │
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>└────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴──────────┘
+</code></pre></div>
+<h3 id="tile-anatomy">Tile anatomy<a class="headerlink" href="#tile-anatomy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌─ tile ─────────────┐
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│ Po        peak 82W │  ← label (11px) + peak readout (9px, right)
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│ 78 W               │  ← value (22px, Roboto Mono, weight 700)
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>│ ▓▓▓▓▓▓▓░░░░░░░░░ │  ← horizontal bar, 6px tall, gradient from --v2-meter-*-fill
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>└────────────────────┘
+</code></pre></div>
+<hr />
+<h2 id="4-audio-scope-filter-curve-integration">4. Audio-scope / filter-curve integration<a class="headerlink" href="#4-audio-scope-filter-curve-integration" title="Permanent link">&para;</a></h2>
+<p><strong>Decision: move <code>AudioSpectrumPanel</code> (the combined AF-FFT + passband +
+PBT + notch/contour widget — see §1 correction) out of the dock into the
+right sidebar as a collapsible panel below the existing DSP controls.</strong>
+The widget is preserved intact. Argument:</p>
+<ul>
+<li>The dock's new job (meters dashboard) demands full width and visual
+  unity. Splitting it with a scope breaks the "one glance, one truth"
+  read of station telemetry.</li>
+<li>The combined widget is diagnostic/tuning-assist, not ever-present;
+  operators open it when chasing a signal or setting up a filter, then
+  often collapse it. Sidebar-collapsible matches that usage pattern.</li>
+<li>Right sidebar already hosts <code>DspPanel</code> / <code>TxPanel</code> / <code>RxAudioPanel</code> —
+  a widget that shows AF content + filter shape + PBT + notch/contour
+  belongs with DSP/audio, not wedged between RX1 and the meters.</li>
+<li>Only the mount point changes — no modification to
+  <code>AudioSpectrumPanel.svelte</code> itself. Notch/contour overlays for FTX-1
+  continue to function unchanged.</li>
+</ul>
+<p>The separate RX filter-bandwidth summary in <code>FilterPanel</code> on the left
+sidebar (the small trapezoid + "Filter: 3200 Hz" readout) stays put —
+this is a <em>different</em> widget from <code>AudioSpectrumPanel</code> and was never in
+the dock.</p>
+<p>Rejected alternatives:</p>
+<ul>
+<li><em>Keep the combined widget in the dock alongside meters</em> — kills the
+  dashboard read, forces meters into a narrow strip.</li>
+<li><em>Move to VFO header</em> — header is already 156 px tall and dense; adding
+  a canvas widget here steals vertical space from the spectrum.</li>
+</ul>
+<hr />
+<h2 id="5-states">5. States<a class="headerlink" href="#5-states" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Trigger</th>
+<th>Visual</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Idle (RX)</strong></td>
+<td><code>txActive === false</code></td>
+<td>TX-only tiles dim to <code>opacity: 0.35</code>, bars show <code>0</code>, values show <code>—</code>. S-meter and Vd stay fully lit. TX indicator shows <code>RX</code> in muted color.</td>
+</tr>
+<tr>
+<td><strong>Pre-TX (PTT armed)</strong></td>
+<td><code>pttArmed &amp;&amp; !txActive</code> (50–200 ms window)</td>
+<td>Brief <code>border: 1px solid var(--v2-accent-yellow)</code> pulse on Po/SWR/ALC tiles. Signals "about to transmit." Optional — may be cut if runtime doesn't expose <code>pttArmed</code>.</td>
+</tr>
+<tr>
+<td><strong>TX active</strong></td>
+<td><code>txActive === true</code></td>
+<td>TX-only tiles fully lit (<code>opacity: 1</code>). Peak-hold overlays appear. S-meter dims to 0.35. Top-right status chip shows <code>TX ●</code> in <code>--v2-accent-red</code> with pulsing dot.</td>
+</tr>
+<tr>
+<td><strong>TX fault</strong></td>
+<td><code>swrMeter &gt; 2.0</code> OR <code>alcMeter &gt; 0.9</code></td>
+<td>The offending tile's border becomes <code>--v2-accent-red</code>, value text turns <code>--v2-accent-red-alt</code>, tile gains subtle <code>box-shadow: 0 0 6px var(--v2-accent-red)</code>. No modal, no blocking — hams are adults.</td>
+</tr>
+<tr>
+<td><strong>Capability missing</strong></td>
+<td><code>state.&lt;meter&gt; === undefined</code> at mount</td>
+<td>Tile not rendered. Grid re-flows.</td>
+</tr>
+<tr>
+<td><strong>Compressor off</strong></td>
+<td><code>compressorOn !== true</code></td>
+<td>COMP tile not rendered.</td>
+</tr>
+<tr>
+<td><strong>Power-off</strong></td>
+<td><code>runtime.radioPowerOn === false</code></td>
+<td>Whole dock hidden by the existing <code>power-off-overlay</code> (no change).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-visual-language">6. Visual language<a class="headerlink" href="#6-visual-language" title="Permanent link">&para;</a></h2>
+<h3 id="typography">Typography<a class="headerlink" href="#typography" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Size</th>
+<th>Weight</th>
+<th>Font</th>
+<th>Color token</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tile value</td>
+<td>22 px</td>
+<td>700</td>
+<td><code>Roboto Mono</code></td>
+<td><code>--v2-text-white</code> (active) / <code>--v2-text-muted</code> (idle)</td>
+</tr>
+<tr>
+<td>Tile unit suffix (W, dB, A)</td>
+<td>12 px</td>
+<td>500</td>
+<td><code>Roboto Mono</code></td>
+<td><code>--v2-text-secondary</code></td>
+</tr>
+<tr>
+<td>Tile label (Po, SWR, …)</td>
+<td>11 px</td>
+<td>700, letter-spacing 0.12 em</td>
+<td><code>Roboto Mono</code></td>
+<td><code>--v2-text-light</code></td>
+</tr>
+<tr>
+<td>Peak-hold readout</td>
+<td>9 px</td>
+<td>600</td>
+<td><code>Roboto Mono</code></td>
+<td><code>--v2-text-dim</code></td>
+</tr>
+<tr>
+<td>Panel title "STATION METERS"</td>
+<td>11 px</td>
+<td>700, letter-spacing 0.18 em</td>
+<td><code>Roboto Mono</code></td>
+<td><code>--v2-text-light</code></td>
+</tr>
+</tbody>
+</table>
+<p>Current dock uses 8–11 px labels; we standardize on 11 px for labels and
+22 px for values. No label below 9 px anywhere.</p>
+<h3 id="colors">Colors<a class="headerlink" href="#colors" title="Permanent link">&para;</a></h3>
+<p>Reuse existing meter gradients:</p>
+<ul>
+<li>Po → <code>--v2-meter-power-fill</code> / <code>-track</code></li>
+<li>SWR → <code>--v2-meter-swr-fill</code> / <code>-track</code> (built-in red zone past 2.0)</li>
+<li>ALC → <code>--v2-meter-alc-fill</code> / <code>-track</code></li>
+<li>S → <code>--v2-meter-s-fill</code> / <code>-track</code></li>
+<li>COMP → new token <code>--v2-meter-comp-fill</code> — propose same green ramp as
+  SWR's safe region, <code>linear-gradient(90deg, #1f7a4a 0%, #4ed37b 100%)</code></li>
+<li>Id → new token <code>--v2-meter-id-fill</code> — amber, <code>linear-gradient(90deg,
+  #8a6a14 0%, #f2cf4a 100%)</code></li>
+<li>Vd → new token <code>--v2-meter-vd-fill</code> — blue-cyan, <code>linear-gradient(90deg,
+  #1a5a6d 0%, #7cfce5 100%)</code></li>
+</ul>
+<p>Tile background: <code>var(--v2-bg-card)</code> with <code>1px solid var(--v2-border)</code>.
+On fault: border swaps to <code>--v2-accent-red</code>.</p>
+<h3 id="peak-hold-indicators">Peak-hold indicators<a class="headerlink" href="#peak-hold-indicators" title="Permanent link">&para;</a></h3>
+<p>SWR, Po, ALC get a 2-second peak-hold:</p>
+<ul>
+<li>Small inverted triangle marker on the bar at peak position, color
+  <code>--v2-accent-yellow</code>.</li>
+<li>Peak numeric value printed top-right of tile in 9 px
+  (<code>peak 82 W</code>).</li>
+<li>Peak decays linearly to current value over 2 s after last update ≥
+  current.</li>
+<li>Double-click tile → reset peak immediately.</li>
+</ul>
+<p>Id, Vd, COMP don't need peak-hold (steady-state readings).</p>
+<hr />
+<h2 id="7-interaction">7. Interaction<a class="headerlink" href="#7-interaction" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Gesture</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Click tile</strong></td>
+<td>No-op by default (meters are read-only). Avoids accidental modal spawning during TX.</td>
+</tr>
+<tr>
+<td><strong>Double-click tile</strong></td>
+<td>Reset peak-hold (for Po/SWR/ALC tiles only).</td>
+</tr>
+<tr>
+<td><strong>Long-press (500 ms) / right-click tile</strong></td>
+<td>Open small popover with: peak value, time since peak, option to toggle between "instantaneous" and "1-s averaged" display. Popover is deferred — can ship without it (Issue 4).</td>
+</tr>
+<tr>
+<td><strong>Keyboard</strong></td>
+<td>Dock is not focus-reachable by default. Consider <code>Tab</code> stop on the panel title only, with <code>Enter</code> to reset all peaks. Deferred.</td>
+</tr>
+<tr>
+<td><strong>Hover</strong></td>
+<td>Tile border lifts from <code>--v2-border</code> to <code>--v2-border-soft</code>; no other effect.</td>
+</tr>
+</tbody>
+</table>
+<p>No source-selector radio group (<code>S/SWR/Po</code> buttons in current
+<code>DockMeterPanel</code>) — deliberately removed. All meters always visible.</p>
+<hr />
+<h2 id="8-integration-with-top-vfo-header">8. Integration with top VFO header<a class="headerlink" href="#8-integration-with-top-vfo-header" title="Permanent link">&para;</a></h2>
+<h3 id="removed-from-dock">Removed from dock<a class="headerlink" href="#removed-from-dock" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>receiver-summary-card-main</code> — RX1 freq/mode/filter/S-meter. <strong>Remove entirely.</strong> Duplicates <code>VfoPanel</code> in <code>VfoHeader</code>.</li>
+<li><code>receiver-summary-card-sub</code> — RX2 equivalent. <strong>Remove entirely.</strong></li>
+<li><code>DockMeterPanel</code> (S/SWR/Po toggle variant). <strong>Replace</strong> with new <code>MetersDockPanel</code>.</li>
+<li><code>audio-scope-dock-card</code> (the <code>AudioSpectrumPanel</code> slot). <strong>Move</strong> to right sidebar (see §4).</li>
+</ol>
+<h3 id="s-meter-in-the-new-dock-yes-keep-it">S-meter in the new dock — yes, keep it<a class="headerlink" href="#s-meter-in-the-new-dock-yes-keep-it" title="Permanent link">&para;</a></h3>
+<p>Even though VfoHeader has a full-width LinearSMeter, include a
+small <strong>S tile</strong> at the far right of the meters dock for two reasons:</p>
+<ul>
+<li>During TX the VfoHeader S-meter is frozen / not relevant. The dock S
+  tile fills in the "current RX signal context" role at a glance.</li>
+<li>Symmetry: operators expect to see S alongside Po/SWR. Physical rigs
+  put them on the same multimeter.</li>
+</ul>
+<p>The S tile in the dock is secondary (smaller visual weight via
+<code>opacity: 0.85</code> when TX inactive, the VfoHeader one is primary).</p>
+<h3 id="net-change-per-radiolayoutsvelte">Net change per RadioLayout.svelte<a class="headerlink" href="#net-change-per-radiolayoutsvelte" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Lines 254–298 (bottom-dock section) shrink from 3 card types + meter
+  panel to <strong>one</strong> <code>&lt;MetersDockPanel /&gt;</code>.</li>
+<li>Audio-scope mount migrates to <code>RightSidebar.svelte</code>.</li>
+</ul>
+<hr />
+<h2 id="9-atomic-implementation-issues">9. Atomic implementation issues<a class="headerlink" href="#9-atomic-implementation-issues" title="Permanent link">&para;</a></h2>
+<p>Break into four GitHub issues, each ≤3 files and ≤200 LOC.</p>
+<h3 id="issue-a-add-metersdockpanel-component-with-core-tiles-po-swr-alc-s">Issue A — Add <code>MetersDockPanel</code> component with core tiles (Po, SWR, ALC, S)<a class="headerlink" href="#issue-a-add-metersdockpanel-component-with-core-tiles-po-swr-alc-s" title="Permanent link">&para;</a></h3>
+<p><strong>Title:</strong> <code>feat(ui): add MetersDockPanel with Po/SWR/ALC/S tiles</code>
+<strong>Files (3):</strong>
+- <code>frontend/src/components-v2/panels/MetersDockPanel.svelte</code> (new)
+- <code>frontend/src/components-v2/panels/meter-utils.ts</code> (edit — add <code>formatAmps</code>, <code>formatVolts</code>, <code>formatCompDb</code>, peak-hold helper)
+- <code>frontend/src/components-v2/panels/__tests__/MetersDockPanel.test.ts</code> (new)</p>
+<p><strong>Scope:</strong> render tiles, capability-gate by <code>!== undefined</code>, basic bars. No peak-hold yet. Uses existing tokens only.
+<strong>LOC budget:</strong> ~180.</p>
+<h3 id="issue-b-replace-bottom-dock-in-radiolayout-remove-duplicates">Issue B — Replace bottom-dock in RadioLayout + remove duplicates<a class="headerlink" href="#issue-b-replace-bottom-dock-in-radiolayout-remove-duplicates" title="Permanent link">&para;</a></h3>
+<p><strong>Title:</strong> <code>refactor(ui): replace bottom-dock summary cards with MetersDockPanel</code>
+<strong>Files (2):</strong>
+- <code>frontend/src/components-v2/layout/RadioLayout.svelte</code> (edit — lines 254–298 and associated CSS)
+- <code>frontend/src/components-v2/layout/RightSidebar.svelte</code> (edit — mount <code>AudioSpectrumPanel</code> as collapsible)</p>
+<p><strong>Scope:</strong> wire the new panel, delete receiver-summary-card markup and styles, migrate audio scope to right sidebar.
+<strong>LOC budget:</strong> ~140 (mostly deletions).</p>
+<h3 id="issue-c-add-idvdcomp-tiles-capability-gating">Issue C — Add Id/Vd/COMP tiles + capability gating<a class="headerlink" href="#issue-c-add-idvdcomp-tiles-capability-gating" title="Permanent link">&para;</a></h3>
+<p><strong>Title:</strong> <code>feat(ui): add Id/Vd/COMP tiles with capability gating to MetersDockPanel</code>
+<strong>Files (2):</strong>
+- <code>frontend/src/components-v2/panels/MetersDockPanel.svelte</code> (edit)
+- <code>frontend/src/components-v2/theme/tokens.css</code> (edit — add <code>--v2-meter-id-fill</code>, <code>--v2-meter-vd-fill</code>, <code>--v2-meter-comp-fill</code>)</p>
+<p><strong>Scope:</strong> extend the tile set; COMP gated on <code>compressorOn</code>.
+<strong>LOC budget:</strong> ~120.</p>
+<h3 id="issue-d-add-peak-hold-fault-highlighting">Issue D — Add peak-hold + fault highlighting<a class="headerlink" href="#issue-d-add-peak-hold-fault-highlighting" title="Permanent link">&para;</a></h3>
+<p><strong>Title:</strong> <code>feat(ui): add peak-hold and SWR/ALC fault highlighting to MetersDockPanel</code>
+<strong>Files (2):</strong>
+- <code>frontend/src/components-v2/panels/MetersDockPanel.svelte</code> (edit)
+- <code>frontend/src/components-v2/panels/meter-utils.ts</code> (edit — peak-hold decay logic + tests)</p>
+<p><strong>Scope:</strong> 2-s peak decay for Po/SWR/ALC, SWR &gt; 2.0 red border, ALC &gt; 0.9 red border, double-click reset.
+<strong>LOC budget:</strong> ~150.</p>
+<p><strong>Ordering:</strong> A → B → C → D. After B the visible UI is already improved (no duplication, cleaner dock); C and D add polish without blocking.</p>
+<hr />
+<h2 id="10-open-questions">10. Open questions<a class="headerlink" href="#10-open-questions" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Q1 — S tile in dock: keep or cut?</strong> §8 argues keep. If the user
+  feels it's still duplication given the VfoHeader meter, we drop it
+  and the 6-tile grid becomes cleaner at narrow widths.</li>
+<li><strong>Q2 — Pre-TX yellow pulse.</strong> Requires <code>pttArmed</code> or similar in
+  runtime state. Does the WS protocol actually emit an event between
+  PTT down and TX confirmed? If not, drop the state entirely (no
+  polling hack worth it).</li>
+<li><strong>Q3 — Peak-hold reset gesture.</strong> Double-click per tile vs. single
+  global "reset peaks" button in the panel header? Pro-reset-button:
+  one click clears all. Pro-double-click: per-meter control. Lean
+  toward double-click to match physical-rig muscle memory
+  (tap-the-needle-back-to-zero).</li>
+<li><strong>Q4 — TEMP meter exposure.</strong> Is IC-7610 PA temp reachable via any
+  CI-V subcommand we're not using, or is it truly controller-only? If
+  we can add it, the 7-tile grid lights up a useful warning for
+  contest/DX operating. Needs backend investigation, out of scope for
+  this frontend plan.</li>
+<li><strong>Q5 — Audio-scope panel collapsed-by-default?</strong> Proposal: yes,
+  collapsed on first render; user opens it when debugging audio. Saves
+  right-sidebar scroll.</li>
+<li><strong>Q6 — Tile minimum width on very narrow displays.</strong> At &lt;1100 px the
+  grid will wrap to two rows of 3–4 tiles. Is that acceptable for
+  desktop-v2 (which isn't supposed to be responsive to mobile sizes
+  anyway), or do we force a single-row scroll?</li>
+<li><strong>Q7 — Does removing <code>receiver-summary-card-*</code> break any test
+  selectors or Playwright flows?</strong> Grep shows no external refs, but
+  confirm in Issue B.</li>
+</ul>
+<hr />
+<h2 id="appendix-token-additions-summary">Appendix — Token additions summary<a class="headerlink" href="#appendix-token-additions-summary" title="Permanent link">&para;</a></h2>
+<p>To be added to <code>frontend/src/components-v2/theme/tokens.css</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">--v2-meter-comp-fill</span><span class="o">:</span><span class="w"> </span><span class="nt">linear-gradient</span><span class="o">(</span><span class="nt">90deg</span><span class="o">,</span><span class="w"> </span><span class="p">#</span><span class="nn">1f7a4a</span><span class="w"> </span><span class="nt">0</span><span class="o">%,</span><span class="w"> </span><span class="p">#</span><span class="nn">4ed37b</span><span class="w"> </span><span class="nt">100</span><span class="o">%);</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">--v2-meter-comp-track</span><span class="o">:</span><span class="w"> </span><span class="nt">linear-gradient</span><span class="o">(</span><span class="nt">90deg</span><span class="o">,</span><span class="w"> </span><span class="nt">rgba</span><span class="o">(</span><span class="nt">31</span><span class="o">,</span><span class="nt">122</span><span class="o">,</span><span class="nt">74</span><span class="o">,</span><span class="nt">0</span><span class="p">.</span><span class="nc">3</span><span class="o">)</span><span class="w"> </span><span class="nt">0</span><span class="o">%,</span><span class="w"> </span><span class="nt">rgba</span><span class="o">(</span><span class="nt">78</span><span class="o">,</span><span class="nt">211</span><span class="o">,</span><span class="nt">123</span><span class="o">,</span><span class="nt">0</span><span class="p">.</span><span class="nc">2</span><span class="o">)</span><span class="w"> </span><span class="nt">100</span><span class="o">%);</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nt">--v2-meter-id-fill</span><span class="o">:</span><span class="w">   </span><span class="nt">linear-gradient</span><span class="o">(</span><span class="nt">90deg</span><span class="o">,</span><span class="w"> </span><span class="p">#</span><span class="nn">8a6a14</span><span class="w"> </span><span class="nt">0</span><span class="o">%,</span><span class="w"> </span><span class="p">#</span><span class="nn">f2cf4a</span><span class="w"> </span><span class="nt">100</span><span class="o">%);</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nt">--v2-meter-id-track</span><span class="o">:</span><span class="w">  </span><span class="nt">linear-gradient</span><span class="o">(</span><span class="nt">90deg</span><span class="o">,</span><span class="w"> </span><span class="nt">rgba</span><span class="o">(</span><span class="nt">138</span><span class="o">,</span><span class="nt">106</span><span class="o">,</span><span class="nt">20</span><span class="o">,</span><span class="nt">0</span><span class="p">.</span><span class="nc">3</span><span class="o">)</span><span class="w"> </span><span class="nt">0</span><span class="o">%,</span><span class="w"> </span><span class="nt">rgba</span><span class="o">(</span><span class="nt">242</span><span class="o">,</span><span class="nt">207</span><span class="o">,</span><span class="nt">74</span><span class="o">,</span><span class="nt">0</span><span class="p">.</span><span class="nc">2</span><span class="o">)</span><span class="w"> </span><span class="nt">100</span><span class="o">%);</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nt">--v2-meter-vd-fill</span><span class="o">:</span><span class="w">   </span><span class="nt">linear-gradient</span><span class="o">(</span><span class="nt">90deg</span><span class="o">,</span><span class="w"> </span><span class="p">#</span><span class="nn">1a5a6d</span><span class="w"> </span><span class="nt">0</span><span class="o">%,</span><span class="w"> </span><span class="p">#</span><span class="nn">7cfce5</span><span class="w"> </span><span class="nt">100</span><span class="o">%);</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nt">--v2-meter-vd-track</span><span class="o">:</span><span class="w">  </span><span class="nt">linear-gradient</span><span class="o">(</span><span class="nt">90deg</span><span class="o">,</span><span class="w"> </span><span class="nt">rgba</span><span class="o">(</span><span class="nt">26</span><span class="o">,</span><span class="nt">90</span><span class="o">,</span><span class="nt">109</span><span class="o">,</span><span class="nt">0</span><span class="p">.</span><span class="nc">3</span><span class="o">)</span><span class="w"> </span><span class="nt">0</span><span class="o">%,</span><span class="w"> </span><span class="nt">rgba</span><span class="o">(</span><span class="nt">124</span><span class="o">,</span><span class="nt">252</span><span class="o">,</span><span class="nt">229</span><span class="o">,</span><span class="nt">0</span><span class="p">.</span><span class="nc">2</span><span class="o">)</span><span class="w"> </span><span class="nt">100</span><span class="o">%);</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="nt">--v2-meter-fault-border</span><span class="o">:</span><span class="w"> </span><span class="nt">var</span><span class="o">(</span><span class="nt">--v2-accent-red</span><span class="o">);</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="nt">--v2-meter-fault-glow</span><span class="o">:</span><span class="w">   </span><span class="nt">0</span><span class="w"> </span><span class="nt">0</span><span class="w"> </span><span class="nt">6px</span><span class="w"> </span><span class="nt">rgba</span><span class="o">(</span><span class="nt">255</span><span class="o">,</span><span class="w"> </span><span class="nt">32</span><span class="o">,</span><span class="w"> </span><span class="nt">32</span><span class="o">,</span><span class="w"> </span><span class="nt">0</span><span class="p">.</span><span class="nc">45</span><span class="o">);</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/morozsm/icom-lan" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

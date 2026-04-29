@@ -1903,34 +1903,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../internals/cli-design/" class="md-nav__link">
         
   
@@ -2182,13 +2154,13 @@
 <p>LAN and serial implementations for Icom IC-7610.</p>
 <h2 id="modules">Modules<a class="headerlink" href="#modules" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>core.py</code> — Shared <code>Icom7610CoreRadio</code> (commander, state, CI-V routing)</li>
+<li><code>core.py</code> — Shared <code>CoreRadio</code> (commander, state, CI-V routing)</li>
 <li><code>lan.py</code> — <code>Icom7610LanRadio</code> (UDP control/audio/CI-V)</li>
 <li><code>serial.py</code> — <code>Icom7610SerialRadio</code> (USB serial CI-V + audio devices)</li>
 </ul>
 <h2 id="key-classes">Key Classes<a class="headerlink" href="#key-classes" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>Icom7610CoreRadio</code> — Shared logic for both backends</li>
+<li><code>CoreRadio</code> — Shared logic for both backends</li>
 <li><code>Icom7610LanRadio</code> — LAN backend (implements <code>Radio</code>, <code>AudioCapable</code>, <code>ScopeCapable</code>)</li>
 <li><code>Icom7610SerialRadio</code> — Serial backend (implements <code>Radio</code>, <code>AudioCapable</code>)</li>
 </ul>

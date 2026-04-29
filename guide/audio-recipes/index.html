@@ -1961,34 +1961,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../internals/cli-design/" class="md-nav__link">
         
   
@@ -2299,7 +2271,9 @@ All examples use <strong>PCM 16-bit mono 48 kHz</strong> (<code>AudioCodec.PCM_1
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_USER</span><span class="o">=</span>YOUR_USER
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_PASS</span><span class="o">=</span>YOUR_PASS
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;icom-lan[audio]&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Audio dependencies (opuslib, sounddevice, numpy) ship with the core</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># install since v0.19 — `pip install icom-lan` is enough.</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan
 </code></pre></div>
 <hr />
 <h2 id="1-rx-wav-file-10-seconds">1) RX → WAV file (10 seconds)<a class="headerlink" href="#1-rx-wav-file-10-seconds" title="Permanent link">&para;</a></h2>
@@ -2504,8 +2478,8 @@ All examples use <strong>PCM 16-bit mono 48 kHz</strong> (<code>AudioCodec.PCM_1
 <hr />
 <h2 id="5-wsjt-x-all-in-one-cli">5) WSJT-X all-in-one (CLI)<a class="headerlink" href="#5-wsjt-x-all-in-one-cli" title="Permanent link">&para;</a></h2>
 <p>Run Web UI + audio bridge + rigctld in a single command:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Install dependencies</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan<span class="o">[</span>bridge<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Install (audio-bridge deps ship with the core install since v0.19)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>brew<span class="w"> </span>install<span class="w"> </span>blackhole-2ch<span class="w">  </span><span class="c1"># macOS</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># Start everything</span>

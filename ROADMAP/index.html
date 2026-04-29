@@ -1814,34 +1814,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../internals/cli-design/" class="md-nav__link">
         
   
@@ -2037,10 +2009,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#current-state-v080-python" class="md-nav__link">
+  <a href="#current-state-v0142-python" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Current State: v0.8.0 (Python)
+        Current State: v0.14.2 (Python)
       
     </span>
   </a>
@@ -2661,7 +2633,7 @@
 
 
 <h1 id="roadmap">Roadmap<a class="headerlink" href="#roadmap" title="Permanent link">&para;</a></h1>
-<h2 id="current-state-v080-python">Current State: v0.8.0 (Python)<a class="headerlink" href="#current-state-v080-python" title="Permanent link">&para;</a></h2>
+<h2 id="current-state-v0142-python">Current State: v0.14.2 (Python)<a class="headerlink" href="#current-state-v0142-python" title="Permanent link">&para;</a></h2>
 <ul>
 <li>✅ Phase 1 — Transport (UDP, auth, keep-alive, dual-port)</li>
 <li>✅ Phase 2 — CI-V Commands (frequency, mode, power, meters, PTT, CW, VFO, split)</li>
@@ -2675,7 +2647,7 @@
 <p><strong>Next focus:</strong> Phase 7.4 (Web UI advanced features) and Phase 5.1 (Rust core spike).</p>
 <hr />
 <h2 id="phase-3-audio-streaming-python">Phase 3 — Audio Streaming (Python)<a class="headerlink" href="#phase-3-audio-streaming-python" title="Permanent link">&para;</a></h2>
-<p><strong>Goal:</strong> RX/TX audio via Opus codec on port 50003.</p>
+<p><strong>Goal:</strong> RX/TX audio on port 50003 (default codec: PCM 16-bit mono; Opus optional).</p>
 <p><strong>Status:</strong> ✅ Implemented (core RX/TX/full-duplex API available in current releases).</p>
 <h3 id="tasks">Tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h3>
 <ul>

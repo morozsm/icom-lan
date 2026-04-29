@@ -1821,34 +1821,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../internals/cli-design/" class="md-nav__link">
         
   
@@ -2520,8 +2492,8 @@
 <li>✅ <strong>No credential storage</strong> — credentials are passed as parameters or environment variables, never written to disk by the library</li>
 <li>✅ <strong>No hardcoded secrets</strong> — no default passwords or keys in the codebase</li>
 <li>✅ <strong>Clean exception handling</strong> — errors don't leak credentials in tracebacks</li>
-<li>✅ <strong>Minimal attack surface</strong> — zero external dependencies (stdlib only)</li>
-<li>✅ <strong>No network listeners</strong> — the library only initiates outbound UDP connections</li>
+<li>✅ <strong>Minimal attack surface</strong> — core requires only <code>pyserial</code>; optional extras are well-scoped</li>
+<li>✅ <strong>Controlled network listeners</strong> — the library initiates outbound UDP connections; the optional web server (<code>icom-lan web</code>) and rigctld server (<code>icom-lan serve</code>) bind to configurable addresses and support auth tokens</li>
 </ul>
 <h3 id="what-the-icom-protocol-does-not-provide">What the Icom protocol does NOT provide<a class="headerlink" href="#what-the-icom-protocol-does-not-provide" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2615,8 +2587,7 @@
 <li>File system access based on radio responses</li>
 </ul>
 <h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h3>
-<p>Runtime: <strong>zero external dependencies</strong> (Python stdlib only).</p>
-<p>This eliminates supply-chain risks from third-party packages.</p>
+<p>Runtime: <strong><code>pyserial</code></strong> and <strong><code>pyserial-asyncio</code></strong> (core); optional extras (<code>opuslib</code>, <code>sounddevice</code>, <code>numpy</code>, <code>pillow</code>, <code>cryptography</code>) installed only when requested. Minimal supply-chain surface.</p>
 <h2 id="reporting-vulnerabilities">Reporting Vulnerabilities<a class="headerlink" href="#reporting-vulnerabilities" title="Permanent link">&para;</a></h2>
 <p>If you discover a security vulnerability, please report it responsibly:</p>
 <ol>

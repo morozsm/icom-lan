@@ -1899,10 +1899,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#radiopy-high-level-public-api-1549-lines" class="md-nav__link">
+  <a href="#radiopy-high-level-public-api-3743-lines" class="md-nav__link">
     <span class="md-ellipsis">
       
-        radio.py — High-Level Public API (1549 lines)
+        radio.py — High-Level Public API (3743 lines)
       
     </span>
   </a>
@@ -2699,34 +2699,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../cli-design/" class="md-nav__link">
         
   
@@ -3078,10 +3050,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#radiopy-high-level-public-api-1549-lines" class="md-nav__link">
+  <a href="#radiopy-high-level-public-api-3743-lines" class="md-nav__link">
     <span class="md-ellipsis">
       
-        radio.py — High-Level Public API (1549 lines)
+        radio.py — High-Level Public API (3743 lines)
       
     </span>
   </a>
@@ -3875,7 +3847,7 @@
 <a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>│    └─────────┬──────────┘                    │                         │
 <a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>│              │                               │                         │
 <a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>│              │       ┌───────────────────────┴──────────────┐          │
-<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>│              │       │      Icom7610CoreRadio               │          │
+<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>│              │       │      CoreRadio                       │          │
 <a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>│              └───────►      (shared executable core)        │          │
 <a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>│                      │  - Commander (priority queue)        │          │
 <a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>│                      │  - CI-V RX routing                   │          │
@@ -3895,7 +3867,7 @@
 <li><strong>Consumers</strong> (CLI/Web/rigctld) — program against <code>Radio</code> + capability protocols</li>
 <li><strong>Backend Factory</strong> — <code>create_radio(config)</code> wires typed config → concrete radio</li>
 <li><strong>Backend Adapters</strong> — thin adapters for LAN (UDP) and serial (USB CI-V + audio)</li>
-<li><strong>Shared Core</strong> — <code>Icom7610CoreRadio</code> with commander, state, CI-V routing, scope assembly</li>
+<li><strong>Shared Core</strong> — <code>CoreRadio</code> with commander, state, CI-V routing, scope assembly</li>
 <li><strong>Transports</strong> — LAN uses UDP sockets, serial uses <code>SerialCivLink</code> + <code>UsbAudioDriver</code></li>
 <li><strong>USB Audio Resolver</strong> — <code>usb_audio_resolve.py</code> maps a serial port to the correct <code>sounddevice</code> indices via macOS IORegistry topology (used by <code>UsbAudioDriver</code> when <code>serial_port</code> is provided)</li>
 </ol>
@@ -4057,7 +4029,7 @@ This means existing code that doesn't pass <code>cmd_map</code> continues to wor
 </ul>
 <p>See <a href="../../guide/rig-profiles/"><code>docs/guide/rig-profiles.md</code></a> for how to add a new radio.</p>
 <h2 id="module-responsibilities">Module Responsibilities<a class="headerlink" href="#module-responsibilities" title="Permanent link">&para;</a></h2>
-<h3 id="radiopy-high-level-public-api-1549-lines"><code>radio.py</code> — High-Level Public API (1549 lines)<a class="headerlink" href="#radiopy-high-level-public-api-1549-lines" title="Permanent link">&para;</a></h3>
+<h3 id="radiopy-high-level-public-api-3743-lines"><code>radio.py</code> — High-Level Public API (3743 lines)<a class="headerlink" href="#radiopy-high-level-public-api-3743-lines" title="Permanent link">&para;</a></h3>
 <p>The central orchestrator. <code>IcomRadio</code> inherits from three mixins and manages:</p>
 <ul>
 <li><strong>Three transport instances</strong>: control (50001), CI-V (50002), audio (50003, lazy)</li>
@@ -4130,18 +4102,25 @@ This means existing code that doesn't pass <code>cmd_map</code> continues to wor
 <li>RX: opus → decode → PCM → sounddevice OutputStream → BlackHole/Loopback</li>
 <li>TX: sounddevice InputStream → noise gate → opus encode → radio</li>
 <li>Uses AudioBus subscription (shares RX stream with other consumers)</li>
-<li>Optional dependency: <code>pip install icom-lan[bridge]</code> (sounddevice + numpy + opuslib)</li>
+<li>Dependencies: <code>sounddevice</code>, <code>numpy</code>, <code>opuslib</code> ship with the core install (since v0.19, #1090)</li>
 </ul>
 <h3 id="web-built-in-web-ui"><code>web/</code> — Built-in Web UI<a class="headerlink" href="#web-built-in-web-ui" title="Permanent link">&para;</a></h3>
 <p>WebSocket-based browser interface:</p>
 <ul>
-<li><code>server.py</code> — aiohttp web server, WebSocket handler management, audio bridge integration</li>
-<li><code>handlers.py</code> — scope, meters, audio, and control WebSocket handlers</li>
-<li><code>static/index.html</code> — single-page app with Canvas2D rendering</li>
+<li><code>server.py</code> — asyncio HTTP/WebSocket server (pure stdlib), WebSocket handler management, audio bridge integration</li>
+<li><code>handlers/</code> — scope, meters, audio, and control WebSocket handlers</li>
+<li>Frontend: Svelte 5 SPA built with Vite; build artifacts served from <code>web/static/</code></li>
 <li>Audio: PCM16 binary frames over WebSocket, Web Audio API playback</li>
 <li>AudioBroadcaster uses AudioBus subscription for RX audio distribution</li>
 </ul>
 <h4 id="web-module-descriptions"><code>web/</code> Module Descriptions<a class="headerlink" href="#web-module-descriptions" title="Permanent link">&para;</a></h4>
+<p><strong><code>web/server.py</code></strong> — Single <code>asyncio.start_server</code> accepts raw TCP. For each connection,
+it performs an HTTP Upgrade handshake via pure-stdlib RFC 6455 implementation, then full-duplex
+WebSocket messaging with ping/pong support. Integrates audio bridge and handlers; no external
+web framework (pure stdlib: asyncio, socket, struct).</p>
+<p><strong><code>web/websocket.py</code></strong> — Pure-stdlib RFC 6455 WebSocket implementation. HTTP Upgrade handshake
+key computation, frame serialisation/parsing, and <code>WebSocketConnection</code> class for full-duplex
+messaging with ping/pong support. Used by <code>server.py</code>.</p>
 <p><strong><code>web/protocol.py</code></strong> — Binary frame codec for web UI data streams. Encodes scope frames
 (16-byte header + pixel data), meter frames (4-byte header + values), and audio frames
 (8-byte header + payload). Also provides JSON encode/decode helpers for control messages.</p>
@@ -4149,9 +4128,16 @@ This means existing code that doesn't pass <code>cmd_map</code> continues to wor
 commands, drives rapid meter polling (25 ms interval), slower state polling, and scope
 enable/disable. Avoids request-response patterns to survive the IC-7610's 225-packet/sec
 scope flood.</p>
-<p><strong><code>web/websocket.py</code></strong> — Pure-stdlib RFC 6455 WebSocket implementation (no aiohttp WebSocket
-dependency). HTTP Upgrade handshake key computation, frame serialisation/parsing, and
-<code>WebSocketConnection</code> class for full-duplex messaging with ping/pong support.</p>
+<p><strong><code>web/handlers/</code></strong> — WebSocket handler subpackage: scope, meters, audio, and control
+handlers. Enqueues commands via <code>CommandQueue</code>; <code>RadioPoller</code> drains the queue and dispatches to the radio. (<code>IcomCommander</code> is a lower-level CI-V helper used by the backend, not part of the web dispatch path.)</p>
+<p><strong><code>web/band_plan.py</code></strong> — Amateur radio band definitions and frequency validation helpers.
+Used by the web UI to show band segments and validate frequency input.</p>
+<p><strong><code>web/eibi.py</code></strong> — EIBI.net broadcast station database integration. Fetches and caches
+broadcast station schedules for the waterfall display.</p>
+<p><strong><code>web/discovery.py</code></strong> — UDP broadcast discovery for radio discovery on the local LAN.
+Used by the web UI to find available radios without manual IP entry.</p>
+<p><strong><code>web/rtc.py</code></strong> — Real-Time Communication utilities (reserved for future peer-to-peer audio).</p>
+<p><strong><code>web/tls.py</code></strong> — TLS support for <code>server.py</code>. Certificate loading and HTTPS server setup.</p>
 <p><strong>Boundary rule (web layer):</strong>
 - <code>src/icom_lan/web/</code> must depend on <code>radio_protocol</code> protocols (<code>Radio</code> + capability protocols), not on concrete <code>IcomRadio</code>.
 - Direct import of <code>icom_lan.radio.IcomRadio</code> in <code>web/</code> is forbidden and enforced by lint/CI.</p>
@@ -4454,20 +4440,30 @@ while separating concerns. <code>IcomRadio</code> inherits from <code>ControlPha
 <code>CivRxMixin</code>, and <code>AudioRecoveryMixin</code>. Cross-mixin access uses
 <code>self._xxx  # type: ignore[attr-defined]</code> — accepted trade-off for zero API breakage.</p>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>icom-lan (runtime)
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>└── Python 3.11+ stdlib only
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    ├── asyncio, struct, socket, logging, dataclasses
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>icom-lan[dev]
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>├── pytest, pytest-asyncio
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>icom-lan[scope]
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>└── Pillow (for scope image rendering)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>icom-lan (runtime, core install — since v0.19)
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── pyserial, pyserial-asyncio (CI-V serial transport)
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>├── sounddevice (PortAudio bindings — virtual-audio bridge, USB audio devices)
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>├── numpy (PCM frame processing, DSP)
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>└── opuslib (Opus codec for decode/encode)
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>icom-lan[dev]
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>├── pytest, pytest-asyncio, pytest-cov, pytest-timeout
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>├── ruff, mypy
 <a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>icom-lan[bridge]
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>├── sounddevice (PortAudio bindings)
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>├── numpy (PCM frame processing)
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>└── opuslib (Opus codec for decode/encode)
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>icom-lan[scope]
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>└── Pillow (for scope image rendering)
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>icom-lan[dsp]
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>└── scipy (advanced DSP — anti-aliasing FIR filter design, etc.)
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>icom-lan[webrtc]
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>└── aiortc (WebRTC audio transport)
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>icom-lan[tls]
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>└── cryptography (auto-generated HTTPS certs)
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>icom-lan[audio]   # no-op alias preserved for backwards compat (#1090)
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>icom-lan[bridge]  # no-op alias preserved for backwards compat (#1090)
 </code></pre></div>
 <h2 id="high-level-flows">High-Level Flows<a class="headerlink" href="#high-level-flows" title="Permanent link">&para;</a></h2>
 <h3 id="control-cli-radio-ci-v-ic-7610">Control: CLI → Radio → CI-V → IC-7610<a class="headerlink" href="#control-cli-radio-ci-v-ic-7610" title="Permanent link">&para;</a></h3>

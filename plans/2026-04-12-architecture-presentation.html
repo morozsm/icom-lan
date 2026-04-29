@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>icom-lan Frontend Architecture</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #d29922;
+    --purple: #bc8cff;
+    --cyan: #39d2c0;
+    --pink: #f778ba;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    padding: 40px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 2em; margin-bottom: 8px; }
+  h2 { font-size: 1.5em; margin: 48px 0 16px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  h3 { font-size: 1.15em; margin: 24px 0 12px; color: var(--purple); }
+  p, li { color: var(--muted); margin-bottom: 8px; }
+  .subtitle { color: var(--muted); font-size: 0.95em; margin-bottom: 32px; }
+  code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: var(--cyan); }
+
+  /* Slide sections */
+  .slide { margin-bottom: 64px; }
+
+  /* Layer diagram */
+  .layers {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 24px 0;
+  }
+  .layer {
+    padding: 20px 24px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .layer-num {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2em;
+    font-weight: 700;
+    opacity: 0.15;
+  }
+  .layer h4 { font-size: 1.1em; margin-bottom: 4px; }
+  .layer p { margin: 0; font-size: 0.9em; }
+  .l-runtime { background: #1a2332; border-color: #264166; }
+  .l-runtime h4 { color: var(--accent); }
+  .l-adapter { background: #1a2825; border-color: #1f4a3a; }
+  .l-adapter h4 { color: var(--green); }
+  .l-semantic { background: #261a33; border-color: #3d2666; }
+  .l-semantic h4 { color: var(--purple); }
+  .l-presentation { background: #332218; border-color: #664422; }
+  .l-presentation h4 { color: var(--orange); }
+
+  .arrow-down {
+    text-align: center;
+    font-size: 1.5em;
+    color: var(--muted);
+    line-height: 1;
+    padding: 4px 0;
+  }
+
+  /* Three knobs */
+  .knobs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .knob-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .knob-card h4 {
+    font-size: 1.05em;
+    margin-bottom: 8px;
+  }
+  .knob-card .what { color: var(--text); font-size: 0.95em; margin-bottom: 8px; }
+  .knob-card .how { color: var(--muted); font-size: 0.85em; }
+  .knob-theme h4 { color: var(--cyan); }
+  .knob-skin h4 { color: var(--pink); }
+  .knob-layout h4 { color: var(--orange); }
+
+  /* Comparison table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.9em;
+  }
+  th, td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  th {
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 600;
+  }
+  td { color: var(--muted); }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  .good { color: var(--green); }
+  .bad { color: var(--red); }
+
+  /* Flow diagrams */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 0.85em;
+    white-space: nowrap;
+  }
+  .flow-arrow { color: var(--muted); font-size: 1.2em; }
+  .flow-box.runtime { border-color: #264166; color: var(--accent); }
+  .flow-box.adapter { border-color: #1f4a3a; color: var(--green); }
+  .flow-box.semantic { border-color: #3d2666; color: var(--purple); }
+  .flow-box.skin { border-color: #664422; color: var(--orange); }
+  .flow-box.theme { border-color: #1a4040; color: var(--cyan); }
+
+  /* Skin comparison */
+  .skin-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .skin-example {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .skin-example h5 {
+    font-size: 0.95em;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .skin-example pre {
+    font-size: 0.8em;
+    line-height: 1.5;
+    color: var(--muted);
+    overflow-x: auto;
+  }
+  .lcd-skin h5 { color: #f0a030; }
+  .v2-skin h5 { color: var(--accent); }
+
+  /* File tree */
+  .tree {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.82em;
+    line-height: 1.8;
+    color: var(--muted);
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  .tree .dir { color: var(--accent); font-weight: 600; }
+  .tree .file { color: var(--muted); }
+  .tree .comment { color: #484f58; }
+
+  /* Invariant cards */
+  .invariants {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .inv-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .inv-card .inv-id {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.85em;
+    margin-bottom: 4px;
+  }
+  .inv-card .inv-text {
+    color: var(--text);
+    font-size: 0.9em;
+    margin-bottom: 6px;
+  }
+  .inv-card .inv-why {
+    color: var(--muted);
+    font-size: 0.8em;
+  }
+
+  /* Phase timeline */
+  .phases {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 16px 0;
+  }
+  .phase {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 0;
+    border-left: 2px solid var(--border);
+    margin-left: 16px;
+    padding-left: 24px;
+    position: relative;
+  }
+  .phase::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 20px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--border);
+    border: 2px solid var(--bg);
+  }
+  .phase.active::before { background: var(--green); }
+  .phase-num {
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 0.85em;
+    min-width: 24px;
+  }
+  .phase-content h5 { color: var(--text); font-size: 0.95em; margin-bottom: 4px; }
+  .phase-content p { font-size: 0.85em; margin: 0; }
+  .phase-gate {
+    display: inline-block;
+    background: rgba(59, 185, 80, 0.1);
+    border: 1px solid rgba(59, 185, 80, 0.3);
+    color: var(--green);
+    font-size: 0.75em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+
+  @media (max-width: 768px) {
+    .knobs { grid-template-columns: 1fr; }
+    .skin-grid { grid-template-columns: 1fr; }
+    .invariants { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>icom-lan Frontend Architecture</h1>
+<p class="subtitle">ADR 2026-04-12 &mdash; Target architecture for unified V2/LCD runtime with skin/theme support</p>
+
+<!-- SLIDE 1: Problem -->
+<div class="slide">
+<h2>1. Проблема</h2>
+<p>V2 и LCD задумывались как две презентации над одним рантаймом. На практике runtime-ответственности утекли в компоненты.</p>
+
+<table>
+<tr><th>Нарушение</th><th>Где</th><th>Последствие</th></tr>
+<tr><td>Компоненты открывают WS-каналы</td><td>SpectrumPanel, AudioSpectrumPanel, AmberLcdDisplay</td><td>Transport lifecycle привязан к mount state</td></tr>
+<tr><td>Прямой <code>sendCommand()</code></td><td>AmberLcdDisplay, MemoryPanel</td><td>Команды обходят command bus</td></tr>
+<tr><td>Прямой <code>audioManager</code></td><td>TxPanel, MobileRadioLayout</td><td>TX audio не централизован</td></tr>
+<tr><td>Прямой <code>fetch()</code></td><td>StatusBar, LcdLayout</td><td>HTTP side effects в UI</td></tr>
+<tr><td>Дублирование парсинга</td><td>3 копии parseScopeFrame</td><td>Протокольная логика размазана</td></tr>
+</table>
+
+<p style="color: var(--red); margin-top: 16px;"><strong>Итого: 23 нарушения границ в 5 файлах.</strong> Достаточно для layout-зависимых регрессий даже при одном бэкенде.</p>
+</div>
+
+<!-- SLIDE 2: Target layers -->
+<div class="slide">
+<h2>2. Целевая архитектура: 4 слоя</h2>
+<p>Строгая однонаправленная зависимость. Каждый слой зависит только от слоя ниже.</p>
+
+<div class="layers">
+  <div class="layer l-presentation">
+    <h4>Skin + Layout + Theme</h4>
+    <p>Визуальная оболочка: amber-lcd, desktop-v2, mobile, будущие скины. CSS-темы.</p>
+    <span class="layer-num">4</span>
+  </div>
+  <div class="arrow-down">&darr;</div>
+  <div class="layer l-semantic">
+    <h4>Semantic Components</h4>
+    <p>Контракты поведения: VfoDisplay, MeterPanel, RxAudioControl, ScopeSurface. Типизированные props + callbacks.</p>
+    <span class="layer-num">3</span>
+  </div>
+  <div class="arrow-down">&darr;</div>
+  <div class="layer l-adapter">
+    <h4>View-Model Adapters</h4>
+    <p>Чистые функции: <code>(State, Caps) &rarr; Props</code>. Без side effects. Один адаптер на домен.</p>
+    <span class="layer-num">2</span>
+  </div>
+  <div class="arrow-down">&darr;</div>
+  <div class="layer l-runtime">
+    <h4>Runtime</h4>
+    <p>Singleton. Владеет: WS, audio, scope, state, commands, reconnect. Без DOM.</p>
+    <span class="layer-num">1</span>
+  </div>
+</div>
+</div>
+
+<!-- SLIDE 3: Runtime -->
+<div class="slide">
+<h2>3. Runtime: единый владелец side effects</h2>
+
+<h3>FrontendRuntime</h3>
+<div class="flow">
+  <div class="flow-box runtime">state</div>
+  <div class="flow-box runtime">capabilities</div>
+  <div class="flow-box runtime">connection</div>
+  <div class="flow-box runtime">cmd()</div>
+</div>
+
+<h3>Контроллеры</h3>
+<table>
+<tr><th>Контроллер</th><th>Владеет</th><th>Не владеет</th></tr>
+<tr>
+  <td><code>AudioController</code></td>
+  <td>/api/v1/audio WS, AudioContext, RxPlayer, TxMic, codec negotiation</td>
+  <td>AF level radio command (через cmd())</td>
+</tr>
+<tr>
+  <td><code>ScopeController</code></td>
+  <td>/api/v1/scope WS, /api/v1/audio-scope WS, binary frame parsing</td>
+  <td>Визуальный рендеринг (это skin)</td>
+</tr>
+<tr>
+  <td><code>SystemController</code></td>
+  <td>HTTP: power, connect/disconnect, EIBI identify</td>
+  <td>UI для этих действий</td>
+</tr>
+</table>
+
+<p style="margin-top: 16px;">Ключевое: runtime &mdash; чистый TypeScript, без Svelte, без DOM. Можно тестировать юнитами.</p>
+</div>
+
+<!-- SLIDE 4: Adapters -->
+<div class="slide">
+<h2>4. Адаптеры: чистый маппинг state &rarr; props</h2>
+
+<div class="flow">
+  <div class="flow-box runtime">RadioState</div>
+  <span class="flow-arrow">+</span>
+  <div class="flow-box runtime">Capabilities</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box adapter">toVfoProps()</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box semantic">VfoViewModel</div>
+</div>
+
+<p style="margin-top: 12px;">Каждый адаптер &mdash; чистая функция. Один файл на домен:</p>
+
+<table>
+<tr><th>Адаптер</th><th>Выход</th><th>Используется в</th></tr>
+<tr><td><code>vfo.ts</code></td><td>VfoViewModel (freq, mode, filter, badges, callbacks)</td><td>VfoDisplay</td></tr>
+<tr><td><code>audio.ts</code></td><td>RxAudioViewModel (monitorMode, volume, callbacks)</td><td>RxAudioControl</td></tr>
+<tr><td><code>meter.ts</code></td><td>MeterViewModel (sMeter, swr, power, alc)</td><td>MeterPanel</td></tr>
+<tr><td><code>scope.ts</code></td><td>ScopeViewModel (available, frame, callbacks)</td><td>ScopeSurface</td></tr>
+<tr><td><code>rf.ts</code></td><td>RfViewModel (att, preamp, nb, nr, callbacks)</td><td>RfFrontEnd</td></tr>
+<tr><td><code>tx.ts</code></td><td>TxViewModel (pttActive, txSupported, callbacks)</td><td>TxControl</td></tr>
+</table>
+
+<p style="margin-top: 12px;">Заменяет текущие <code>state-adapter.ts</code> + <code>command-bus.ts</code> &mdash; не дублирует, а рефакторит.</p>
+</div>
+
+<!-- SLIDE 5: Three knobs -->
+<div class="slide">
+<h2>5. Три независимые ручки оформления</h2>
+
+<div class="knobs">
+  <div class="knob-card knob-theme">
+    <h4>Theme</h4>
+    <div class="what">Меняет: цвета, шрифты, тени, радиусы</div>
+    <div class="how">Механизм: CSS custom properties через <code>data-theme</code><br>
+    Примеры: dracula, nord, crt-green, amoled-black<br>
+    <strong>20 тем уже есть &mdash; работают как есть</strong></div>
+  </div>
+  <div class="knob-card knob-skin">
+    <h4>Skin</h4>
+    <div class="what">Меняет: визуальную реализацию компонентов</div>
+    <div class="how">Механизм: конкретный Svelte-компонент для каждого semantic component<br>
+    Примеры: <code>AmberFrequency</code> vs <code>IndustrialFrequency</code><br>
+    <strong>Не меняет поведение &mdash; только рендер</strong></div>
+  </div>
+  <div class="knob-card knob-layout">
+    <h4>Layout</h4>
+    <div class="what">Меняет: расположение компонентов на экране</div>
+    <div class="how">Механизм: grid/flex в top-level компоненте skin-а<br>
+    Примеры: DesktopGrid, MobileTabs, LcdColumn<br>
+    <strong>Не меняет transport ownership</strong></div>
+  </div>
+</div>
+</div>
+
+<!-- SLIDE 6: How skins work -->
+<div class="slide">
+<h2>6. Как работает skin</h2>
+
+<p>Skin &mdash; это Svelte-компонент, который получает <code>FrontendRuntime</code> как единственный prop:</p>
+
+<div class="flow">
+  <div class="flow-box runtime">App.svelte</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box skin">resolveSkinId()</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box skin">loadSkin(id)</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box skin">&lt;SkinComponent runtime /&gt;</div>
+</div>
+
+<div class="skin-grid">
+  <div class="skin-example v2-skin">
+    <h5>Desktop V2 Skin</h5>
+    <pre>
+&lt;DesktopSkin {runtime}&gt;
+  &lt;VfoHeader&gt;
+    &lt;IndustrialFrequency {vfo.freqHz} /&gt;
+    &lt;NeedleSMeter {meter.sMeter} /&gt;
+  &lt;/VfoHeader&gt;
+  &lt;SpectrumCanvas {scope.frame} /&gt;
+  &lt;LeftSidebar&gt;
+    &lt;BandSelector ... /&gt;
+    &lt;ModeSelector ... /&gt;
+  &lt;/LeftSidebar&gt;
+  &lt;RightSidebar&gt;
+    &lt;HardwareRxAudioPanel ... /&gt;
+    &lt;DspPanel ... /&gt;
+  &lt;/RightSidebar&gt;
+&lt;/DesktopSkin&gt;</pre>
+  </div>
+  <div class="skin-example lcd-skin">
+    <h5>Amber LCD Skin</h5>
+    <pre>
+&lt;LcdSkin {runtime}&gt;
+  &lt;LcdFrame&gt;
+    &lt;AmberFrequency {vfo.freqHz} /&gt;
+    &lt;AmberSMeter {meter.sMeter} /&gt;
+    &lt;AmberAudioStrip
+      mode={audio.monitorMode}
+      onModeChange={audio.onModeChange}
+    /&gt;
+  &lt;/LcdFrame&gt;
+  &lt;LeftSidebar&gt;...&lt;/LeftSidebar&gt;
+  &lt;RightSidebar&gt;...&lt;/RightSidebar&gt;
+&lt;/LcdSkin&gt;</pre>
+  </div>
+</div>
+
+<p>Оба skin-а используют <strong>одни и те же адаптеры</strong> (<code>toVfoProps</code>, <code>toMeterProps</code>...) и <strong>один runtime</strong>. Различается только визуал.</p>
+</div>
+
+<!-- SLIDE 7: Data flow -->
+<div class="slide">
+<h2>7. Поток данных: от радио до пикселя</h2>
+
+<h3>RX Audio (пример)</h3>
+<div class="flow">
+  <div class="flow-box">IC-7610</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box runtime">AudioBus</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box runtime">AudioBroadcaster (backend)</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box runtime">/api/v1/audio WS</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box runtime">AudioController</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box runtime">RxPlayer &rarr; AudioContext</div>
+</div>
+
+<h3>User action (пример: смена режима мониторинга)</h3>
+<div class="flow">
+  <div class="flow-box skin">Click "LIVE"</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box adapter">onMonitorModeChange('live')</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box runtime">AudioController.setMonitorMode()</div>
+  <span class="flow-arrow">&rarr;</span>
+  <div class="flow-box runtime">startRx() + resume AudioContext</div>
+</div>
+
+<p style="margin-top: 12px;">UI-компонент <strong>не знает</strong> про WebSocket, AudioContext или codec. Он вызывает callback из props.</p>
+</div>
+
+<!-- SLIDE 8: File structure -->
+<div class="slide">
+<h2>8. Целевая структура файлов</h2>
+
+<div class="tree">
+<span class="dir">frontend/src/</span>
+<br><span class="dir">&boxvr;&boxh; runtime/</span> <span class="comment">&mdash; Layer 1: все side effects</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; index.ts</span> <span class="comment">&mdash; createRuntime(), singleton</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; types.ts</span> <span class="comment">&mdash; FrontendRuntime, controller interfaces</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; audio-controller.ts</span> <span class="comment">&mdash; AudioController (ex audio-manager)</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; scope-controller.ts</span> <span class="comment">&mdash; ScopeController</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; system-controller.ts</span> <span class="comment">&mdash; SystemController (HTTP calls)</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; command-dispatcher.ts</span> <span class="comment">&mdash; cmd() + optimistic patches</span>
+<br><span class="file">&boxv;  &boxur;&boxh; connection-monitor.ts</span>
+<br>
+<br><span class="dir">&boxvr;&boxh; adapters/</span> <span class="comment">&mdash; Layer 2: pure functions</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; vfo.ts, audio.ts, meter.ts, scope.ts</span>
+<br><span class="file">&boxv;  &boxur;&boxh; rf.ts, tx.ts, memory.ts, system.ts</span>
+<br>
+<br><span class="dir">&boxvr;&boxh; semantic/</span> <span class="comment">&mdash; Layer 3: behaviour contracts</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; VfoDisplay.svelte</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; RxAudioControl.svelte</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; MeterPanel.svelte, ScopeSurface.svelte</span>
+<br><span class="file">&boxv;  &boxur;&boxh; TxControl.svelte, ...</span>
+<br>
+<br><span class="dir">&boxvr;&boxh; primitives/</span> <span class="comment">&mdash; shared visual atoms</span>
+<br><span class="file">&boxv;  &boxur;&boxh; SegmentedButton, Knob, LinearMeter, SevenSegment, ...</span>
+<br>
+<br><span class="dir">&boxvr;&boxh; skins/</span> <span class="comment">&mdash; Layer 4: visual implementations</span>
+<br><span class="file">&boxv;  &boxvr;&boxh; registry.ts</span> <span class="comment">&mdash; resolveSkinId(), loadSkin()</span>
+<br><span class="dir">&boxv;  &boxvr;&boxh; desktop-v2/</span> <span class="comment">&mdash; DesktopSkin + visual components</span>
+<br><span class="dir">&boxv;  &boxvr;&boxh; amber-lcd/</span> <span class="comment">&mdash; LcdSkin + AmberFrequency, AmberMeter...</span>
+<br><span class="dir">&boxv;  &boxur;&boxh; mobile/</span> <span class="comment">&mdash; MobileSkin + CompactVfo...</span>
+<br>
+<br><span class="dir">&boxvr;&boxh; themes/</span> <span class="comment">&mdash; CSS tokens (20+ тем, as-is)</span>
+<br><span class="dir">&boxvr;&boxh; lib/</span> <span class="comment">&mdash; renderers, utils, gestures, data</span>
+<br><span class="file">&boxur;&boxh; App.svelte</span> <span class="comment">&mdash; skin resolver entry point</span>
+</div>
+</div>
+
+<!-- SLIDE 9: Invariants -->
+<div class="slide">
+<h2>9. Архитектурные инварианты</h2>
+<p>Нарушение любого = регрессия.</p>
+
+<div class="invariants">
+  <div class="inv-card">
+    <div class="inv-id">INV-1</div>
+    <div class="inv-text">Единый путь RX playback</div>
+    <div class="inv-why">Все лейауты проходят через один AudioController. Codec, WS, decode, volume &mdash; layout-независимы.</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-id">INV-2</div>
+    <div class="inv-text">Единое владение scope</div>
+    <div class="inv-why">ScopeController владеет WS-каналами. Лейаут решает где рендерить &mdash; но не подключаться ли.</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-id">INV-3</div>
+    <div class="inv-text">scope=false + audio=true &mdash; first class</div>
+    <div class="inv-why">Отсутствие scope не влияет на audio. LCD fallback &mdash; решение презентации, не рантайма.</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-id">INV-4</div>
+    <div class="inv-text">Capability gating до презентации</div>
+    <div class="inv-why">Панели не решают есть ли capability. Runtime/adapters дают hasLiveAudio, hasScope, hasTx.</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-id">INV-5</div>
+    <div class="inv-text">Mount/unmount не меняет transport</div>
+    <div class="inv-why">Переключение лейаута не перезапускает WS. Вмонтирование scope surface не стартует стрим.</div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-id">INV-6</div>
+    <div class="inv-text">Нет runtime-импортов в презентации</div>
+    <div class="inv-why">Semantic, skins, primitives не импортируют transport/audio-manager. Enforced eslint-ом.</div>
+  </div>
+</div>
+</div>
+
+<!-- SLIDE 10: What this gives us -->
+<div class="slide">
+<h2>10. Что это даёт</h2>
+
+<table>
+<tr><th>Сценарий</th><th>Что менять</th><th>Что НЕ менять</th></tr>
+<tr>
+  <td><strong>Новый skin</strong> (например, Nixie Tube)</td>
+  <td>Новая папка <code>skins/nixie/</code></td>
+  <td class="good">Runtime, adapters, semantic &mdash; 0 изменений</td>
+</tr>
+<tr>
+  <td><strong>Новая capability радио</strong></td>
+  <td>Runtime + adapter</td>
+  <td class="good">Skins &mdash; 0 изменений (если semantic component есть)</td>
+</tr>
+<tr>
+  <td><strong>Audio bug</strong> (как #642)</td>
+  <td>Один файл: <code>runtime/audio-controller.ts</code></td>
+  <td class="good">Работает одинаково во всех скинах</td>
+</tr>
+<tr>
+  <td><strong>Новая тема</strong></td>
+  <td>Один CSS-файл в <code>themes/</code></td>
+  <td class="good">Всё остальное</td>
+</tr>
+<tr>
+  <td><strong>Behavioral parity</strong></td>
+  <td colspan="2" class="good">Гарантирована архитектурно: один runtime, одни адаптеры, enforce eslint</td>
+</tr>
+</table>
+</div>
+
+<!-- SLIDE 11: Current vs Target -->
+<div class="slide">
+<h2>11. Сейчас vs Target</h2>
+
+<table>
+<tr><th>Аспект</th><th>Сейчас</th><th>Target</th></tr>
+<tr>
+  <td>state-adapter + command-bus</td>
+  <td>Зачатки, не enforced</td>
+  <td class="good">Полноценные adapters, eslint enforcement</td>
+</tr>
+<tr>
+  <td>AudioManager</td>
+  <td class="bad">Синглтон, импортируется из 5 мест напрямую</td>
+  <td class="good">AudioController в runtime, доступен только через props</td>
+</tr>
+<tr>
+  <td>LCD layout</td>
+  <td class="bad">Отдельный путь с дублированием</td>
+  <td class="good">Skin над теми же semantic components</td>
+</tr>
+<tr>
+  <td>Scope ownership</td>
+  <td class="bad">getChannel() в 3 компонентах</td>
+  <td class="good">ScopeController, один WS, данные через props</td>
+</tr>
+<tr>
+  <td>Protocol parsing</td>
+  <td class="bad">3 копии parseScopeFrame</td>
+  <td class="good">Один раз в runtime controller</td>
+</tr>
+<tr>
+  <td>Темы</td>
+  <td>20 CSS тем, работают</td>
+  <td class="good">Остаются как есть</td>
+</tr>
+<tr>
+  <td>Boundary violations</td>
+  <td class="bad">23 нарушения</td>
+  <td class="good">0 &mdash; enforced eslint rules</td>
+</tr>
+</table>
+</div>
+
+<!-- SLIDE 12: Migration phases -->
+<div class="slide">
+<h2>12. Фазы миграции</h2>
+<p>Строго последовательно. Runtime first, presentation second.</p>
+
+<div class="phases">
+  <div class="phase active">
+    <div class="phase-content">
+      <div class="phase-num">#647</div>
+      <h5>Phase 0: Guardrails + диагностика</h5>
+      <p>eslint import boundaries, diagnostic logging для audio failure</p>
+      <div class="phase-gate">Gate: audio failure classified + guardrails active</div>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-content">
+      <div class="phase-num">#648</div>
+      <h5>Phase 1: Runtime shell + adapter boundary</h5>
+      <p>FrontendRuntime scaffold, controller interfaces, injected props</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-content">
+      <div class="phase-num">#649</div>
+      <h5>Phase 2: Centralize audio + scope</h5>
+      <p>AudioController, ScopeController &mdash; убрать getChannel из компонентов</p>
+      <div class="phase-gate">Gate: no presentation-owned WS connections</div>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-content">
+      <div class="phase-num">#650</div>
+      <h5>Phase 3: Semantic presentation layer</h5>
+      <p>Semantic component APIs, skin registry, layout slots</p>
+      <div class="phase-gate">Gate: semantic contracts stable for both desktop + LCD</div>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-content">
+      <div class="phase-num">#651</div>
+      <h5>Phase 4: Migrate V2 desktop</h5>
+      <p>Standard layout на unified architecture, feature flag</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-content">
+      <div class="phase-num">#652</div>
+      <h5>Phase 5: Migrate LCD</h5>
+      <p>LCD как skin + layout variant, validate scope=false+audio=true</p>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-content">
+      <div class="phase-num">#653</div>
+      <h5>Phase 6: Cutover + cleanup</h5>
+      <p>Удалить legacy paths, финальная проверка parity matrix</p>
+      <div class="phase-gate">Gate: all 4 capability scenarios pass + manual HW validation</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- SLIDE 13: Anti-patterns -->
+<div class="slide">
+<h2>13. Анти-паттерны (запрещено)</h2>
+
+<table>
+<tr><th>#</th><th>Анти-паттерн</th><th>Почему запрещён</th></tr>
+<tr><td class="bad">1</td><td>Skin импортирует runtime напрямую</td><td>Превращает skin в скрытый behavior fork</td></tr>
+<tr><td class="bad">2</td><td>Theme содержит behavior flags</td><td>Theme &mdash; только токены</td></tr>
+<tr><td class="bad">3</td><td>Layout решает transport по mount state</td><td>Текущий источник drift (scope/audio)</td></tr>
+<tr><td class="bad">4</td><td>Semantic component с escape hatches (<code>rawWsData</code>)</td><td>Разрушает semantic boundary</td></tr>
+<tr><td class="bad">5</td><td>LCD как special case с <code>if (isLcd)</code></td><td>LCD = skin, не отдельный code path</td></tr>
+<tr><td class="bad">6</td><td>Дублирование protocol parsing в UI</td><td>Парсинг &mdash; ответственность runtime</td></tr>
+</table>
+</div>
+
+<div class="slide" style="text-align: center; padding: 48px 0;">
+<h2 style="border: none;">Итог</h2>
+<p style="color: var(--text); font-size: 1.1em; max-width: 700px; margin: 0 auto;">
+Не нужен полный rewrite. Нужно строгое завершение архитектуры, которая уже частично существует:
+один runtime &rarr; чистые адаптеры &rarr; semantic components &rarr; skins/themes/layouts.
+</p>
+<p style="margin-top: 24px; font-size: 0.9em;">
+ADR: <code>docs/plans/2026-04-12-target-frontend-architecture.md</code>
+</p>
+</div>
+
+</body>
+</html>

@@ -2156,34 +2156,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../internals/cli-design/" class="md-nav__link">
         
   
@@ -2777,7 +2749,7 @@
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="c1"># Create serial radio for IC-7300</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">&quot;serial&quot;</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">&quot;IC-7300&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-A602RVAV&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="s2">&quot;serial&quot;</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">&quot;IC-7300&quot;</span><span class="p">,</span> <span class="n">serial_port</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-A602RVAV&quot;</span><span class="p">)</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">radio</span><span class="p">:</span>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="c1"># Read frequency</span>
@@ -2800,16 +2772,16 @@
 </code></pre></div>
 <h3 id="4-cli-usage">4. CLI Usage<a class="headerlink" href="#4-cli-usage" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Check connection</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-7300<span class="w"> </span>--device<span class="w"> </span>/dev/cu.usbserial-A602RVAV<span class="w"> </span>status
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-7300<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-A602RVAV<span class="w"> </span>status
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Set frequency</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-7300<span class="w"> </span>--device<span class="w"> </span>/dev/cu.usbserial-A602RVAV<span class="w"> </span>freq<span class="w"> </span><span class="m">7074000</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-7300<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-A602RVAV<span class="w"> </span>freq<span class="w"> </span><span class="m">7074000</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Monitor metrics</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-7300<span class="w"> </span>--device<span class="w"> </span>/dev/cu.usbserial-A602RVAV<span class="w"> </span>meters
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-7300<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-A602RVAV<span class="w"> </span>meters
 </code></pre></div>
 <h3 id="5-web-ui">5. Web UI<a class="headerlink" href="#5-web-ui" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-7300<span class="w"> </span>--device<span class="w"> </span>/dev/cu.usbserial-A602RVAV
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-7300<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-A602RVAV
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Open http://localhost:8000</span>
 </code></pre></div>
 <h2 id="supported-features">Supported Features<a class="headerlink" href="#supported-features" title="Permanent link">&para;</a></h2>
@@ -2895,7 +2867,7 @@
 <li>Audio Midi Setup → + → "IC-7300 Bridge"</li>
 <li>Add "IC-7300" input + "BlackHole 2ch" output</li>
 <li><strong>Start audio bridge</strong>:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>bridge<span class="w"> </span>--device<span class="w"> </span>ic-7300-usb-in<span class="w"> </span>--loopback<span class="w"> </span><span class="s2">&quot;BlackHole 2ch&quot;</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>bridge<span class="w"> </span>--serial-port<span class="w"> </span>ic-7300-usb-in<span class="w"> </span>--loopback<span class="w"> </span><span class="s2">&quot;BlackHole 2ch&quot;</span>
 </code></pre></div></li>
 <li><strong>WSJT-X settings</strong>:</li>
 <li>Input Device: "IC-7300 Bridge"</li>
@@ -2926,7 +2898,7 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span>
 <a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;serial&quot;</span><span class="p">,</span>
 <a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;IC-7300&quot;</span><span class="p">,</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-A602RVAV&quot;</span><span class="p">,</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="n">serial_port</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-A602RVAV&quot;</span><span class="p">,</span>
 <a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="p">)</span>
 <a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="c1"># Set 100ms minimum between CI-V commands (default is 50ms)</span>
 <a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>

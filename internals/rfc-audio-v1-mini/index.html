@@ -1814,34 +1814,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../cli-design/" class="md-nav__link">
         
   
@@ -2418,6 +2390,140 @@ This makes API naming ambiguous, CLI scope unclear, and recovery/testing behavio
 <li>Should <code>--stats</code> print periodic stream stats (live) or end-of-run summary by default?</li>
 <li>Is <code>opuslib</code> optional dependency acceptable as the default high-level backend?</li>
 </ol>
+<h2 id="10-dsp-pipeline-pcm-tap-gate-on-opus-native-radios-issue-762">10) DSP pipeline + PCM tap gate on Opus-native radios (issue #762)<a class="headerlink" href="#10-dsp-pipeline-pcm-tap-gate-on-opus-native-radios-issue-762" title="Permanent link">&para;</a></h2>
+<p><strong>Behavior:</strong> the web audio broadcaster's DSP pipeline (noise gate,
+limiter, etc.) and the PCM tap registry (used by the FFT / waterfall
+scope and audio analyzers) both operate on decoded PCM16.  When the
+radio's native audio codec is Opus (IC-705 and any future Opus-only
+model), the broadcaster passes the Opus frame through without
+decoding, so DSP and taps <strong>do not run</strong>.</p>
+<p><strong>Why we don't decode + re-encode on the hot path:</strong> Opus re-encode
+would introduce quality loss on every frame.  Users of IC-705 have
+not reported needing DSP or scope through the web UI, so the gate
+is documented rather than closed.</p>
+<p><strong>Observability:</strong> the broadcaster emits a one-shot <code>WARNING</code> log
+entry when it detects an active DSP pipeline on an Opus-native
+codec — fires at <code>set_dsp_pipeline()</code> or at <code>_refresh_codec_state()</code>
+(in case the codec flips mid-stream), whichever happens first.</p>
+<p><strong>Upgrade path if demand arrives:</strong> issue #762 §"Option A" — decode
+Opus once in <code>_relay_loop</code>, run DSP + feed taps on the PCM buffer,
+then re-encode before fan-out.  <code>_audio_transcoder.PcmOpusTranscoder</code>
+already exists and can be reused.  Quality loss is negligible for
+AM/FM ham audio but non-zero on SSB; flag behind a config toggle if
+implemented.</p>
+<h2 id="11-lan-mainsub-audio-routing-epic-787">11) LAN MAIN/SUB audio routing (epic #787)<a class="headerlink" href="#11-lan-mainsub-audio-routing-epic-787" title="Permanent link">&para;</a></h2>
+<p><strong>Wire format.</strong>  On dual-RX radios the LAN audio stream is <strong>stereo
+PCM16 with L=MAIN and R=SUB</strong> whenever a 2-channel codec is
+negotiated.  <code>_DEFAULT_CODEC_PREFERENCE</code> in <code>types.py</code> leads with
+<code>PCM_2CH_16BIT</code> (0x10); single-RX firmware downgrades to mono during
+handshake, and the broadcaster's <code>_refresh_codec_state</code> reads the
+negotiated codec back so downstream logic tracks reality rather than
+the requested codec.</p>
+<p><strong>Phones L/R Mix is always OFF.</strong>  CI-V <code>0x1A 05 00 72</code> is a boolean
+toggle — <code>0x00</code> = Mix OFF (separated stereo), <code>0x01</code> = Mix ON (summed
+to both channels).  The backend keeps it locked at <code>0x00</code> via two
+paths:</p>
+<ul>
+<li><code>AudioHandler._handle_audio_config</code> — every <code>audio_config</code> WS
+  message emits <code>0x00</code>, independent of the <code>split_stereo</code> payload.</li>
+<li><code>AudioBroadcaster._apply_phones_mix_off</code> — fires once on every
+  relay start (guarded on <code>receiver_count &gt;= 2</code>) so the LAN stream
+  begins in separated-stereo state regardless of the radio's prior
+  menu state.  Errors are swallowed so start-up continues on radios
+  where the command is unsupported.</li>
+</ul>
+<p>If Mix were ON the radio would pre-sum MAIN + SUB before transmission
+and the frontend graph could no longer isolate a single receiver —
+<code>focus=main</code> and <code>focus=sub</code> would both play the summed signal.</p>
+<p><strong><code>focus</code> and <code>split_stereo</code> live on the frontend.</strong>  The WebAudio
+graph in <code>frontend/src/lib/audio/rx-player.ts</code> routes the stereo
+pair through <code>ChannelSplitter(2) → GainNode×2 → StereoPanner×2 →
+destination</code>:</p>
+<table>
+<thead>
+<tr>
+<th><code>focus</code></th>
+<th><code>split_stereo</code></th>
+<th>L gain</th>
+<th>R gain</th>
+<th>L pan</th>
+<th>R pan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>main</td>
+<td>false</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>main</td>
+<td>true</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>−1</td>
+<td>+1</td>
+</tr>
+<tr>
+<td>sub</td>
+<td>false</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>sub</td>
+<td>true</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>−1</td>
+<td>+1</td>
+</tr>
+<tr>
+<td>both</td>
+<td>false</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>both</td>
+<td>true</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>−1</td>
+<td>+1</td>
+</tr>
+</tbody>
+</table>
+<p>Panning depends <strong>only</strong> on <code>split_stereo</code> (see
+<code>rx-player.ts::_applyGraphState</code>, lines 247-257) — when on,
+<code>mainPanner</code> hard-pans to −1 and <code>subPanner</code> to +1 regardless of
+<code>focus</code>.  For single-receiver focus (<code>focus=main</code> or <code>focus=sub</code>) the
+opposing gain is already 0 so the pan on the silenced channel is
+inaudible, but the setting still applies to the active channel — e.g.
+<code>focus=main</code> + <code>split_stereo=true</code> routes MAIN to the left ear only.</p>
+<p>Per-channel dB sliders (<code>mainGainDb</code> / <code>subGainDb</code>) multiply into the
+L/R gains respectively.</p>
+<p><strong>Why the WS message still exists.</strong>  <code>audio_config</code> is retained as
+a bidirectional echo channel so the client can persist its <code>focus</code> +
+<code>split_stereo</code> choice and the backend confirms via <code>applied: true</code>.
+The CI-V round-trip it used to drive (the broken <code>_PHONES_LR_MIX</code>
+dict pre-#788) is gone — the message now only raises the
+broadcaster's <code>_codec_stale</code> flag so a mid-stream codec/channel
+change triggers a fresh <code>_refresh_codec_state</code> pass (issue #766).</p>
+<p><strong>Historical context.</strong>  Revisions before #788 sent <code>0x02</code> / <code>0x03</code>
+on this sub-command for <code>focus=sub</code> / <code>focus=both</code> — values the radio
+silently ignored per the CI-V reference (only <code>{0x00, 0x01}</code> valid).</p>
+<h1 id="788-briefly-tied-the-byte-to-split_stereo-792-corrected-that-to">788 briefly tied the byte to <code>split_stereo</code>; #792 corrected that to<a class="headerlink" href="#788-briefly-tied-the-byte-to-split_stereo-792-corrected-that-to" title="Permanent link">&para;</a></h1>
+<p>the lock-at-<code>0x00</code> contract above.  The dead-code mapping is
+documented here rather than in a deleted source comment so future
+contributors don't rediscover the same trap.</p>
 
 
 

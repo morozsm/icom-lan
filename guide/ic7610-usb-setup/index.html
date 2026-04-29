@@ -2205,34 +2205,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../internals/cli-design/" class="md-nav__link">
         
   
@@ -2851,17 +2823,16 @@
 </div>
 <h2 id="macos-setup">macOS Setup<a class="headerlink" href="#macos-setup" title="Permanent link">&para;</a></h2>
 <h3 id="1-install-icom-lan">1. Install icom-lan<a class="headerlink" href="#1-install-icom-lan" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># For serial CI-V control:</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># For USB audio RX/TX and audio-device listing:</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;icom-lan[serial,bridge]&#39;</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># serial: pyserial + pyserial-asyncio</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># bridge: sounddevice + numpy + opuslib</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Core install — includes serial CI-V (pyserial), USB audio RX/TX,</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># audio-device listing (sounddevice + numpy + opuslib).</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan
 </code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Since v0.19 the audio-bridge stack (<code>sounddevice</code>, <code>numpy</code>, <code>opuslib</code>)
+is part of the core install. The legacy <code>[bridge]</code> and <code>[audio]</code> extras
+still resolve but are now no-op aliases.</p>
+</div>
 <h3 id="2-connect-the-radio">2. Connect the Radio<a class="headerlink" href="#2-connect-the-radio" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Power on the IC-7610</li>
@@ -2886,20 +2857,19 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># List available audio devices</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>icom-lan<span class="w"> </span>--list-audio-devices
 </code></pre></div>
-<p>This command requires the optional bridge dependencies:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;icom-lan[bridge]&#39;</span>
-</code></pre></div>
+<p>Audio-device listing requires <code>sounddevice</code>, which ships with the core
+install since v0.19 (<code>pip install icom-lan</code>).</p>
 <p>Example output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>4 audio device(s):
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  [0] IC-7610 USB Audio  (in=2, out=2)
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  [1] Built-in Microphone  (in=2, out=0)
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  [2] Built-in Output  (in=0, out=2)
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  [3] BlackHole 2ch  (in=2, out=2)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>4 audio device(s):
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  [0] IC-7610 USB Audio  (in=2, out=2)
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  [1] Built-in Microphone  (in=2, out=0)
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  [2] Built-in Output  (in=0, out=2)
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  [3] BlackHole 2ch  (in=2, out=2)
 </code></pre></div>
 <p>The IC-7610 USB audio device is typically named <code>IC-7610 USB Audio</code> or similar.</p>
 <div class="admonition tip">
 <p class="admonition-title">JSON Output</p>
-<p><div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>icom-lan<span class="w"> </span>--list-audio-devices<span class="w"> </span>--json
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>icom-lan<span class="w"> </span>--list-audio-devices<span class="w"> </span>--json
 </code></pre></div>
 Returns structured JSON for scripting.</p>
 </div>
@@ -2917,103 +2887,103 @@ first matching USB Audio CODEC device by name, which may be incorrect for multi-
 In that case, specify explicit device indices with <code>--rx-device</code> and <code>--tx-device</code>.</p>
 </div>
 <h3 id="5-test-the-connection">5. Test the Connection<a class="headerlink" href="#5-test-the-connection" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Set environment variables</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_DEVICE</span><span class="o">=</span>/dev/cu.usbserial-111120
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_BAUDRATE</span><span class="o">=</span><span class="m">115200</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Test basic control</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>freq
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>mode
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Set environment variables</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_DEVICE</span><span class="o">=</span>/dev/cu.usbserial-111120
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_BAUDRATE</span><span class="o">=</span><span class="m">115200</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># Test basic control</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>freq
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>mode
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Frequency:    14,074,000 Hz  (14.074000 MHz)
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>Mode:         USB
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>S-meter:      42
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Power:        50
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Frequency:    14,074,000 Hz  (14.074000 MHz)
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>Mode:         USB
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>S-meter:      42
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Power:        50
 </code></pre></div>
 <h3 id="6-test-audio-optional">6. Test Audio (Optional)<a class="headerlink" href="#6-test-audio-optional" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Capture 10 seconds of RX audio to WAV</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span>--rx-device<span class="w"> </span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span>audio<span class="w"> </span>rx<span class="w"> </span>--out<span class="w"> </span>test_rx.wav<span class="w"> </span>--seconds<span class="w"> </span><span class="m">10</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Audio devices are auto-detected if not specified</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Capture 10 seconds of RX audio to WAV</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span>--rx-device<span class="w"> </span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span>audio<span class="w"> </span>rx<span class="w"> </span>--out<span class="w"> </span>test_rx.wav<span class="w"> </span>--seconds<span class="w"> </span><span class="m">10</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># Audio devices are auto-detected if not specified</span>
 </code></pre></div>
 <h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
 <h3 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Status check</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Set frequency</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>freq<span class="w"> </span><span class="m">7</span>.074m
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Set mode</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>mode<span class="w"> </span>USB
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c1"># PTT on/off</span>
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>ptt<span class="w"> </span>on
-<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>ptt<span class="w"> </span>off
-<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>
-<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="c1"># CW keying</span>
-<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>cw<span class="w"> </span><span class="s2">&quot;CQ CQ DE KN4KYD K&quot;</span>
-<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>
-<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="c1"># Attenuator (uses Command29 for IC-7610)</span>
-<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>att<span class="w"> </span><span class="m">18</span>
-<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>att<span class="w"> </span><span class="m">0</span>
-<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>
-<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="c1"># Preamp</span>
-<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>preamp<span class="w"> </span><span class="m">1</span>
-<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>preamp<span class="w"> </span><span class="m">0</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Status check</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Set frequency</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>freq<span class="w"> </span><span class="m">7</span>.074m
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># Set mode</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>mode<span class="w"> </span>USB
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="c1"># PTT on/off</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>ptt<span class="w"> </span>on
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>ptt<span class="w"> </span>off
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="c1"># CW keying</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>cw<span class="w"> </span><span class="s2">&quot;CQ CQ DE KN4KYD K&quot;</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="c1"># Attenuator (uses Command29 for IC-7610)</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>att<span class="w"> </span><span class="m">18</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>att<span class="w"> </span><span class="m">0</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="c1"># Preamp</span>
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>preamp<span class="w"> </span><span class="m">1</span>
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>preamp<span class="w"> </span><span class="m">0</span>
 </code></pre></div>
 <h3 id="python-api">Python API<a class="headerlink" href="#python-api" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.backends.factory</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.backends.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">SerialBackendConfig</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">SerialBackendConfig</span><span class="p">(</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>        <span class="n">device</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-111120&quot;</span><span class="p">,</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>        <span class="n">baudrate</span><span class="o">=</span><span class="mi">115200</span><span class="p">,</span>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>        <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">,</span>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>        <span class="n">rx_device</span><span class="o">=</span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="p">,</span>  <span class="c1"># or None for auto-detect</span>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>        <span class="n">tx_device</span><span class="o">=</span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="p">,</span>  <span class="c1"># or None for auto-detect</span>
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="p">)</span>
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>    <span class="n">radio</span> <span class="o">=</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>
-<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">radio</span><span class="p">:</span>
-<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>        <span class="c1"># Control</span>
-<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>        <span class="n">freq</span> <span class="o">=</span> <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">get_frequency</span><span class="p">()</span>
-<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Frequency: </span><span class="si">{</span><span class="n">freq</span><span class="o">/</span><span class="mf">1e6</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> MHz&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>
-<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>        <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">set_frequency</span><span class="p">(</span><span class="mi">14_074_000</span><span class="p">)</span>
-<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>        <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">set_mode</span><span class="p">(</span><span class="s2">&quot;USB&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>
-<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>        <span class="c1"># Meters</span>
-<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>        <span class="n">s</span> <span class="o">=</span> <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">get_s_meter</span><span class="p">()</span>
-<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;S-meter: </span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>
-<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>        <span class="c1"># Audio (if audio_capable)</span>
-<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.radio_protocol</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioCapable</span>
-<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">radio</span><span class="p">,</span> <span class="n">AudioCapable</span><span class="p">):</span>
-<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a>            <span class="k">def</span><span class="w"> </span><span class="nf">on_audio</span><span class="p">(</span><span class="n">packet</span><span class="p">):</span>
-<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a>                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;RX audio: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">packet</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> bytes&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a>
-<a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a>            <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio_rx_opus</span><span class="p">(</span><span class="n">on_audio</span><span class="p">)</span>
-<a id="__codelineno-12-35" name="__codelineno-12-35" href="#__codelineno-12-35"></a>            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
-<a id="__codelineno-12-36" name="__codelineno-12-36" href="#__codelineno-12-36"></a>            <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio_rx_opus</span><span class="p">()</span>
-<a id="__codelineno-12-37" name="__codelineno-12-37" href="#__codelineno-12-37"></a>
-<a id="__codelineno-12-38" name="__codelineno-12-38" href="#__codelineno-12-38"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.backends.factory</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.backends.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">SerialBackendConfig</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">SerialBackendConfig</span><span class="p">(</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>        <span class="n">device</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-111120&quot;</span><span class="p">,</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>        <span class="n">baudrate</span><span class="o">=</span><span class="mi">115200</span><span class="p">,</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>        <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">,</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>        <span class="n">rx_device</span><span class="o">=</span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="p">,</span>  <span class="c1"># or None for auto-detect</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>        <span class="n">tx_device</span><span class="o">=</span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="p">,</span>  <span class="c1"># or None for auto-detect</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>    <span class="p">)</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>    <span class="n">radio</span> <span class="o">=</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>        <span class="c1"># Control</span>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>        <span class="n">freq</span> <span class="o">=</span> <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">get_frequency</span><span class="p">()</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Frequency: </span><span class="si">{</span><span class="n">freq</span><span class="o">/</span><span class="mf">1e6</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> MHz&quot;</span><span class="p">)</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>        <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">set_frequency</span><span class="p">(</span><span class="mi">14_074_000</span><span class="p">)</span>
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>        <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">set_mode</span><span class="p">(</span><span class="s2">&quot;USB&quot;</span><span class="p">)</span>
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>        <span class="c1"># Meters</span>
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>        <span class="n">s</span> <span class="o">=</span> <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">get_s_meter</span><span class="p">()</span>
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;S-meter: </span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a>
+<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a>        <span class="c1"># Audio (if audio_capable)</span>
+<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a>        <span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.radio_protocol</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioCapable</span>
+<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">radio</span><span class="p">,</span> <span class="n">AudioCapable</span><span class="p">):</span>
+<a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a>            <span class="k">def</span><span class="w"> </span><span class="nf">on_audio</span><span class="p">(</span><span class="n">packet</span><span class="p">):</span>
+<a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a>                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;RX audio: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">packet</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> bytes&quot;</span><span class="p">)</span>
+<a id="__codelineno-11-33" name="__codelineno-11-33" href="#__codelineno-11-33"></a>
+<a id="__codelineno-11-34" name="__codelineno-11-34" href="#__codelineno-11-34"></a>            <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio_rx_opus</span><span class="p">(</span><span class="n">on_audio</span><span class="p">)</span>
+<a id="__codelineno-11-35" name="__codelineno-11-35" href="#__codelineno-11-35"></a>            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-11-36" name="__codelineno-11-36" href="#__codelineno-11-36"></a>            <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio_rx_opus</span><span class="p">()</span>
+<a id="__codelineno-11-37" name="__codelineno-11-37" href="#__codelineno-11-37"></a>
+<a id="__codelineno-11-38" name="__codelineno-11-38" href="#__codelineno-11-38"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </code></pre></div>
 <h3 id="web-ui-with-serial-backend">Web UI with Serial Backend<a class="headerlink" href="#web-ui-with-serial-backend" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Start web UI on serial backend</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span>--rx-device<span class="w"> </span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span>--tx-device<span class="w"> </span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span>web
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Then open http://localhost:8080</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Start web UI on serial backend</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span>--rx-device<span class="w"> </span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span>--tx-device<span class="w"> </span><span class="s2">&quot;IC-7610 USB Audio&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span>web
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Then open http://localhost:8080</span>
 </code></pre></div>
 <p>The web UI will show:
 - Frequency/mode control
@@ -3021,12 +2991,12 @@ In that case, specify explicit device indices with <code>--rx-device</code> and 
 - RX audio streaming to browser
 - TX audio from browser microphone (if USB audio TX is enabled)</p>
 <h3 id="rigctld-with-serial-backend">rigctld with Serial Backend<a class="headerlink" href="#rigctld-with-serial-backend" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Start rigctld server on serial backend</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>serve
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Then configure WSJT-X:</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="c1"># Radio: Hamlib NET rigctl</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="c1"># Network Server: localhost:4532</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Start rigctld server on serial backend</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>serve
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Then configure WSJT-X:</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># Radio: Hamlib NET rigctl</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="c1"># Network Server: localhost:4532</span>
 </code></pre></div>
 <h2 id="capability-differences-lan-vs-serial">Capability Differences: LAN vs Serial<a class="headerlink" href="#capability-differences-lan-vs-serial" title="Permanent link">&para;</a></h2>
 <table>
@@ -3092,17 +3062,17 @@ In that case, specify explicit device indices with <code>--rx-device</code> and 
 <h3 id="permission-denied-devcuusbserial-">"Permission denied: /dev/cu.usbserial-..."<a class="headerlink" href="#permission-denied-devcuusbserial-" title="Permanent link">&para;</a></h3>
 <p><strong>Cause</strong>: User lacks permissions to access serial device.</p>
 <p><strong>Fix</strong> (macOS typically doesn't need this, but if it happens):
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Add your user to the dialout group (Linux)</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-a<span class="w"> </span>-G<span class="w"> </span>dialout<span class="w"> </span><span class="nv">$USER</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Logout and login again</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Add your user to the dialout group (Linux)</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>sudo<span class="w"> </span>usermod<span class="w"> </span>-a<span class="w"> </span>-G<span class="w"> </span>dialout<span class="w"> </span><span class="nv">$USER</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Logout and login again</span>
 </code></pre></div></p>
 <p>On macOS, if you see permissions issues, try:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Check ownership</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>ls<span class="w"> </span>-l<span class="w"> </span>/dev/cu.usbserial-*
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Typically owned by root:wheel with mode 0666 (world read/write)</span>
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="c1"># If not, contact system admin or check USB security settings</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Check ownership</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>ls<span class="w"> </span>-l<span class="w"> </span>/dev/cu.usbserial-*
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Typically owned by root:wheel with mode 0666 (world read/write)</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="c1"># If not, contact system admin or check USB security settings</span>
 </code></pre></div></p>
 <h3 id="audio-device-ic-7610-usb-audio-not-found">"Audio device 'IC-7610 USB Audio' not found"<a class="headerlink" href="#audio-device-ic-7610-usb-audio-not-found" title="Permanent link">&para;</a></h3>
 <p><strong>Cause</strong>: USB audio not exported by radio, or wrong device name.</p>
@@ -3110,7 +3080,7 @@ In that case, specify explicit device indices with <code>--rx-device</code> and 
 1. Verify USB audio is enabled in radio settings:
    - Menu → Set → Connectors → USB Audio → <strong>Enabled</strong>
 2. List available devices:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>icom-lan<span class="w"> </span>--list-audio-devices
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>icom-lan<span class="w"> </span>--list-audio-devices
 </code></pre></div>
 3. Use exact device name from the list (case-sensitive)
 4. If still not visible, disconnect/reconnect USB cable</p>
@@ -3120,10 +3090,10 @@ In that case, specify explicit device indices with <code>--rx-device</code> and 
 <p><strong>Fix</strong>:
 1. <strong>Recommended</strong>: Set CI-V USB Baud Rate to <strong>115200</strong> in radio settings
 2. <strong>Override</strong> (use with caution):
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">config</span> <span class="o">=</span> <span class="n">SerialBackendConfig</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">allow_low_baud_scope</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">config</span> <span class="o">=</span> <span class="n">SerialBackendConfig</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">allow_low_baud_scope</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
    or
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD</span><span class="o">=</span><span class="m">1</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD</span><span class="o">=</span><span class="m">1</span>
 </code></pre></div>
    Library will log a warning about timeout risk.</p>
 <h3 id="ci-v-response-timed-out-on-serial">"CI-V response timed out" on serial<a class="headerlink" href="#ci-v-response-timed-out-on-serial" title="Permanent link">&para;</a></h3>
@@ -3135,17 +3105,17 @@ In that case, specify explicit device indices with <code>--rx-device</code> and 
 1. Check radio baud rate: Menu → Set → Connectors → CI-V → CI-V USB Baud Rate
 2. Check CI-V USB Port setting (see "Critical Setup Step" above)
 3. Close other apps using the serial port:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Check what&#39;s using the port (macOS)</span>
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>lsof<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cu.usbserial
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Check what&#39;s using the port (macOS)</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>lsof<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cu.usbserial
 </code></pre></div></p>
 <h3 id="wrong-usb-audio-device-selected-with-two-radios-connected">Wrong USB audio device selected with two radios connected<a class="headerlink" href="#wrong-usb-audio-device-selected-with-two-radios-connected" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom</strong>: Audio from the wrong radio when IC-7300 and IC-7610 are both connected via USB.</p>
 <p><strong>Cause</strong>: Two identical "USB Audio CODEC" devices appear in the system; name-based selection picks the first one regardless of which radio's serial port is in use.</p>
 <p><strong>Fix</strong>: On macOS, this is resolved <strong>automatically</strong> — the library reads USB hub topology via IORegistry and selects the audio device on the same USB hub as the serial CI-V port. Check the log for a line like:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>usb-audio-resolve: /dev/cu.usbserial-201410 → prefix 0x2014 → RX device [2], TX device [3]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>usb-audio-resolve: /dev/cu.usbserial-201410 → prefix 0x2014 → RX device [2], TX device [3]
 </code></pre></div>
 <p>If you see <code>"topology resolution not supported"</code> (Linux), specify device indices explicitly:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--rx-device<span class="w"> </span><span class="m">2</span><span class="w"> </span>--tx-device<span class="w"> </span><span class="m">3</span><span class="w"> </span>status
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--rx-device<span class="w"> </span><span class="m">2</span><span class="w"> </span>--tx-device<span class="w"> </span><span class="m">3</span><span class="w"> </span>status
 </code></pre></div></p>
 <p>Use <code>icom-lan --list-audio-devices</code> to find the correct indices.</p>
 <h3 id="audio-tx-not-working">Audio TX not working<a class="headerlink" href="#audio-tx-not-working" title="Permanent link">&para;</a></h3>
@@ -3156,39 +3126,39 @@ In that case, specify explicit device indices with <code>--rx-device</code> and 
 3. Verify <code>--tx-device</code> matches the USB audio device name</p>
 <h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
 <p>For convenience, set these in your shell profile:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># ~/.bashrc or ~/.zshrc</span>
-<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_DEVICE</span><span class="o">=</span>/dev/cu.usbserial-111120
-<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_BAUDRATE</span><span class="o">=</span><span class="m">115200</span>
-<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_USB_RX_DEVICE</span><span class="o">=</span><span class="s2">&quot;IC-7610 USB Audio&quot;</span>
-<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_USB_TX_DEVICE</span><span class="o">=</span><span class="s2">&quot;IC-7610 USB Audio&quot;</span>
-<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>
-<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="c1"># Then simply:</span>
-<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># ~/.bashrc or ~/.zshrc</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_DEVICE</span><span class="o">=</span>/dev/cu.usbserial-111120
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_BAUDRATE</span><span class="o">=</span><span class="m">115200</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_USB_RX_DEVICE</span><span class="o">=</span><span class="s2">&quot;IC-7610 USB Audio&quot;</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_USB_TX_DEVICE</span><span class="o">=</span><span class="s2">&quot;IC-7610 USB Audio&quot;</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="c1"># Then simply:</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
 </code></pre></div>
 <h2 id="migration-from-lan-to-serial">Migration from LAN to Serial<a class="headerlink" href="#migration-from-lan-to-serial" title="Permanent link">&para;</a></h2>
 <p>If you're currently using the LAN backend and want to switch to serial:</p>
 <ol>
 <li>
 <p><strong>No code changes needed</strong> — use <code>create_radio(config)</code> factory with typed config:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Before (LAN)</span>
-<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.backends.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">LanBackendConfig</span>
-<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>
-<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="c1"># After (Serial)</span>
-<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.backends.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">SerialBackendConfig</span>
-<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="n">config</span> <span class="o">=</span> <span class="n">SerialBackendConfig</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-111120&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>
-<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="c1"># Same factory call</span>
-<a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Before (LAN)</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.backends.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">LanBackendConfig</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="c1"># After (Serial)</span>
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.backends.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">SerialBackendConfig</span>
+<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="n">config</span> <span class="o">=</span> <span class="n">SerialBackendConfig</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-111120&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>
+<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="c1"># Same factory call</span>
+<a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 </code></pre></div></p>
 </li>
 <li>
 <p><strong>CLI</strong>: add <code>--backend serial</code> flag:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Before (LAN, default)</span>
-<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>icom-lan<span class="w"> </span>status
-<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
-<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="c1"># After (Serial)</span>
-<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Before (LAN, default)</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>icom-lan<span class="w"> </span>status
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="c1"># After (Serial)</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
 </code></pre></div></p>
 </li>
 <li>

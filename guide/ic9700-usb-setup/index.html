@@ -2222,34 +2222,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../internals/cli-design/" class="md-nav__link">
         
   
@@ -2859,7 +2831,7 @@
 </tr>
 <tr>
 <td><strong>CI-V Address</strong></td>
-<td>0x80</td>
+<td>0x98</td>
 <td>0xA4</td>
 <td>0x94</td>
 <td><strong>0xA2</strong></td>
@@ -2970,7 +2942,7 @@
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>        <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;serial&quot;</span><span class="p">,</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;IC-9700&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="n">device</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-A602RVBV&quot;</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="n">serial_port</span><span class="o">=</span><span class="s2">&quot;/dev/cu.usbserial-A602RVBV&quot;</span>
 <a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="p">)</span>
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
 <a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">radio</span><span class="p">:</span>
@@ -2997,20 +2969,20 @@
 </code></pre></div>
 <h3 id="4-cli-usage-serial">4. CLI Usage (Serial)<a class="headerlink" href="#4-cli-usage-serial" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Check connection</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--device<span class="w"> </span>/dev/cu.usbserial-A602RVBV<span class="w"> </span>status
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-A602RVBV<span class="w"> </span>status
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># MAIN receiver (default)</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--device<span class="w"> </span>/dev/cu.usbserial-A602RVBV<span class="w"> </span>freq<span class="w"> </span><span class="m">144100000</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-A602RVBV<span class="w"> </span>freq<span class="w"> </span><span class="m">144100000</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># SUB receiver</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--device<span class="w"> </span>/dev/cu.usbserial-A602RVBV<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-A602RVBV<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span>--receiver<span class="w"> </span><span class="m">1</span><span class="w"> </span>freq<span class="w"> </span><span class="m">144200000</span>
 <a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
 <a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1"># Monitor both</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--device<span class="w"> </span>/dev/cu.usbserial-A602RVBV<span class="w"> </span>meters
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-A602RVBV<span class="w"> </span>meters
 </code></pre></div>
 <h3 id="5-web-ui-serial">5. Web UI (Serial)<a class="headerlink" href="#5-web-ui-serial" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--device<span class="w"> </span>/dev/cu.usbserial-A602RVBV
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>--model<span class="w"> </span>IC-9700<span class="w"> </span>--serial-port<span class="w"> </span>/dev/cu.usbserial-A602RVBV
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Open http://localhost:8000</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Use MAIN/SUB selector in web UI</span>
 </code></pre></div>

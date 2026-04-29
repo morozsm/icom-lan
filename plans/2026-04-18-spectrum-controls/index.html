@@ -1,0 +1,2967 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Python library for controlling Icom transceivers over LAN">
+      
+      
+      
+        <link rel="canonical" href="https://morozsm.github.io/icom-lan/plans/2026-04-18-spectrum-controls/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Spectrum Toolbar Ergonomics — Design Plan - icom-lan</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#spectrum-toolbar-ergonomics-design-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="icom-lan" class="md-header__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            icom-lan
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Spectrum Toolbar Ergonomics — Design Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/connection/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/public-api-surface/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../internals/architecture/" class="md-tabs__link">
+          
+  
+  
+  Internals
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="icom-lan" class="md-nav__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    icom-lan
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/connection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supported Radios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/rig-profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rig Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Setup Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Radio Setup Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic7610-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-7610 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic705-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-705 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic7300-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-7300 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/ic9700-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-9700 USB & LAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../opuslib-macos-fix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    opuslib macOS Fix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/web-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI-V Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IcomRadio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/audio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types & Enums
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/backends-icom7610/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Icom 7610 Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rig-loader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rig Loader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rigctld/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rigctld
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/scope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/web/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internals
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Internals
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../radio-protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../capabilities-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PERFORMANCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUDIO_STREAMING_PROFILE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Streaming Profile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SECURITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-problem-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Problem statement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-inventory-every-control-on-the-spectrum-toolbar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Inventory — every control on the spectrum toolbar
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Categories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-proposed-toolbar-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Proposed toolbar layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-move-out-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Move-out plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Move-out plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#5a-move-to-vfo-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5a. Move to VFO header
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5b-move-to-scope-settings-popover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5b. Move to scope settings ⚙ popover
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5c-keyboard-shortcuts-only-power-users-no-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5c. Keyboard shortcuts only (power users, no UI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5d-stays-on-toolbar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5d. Stays on toolbar
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-vfo-header-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. VFO header impact
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-visual-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Visual spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-responsive-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Responsive behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-interaction-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Interaction notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-atomic-implementation-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Atomic implementation issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Atomic implementation issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#issue-a-toolbar-grouping-separators-visual-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue #A — Toolbar grouping, separators, visual spec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-b-tooltips-keyboard-shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue #B — Tooltips + keyboard shortcuts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-c-move-dual-mainsub-spanspeed-digest-to-vfoheader-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue #C — Move DUAL + MAIN/SUB + SPAN/SPEED digest to VfoHeader bridge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-d-stretch-optional-overflow-via-popover-at-narrow-widths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue #D (stretch — optional) — Overflow via ⚙ popover at narrow widths
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-open-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Open questions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Non-goals
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="spectrum-toolbar-ergonomics-design-plan">Spectrum Toolbar Ergonomics — Design Plan<a class="headerlink" href="#spectrum-toolbar-ergonomics-design-plan" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-04-18
+<strong>Scope:</strong> Desktop skin (<code>RadioLayout.svelte</code> center column). Mobile spectrum is #812 — out of scope.
+<strong>Owner files:</strong>
+- <code>frontend/src/components/spectrum/SpectrumToolbar.svelte</code>
+- <code>frontend/src/components/spectrum/spectrum-toolbar-logic.ts</code>
+- <code>frontend/src/components-v2/layout/VfoHeader.svelte</code></p>
+<hr />
+<h2 id="1-problem-statement">1. Problem statement<a class="headerlink" href="#1-problem-statement" title="Permanent link">&para;</a></h2>
+<p>The current desktop spectrum toolbar packs ~16 controls into a single 28 px dense row at 10 px monospace. There is no visual grouping beyond thin 1 px separators at 16 px height, no color differentiation between "display setting" vs "radio state" vs "action", and cryptic 3-char labels (<code>CTR</code>, <code>FIX</code>, <code>S-C</code>, <code>S-F</code>, <code>SPD</code>, <code>FST</code>) that are unreadable to new operators and still slow for pros. The VFO header's bridge column (132 px, center) has vertical headroom and — on wide dual layouts — the MAIN/SUB VfoPanels themselves have horizontal real estate that is currently unused above the frequency display.</p>
+<p><strong>Design goal:</strong> reduce toolbar cognitive load from "wall of beige tokens" to four immediately-recognisable groups, while surfacing purely informational state (current receiver, DUAL on/off, current SPAN value) to the VFO header where it belongs.</p>
+<hr />
+<h2 id="2-inventory-every-control-on-the-spectrum-toolbar">2. Inventory — every control on the spectrum toolbar<a class="headerlink" href="#2-inventory-every-control-on-the-spectrum-toolbar" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Control</th>
+<th>Type</th>
+<th>Purpose</th>
+<th>Frequency</th>
+<th>Affects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>STEP ◀ / value / ▶</code></td>
+<td>stepper + value</td>
+<td>Tuning step cycle (shared with VFO encoder)</td>
+<td><strong>tuning (constant)</strong></td>
+<td>radio state (indirect — mouse-wheel on VFO)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>AVG</code></td>
+<td>toggle</td>
+<td>Enable/disable spectrum averaging (client-side)</td>
+<td>view (set-and-forget)</td>
+<td>display only</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>PEAK</code></td>
+<td>toggle</td>
+<td>Enable/disable peak-hold overlay (client-side)</td>
+<td>view (set-and-forget)</td>
+<td>display only</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>BRT − / value / +</code></td>
+<td>stepper</td>
+<td>Waterfall intensity ±30</td>
+<td>view (rarely)</td>
+<td>display only (client)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>REF − / value / +</code></td>
+<td>stepper</td>
+<td>Scope reference level ±30 dB (radio setting)</td>
+<td>tuning (sometimes)</td>
+<td>radio scope data</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>CTR</code></td>
+<td>radio-segment</td>
+<td>Scope mode 0 — CENTER (±span around VFO)</td>
+<td>ops</td>
+<td>radio scope mode</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>FIX</code></td>
+<td>radio-segment</td>
+<td>Scope mode 1 — FIXED (fixed lower/upper edges)</td>
+<td>ops</td>
+<td>radio scope mode</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>S-C</code></td>
+<td>radio-segment</td>
+<td>Scope mode 2 — SCROLL-CENTER</td>
+<td>rare</td>
+<td>radio scope mode</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>S-F</code></td>
+<td>radio-segment</td>
+<td>Scope mode 3 — SCROLL-FIXED</td>
+<td>rare</td>
+<td>radio scope mode</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>EDGE 1..4</code></td>
+<td>radio-segment (conditional)</td>
+<td>Edge preset for FIX / S-F only</td>
+<td>ops (when in FIX)</td>
+<td>radio scope edges</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>SPAN ◀ / value / ▶</code></td>
+<td>stepper (conditional)</td>
+<td>±2.5k..±500k, CTR/S-C only</td>
+<td><strong>tuning (often)</strong></td>
+<td>radio scope data</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>SPD ◀ / value / ▶</code></td>
+<td>stepper</td>
+<td>Sweep speed FST / MID / SLO</td>
+<td>ops (rare)</td>
+<td>radio scope data</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>HOLD</code></td>
+<td>toggle</td>
+<td>Freeze waterfall</td>
+<td>rare</td>
+<td>radio scope data</td>
+</tr>
+<tr>
+<td>14</td>
+<td><code>DUAL</code></td>
+<td>toggle</td>
+<td>Dual-scope on/off (MAIN + SUB simultaneously)</td>
+<td>set-and-forget</td>
+<td>radio scope state</td>
+</tr>
+<tr>
+<td>15</td>
+<td><code>MAIN / SUB</code></td>
+<td>momentary</td>
+<td>Switch which receiver drives scope</td>
+<td>ops</td>
+<td>radio scope state</td>
+</tr>
+<tr>
+<td>16</td>
+<td><code>⚙</code></td>
+<td>button-popover</td>
+<td>Scope settings popover (ATT, VBW, expand)</td>
+<td>rare</td>
+<td>radio scope data</td>
+</tr>
+<tr>
+<td>17</td>
+<td><code>Classic / Thermal / Gray</code></td>
+<td>dropdown</td>
+<td>Waterfall palette</td>
+<td>set-and-forget</td>
+<td>display only</td>
+</tr>
+<tr>
+<td>18</td>
+<td><code>BANDS</code></td>
+<td>toggle</td>
+<td>Band-plan overlay</td>
+<td>set-and-forget</td>
+<td>display only</td>
+</tr>
+<tr>
+<td>19</td>
+<td><code>▾</code> (layers)</td>
+<td>button-popover</td>
+<td>Layer/region picker + EiBi launcher</td>
+<td>set-and-forget</td>
+<td>display only</td>
+</tr>
+<tr>
+<td>20</td>
+<td><code>⛶ / ✕</code></td>
+<td>momentary</td>
+<td>Toggle fullscreen spectrum</td>
+<td>ops</td>
+<td>layout</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Decoding the cryptic labels</strong> (Icom-standard terms from IC-7610 manual, not inventable):</p>
+<ul>
+<li><strong>CTR</strong> = <em>Center</em> mode. VFO stays centred, span expands symmetrically.</li>
+<li><strong>FIX</strong> = <em>Fixed</em> mode. Fixed lower/upper edges, one of four EDGE presets.</li>
+<li><strong>S-C</strong> = <em>Scroll-Center</em>. Centred, but scope scrolls when tuning outside the window rather than re-centering each tick.</li>
+<li><strong>S-F</strong> = <em>Scroll-Fixed</em>. Like FIX, but when tuning past the upper edge the window shifts forward (auto-advancing fixed window).</li>
+<li><strong>SPD / FST / MID / SLO</strong> = sweep speed. FST/MID/SLO already expanded. <strong>SPD → SPEED</strong> is a trivial clarity win.</li>
+<li><strong>BRT</strong> = <em>Brightness</em> (waterfall palette gain).</li>
+<li><strong>REF</strong> = <em>Reference level</em>, in dB, for the scope amplitude axis.</li>
+</ul>
+<p>These Icom abbreviations are muscle-memory for existing operators, so we keep them as primary labels but expand via tooltip, and rename <strong>SPD → SPEED</strong> (same width at this size — 5 chars fits in 34 px).</p>
+<hr />
+<h2 id="3-categories">3. Categories<a class="headerlink" href="#3-categories" title="Permanent link">&para;</a></h2>
+<p>Six logical groups, ordered by frequency of use (left-to-right on the toolbar):</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Controls</th>
+<th>Tint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A. Tuning</strong></td>
+<td><code>STEP</code></td>
+<td>none (leftmost, highest-priority, needs visual weight)</td>
+</tr>
+<tr>
+<td><strong>B. Scope mode</strong></td>
+<td><code>CTR FIX S-C S-F</code>, <code>EDGE</code> (conditional)</td>
+<td><code>rgba(0,212,255,0.03)</code> cyan wash — "radio state"</td>
+</tr>
+<tr>
+<td><strong>C. Scope data</strong></td>
+<td><code>SPAN</code>, <code>SPEED</code>, <code>HOLD</code>, <code>REF</code></td>
+<td><code>rgba(0,212,255,0.03)</code> cyan wash — "radio state" (same as B)</td>
+</tr>
+<tr>
+<td><strong>D. Display</strong></td>
+<td><code>AVG</code>, <code>PEAK</code>, <code>BRT</code>, palette dropdown, <code>BANDS+▾</code></td>
+<td><code>rgba(255,255,255,0.02)</code> neutral wash — "client-only"</td>
+</tr>
+<tr>
+<td><strong>E. Settings</strong></td>
+<td><code>⚙</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td><strong>F. Actions</strong></td>
+<td>fullscreen</td>
+<td>none (rightmost, pushed by spacer)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why this split:</strong> the most important ergonomic signal is <em>does this change the radio or only my view?</em> Cyan wash for scope-state (B+C) matches the existing accent for <code>.active</code> buttons and tells the operator "this affects the rig". Neutral wash for display (D) says "harmless, experiment freely". Tuning (A) gets no wash because it already has the <code>auto-step</code> amber badge providing visual weight, and placing it leftmost with breathing room reinforces its always-active status.</p>
+<p><strong>Why merge B and C visually</strong> rather than separating them: the distinction between "pick a mode" and "tune the mode's parameters" is real, but on a 28 px row two cyan blocks separated by a 1 px divider communicates "this cluster is scope state" more cleanly than three alternating tints.</p>
+<hr />
+<h2 id="4-proposed-toolbar-layout">4. Proposed toolbar layout<a class="headerlink" href="#4-proposed-toolbar-layout" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌───────────────────────────────────────────────── SPECTRUM TOOLBAR 28px ───────────────────────────────────────────────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  [◀ STEP 1kHz ▶]║  CTR  FIX  S-C  S-F  │ EDGE 1 2 3 4  │ [◀ SPAN ±25k ▶] [◀ SPEED MID ▶] HOLD │ REF − 0 +  ║ AVG  PEAK │ BRT − 0 + │ Classic▾ │ BANDS ▾ ║ ⚙ ════════════════spacer═══════ ⛶ │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│   ~110px        ║   ↑ group B: SCOPE MODE ↑    ║   ↑ group C: SCOPE DATA ↑              ║  ↑ group D: DISPLAY ↑        ║                                         │
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   Tuning                 cyan wash rgba(0,212,255,.03)                                       neutral wash rgba(255,255,255,.02)                                   │
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│                                                                                                                                                                   │
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   ║ = 2px group boundary (separator becomes 2px + 6px margin)                                                                                                     │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   │ = 1px in-group sub-separator (4px margin — keeps EDGE visually adjacent to scope-mode without merging)                                                        │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+<p><strong>Pixel budget at 1440 px viewport</strong> (center column ≈ 960 px with sidebars):</p>
+<table>
+<thead>
+<tr>
+<th>Segment</th>
+<th style="text-align: right;">Width</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>STEP triplet</td>
+<td style="text-align: right;">110</td>
+</tr>
+<tr>
+<td>group separator</td>
+<td style="text-align: right;">8</td>
+</tr>
+<tr>
+<td>scope-mode quad (CTR FIX S-C S-F)</td>
+<td style="text-align: right;">128</td>
+</tr>
+<tr>
+<td>sub-sep + EDGE 1..4 (conditional, 92 px when shown)</td>
+<td style="text-align: right;">96</td>
+</tr>
+<tr>
+<td>group separator</td>
+<td style="text-align: right;">8</td>
+</tr>
+<tr>
+<td>SPAN triplet (conditional)</td>
+<td style="text-align: right;">110</td>
+</tr>
+<tr>
+<td>SPEED triplet</td>
+<td style="text-align: right;">110</td>
+</tr>
+<tr>
+<td>HOLD</td>
+<td style="text-align: right;">42</td>
+</tr>
+<tr>
+<td>sub-sep</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td>REF triplet</td>
+<td style="text-align: right;">88</td>
+</tr>
+<tr>
+<td>group separator</td>
+<td style="text-align: right;">8</td>
+</tr>
+<tr>
+<td>AVG PEAK</td>
+<td style="text-align: right;">76</td>
+</tr>
+<tr>
+<td>sub-sep</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td>BRT triplet</td>
+<td style="text-align: right;">88</td>
+</tr>
+<tr>
+<td>sub-sep</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td>palette dropdown</td>
+<td style="text-align: right;">78</td>
+</tr>
+<tr>
+<td>sub-sep</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td>BANDS+▾</td>
+<td style="text-align: right;">68</td>
+</tr>
+<tr>
+<td>group separator</td>
+<td style="text-align: right;">8</td>
+</tr>
+<tr>
+<td>⚙</td>
+<td style="text-align: right;">22</td>
+</tr>
+<tr>
+<td>flex spacer</td>
+<td style="text-align: right;">rest</td>
+</tr>
+<tr>
+<td>⛶</td>
+<td style="text-align: right;">22</td>
+</tr>
+<tr>
+<td><strong>TOTAL (non-conditional)</strong></td>
+<td style="text-align: right;"><strong>~910 px</strong></td>
+</tr>
+</tbody>
+</table>
+<p>At 1280 px center column (~800 px), ~110 px overflows — handled in §7.</p>
+<hr />
+<h2 id="5-move-out-plan">5. Move-out plan<a class="headerlink" href="#5-move-out-plan" title="Permanent link">&para;</a></h2>
+<h3 id="5a-move-to-vfo-header">5a. Move to VFO header<a class="headerlink" href="#5a-move-to-vfo-header" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Why</th>
+<th>New home</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DUAL</code> toggle</td>
+<td>Pure scope visibility state; belongs alongside SPLIT / DUAL-WATCH which already live in VFO bridge</td>
+<td><code>VfoHeader.svelte</code> bridge stack (below <code>VfoOps</code>, above SPLIT row)</td>
+</tr>
+<tr>
+<td><code>MAIN/SUB</code> scope receiver selector</td>
+<td>Informational + switches which VFO <em>drives the scope</em>; redundant with the visual ACTIVE/STANDBY pill already on each VfoPanel</td>
+<td><code>VfoHeader.svelte</code> bridge stack — as a tiny two-pill indicator <strong>"SCOPE: ▣ MAIN  ▢ SUB"</strong> clickable</td>
+</tr>
+<tr>
+<td>Current <strong>SPAN label</strong> (read-only mirror)</td>
+<td>Operators reading the VFO header already look there for bandwidth context</td>
+<td>VfoPanel badge row, right side of main VFO header only (not both)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="5b-move-to-scope-settings-popover">5b. Move to scope settings ⚙ popover<a class="headerlink" href="#5b-move-to-scope-settings-popover" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Palette dropdown (<code>Classic / Thermal / Gray</code>) — set-and-forget, no business being in the hot row.</li>
+<li><code>BANDS</code> layer dropdown region selector (<code>US / R1 / R2 / R3</code>) — already inside the popover conceptually; keep the BANDS toggle on the toolbar but move region chooser into ⚙.</li>
+<li><code>HOLD</code> — stays on toolbar (it's operational, though rare).</li>
+</ul>
+<h3 id="5c-keyboard-shortcuts-only-power-users-no-ui">5c. Keyboard shortcuts only (power users, no UI)<a class="headerlink" href="#5c-keyboard-shortcuts-only-power-users-no-ui" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>[</code> / <code>]</code> — decrement/increment SPAN.</li>
+<li><code>-</code> / <code>+</code> — decrement/increment REF level (<code>+</code> chosen over <code>=</code> to avoid colliding with the existing VFO-equalize shortcut in the runtime keyboard profile).</li>
+<li><code>Shift+H</code> — toggle HOLD.</li>
+<li><code>Shift+F</code> — toggle fast scroll (FST).</li>
+<li><code>Shift+D</code> — toggle DUAL scope.
+These are registered through <code>KeyboardHandler.svelte</code>; document in <code>shortcut-hints.ts</code>.</li>
+</ul>
+<h3 id="5d-stays-on-toolbar">5d. Stays on toolbar<a class="headerlink" href="#5d-stays-on-toolbar" title="Permanent link">&para;</a></h3>
+<p>Everything in §3 groups A, B, C (minus DUAL + MAIN/SUB), D, E, F.</p>
+<hr />
+<h2 id="6-vfo-header-impact">6. VFO header impact<a class="headerlink" href="#6-vfo-header-impact" title="Permanent link">&para;</a></h2>
+<p><code>VfoHeader.svelte</code> currently has three regions: <code>main</code>, <code>bridge</code> (132 px center column), <code>sub</code>. The bridge stack is vertical: <code>VfoOps</code> → gap → SPLIT row → SPEAK. We have ~60 px of vertical slack in the bridge between <code>VfoOps</code> and the SPLIT row at current <code>--vfo-bridge-width: 132px</code>.</p>
+<p><strong>Add a new <code>scope-status</code> stack item between <code>VfoOps</code> and the SPLIT row</strong> (only when <code>hasCapability('scope')</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌─ bridge 132px ─┐
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│   VfoOps       │  ← unchanged
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│                │
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│ ┌─ SCOPE ─┐    │  ← NEW block
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│ │[▣M][ S] │    │     two micro-pills, 42×18 each, click = switchReceiver
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│ │  DUAL   │    │     smaller second row: DUAL toggle (48×16) with cyan accent when on
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│ │±25k MID │    │     read-only SPAN + SPEED digest, 7px monospace
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│ └─────────┘    │
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│                │
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>│ SPLIT ...      │  ← unchanged
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│ SPEAK          │  ← unchanged
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>└────────────────┘
+</code></pre></div>
+<p>Visual spec for the new block:
+- Border-top: <code>1px solid var(--v2-vfo-header-border)</code> — matches SPLIT row.
+- Title row: 7 px uppercase "SCOPE", <code>letter-spacing: 0.1em</code>, color <code>var(--v2-text-muted)</code> — matches SPLIT title.
+- Pills: 18 px tall, cyan-bordered when active (reuses <code>.toolbar-btn.active</code> tokens).
+- In single-receiver mode (no <code>hasDualReceiver()</code>): only the DUAL row is hidden; the SPAN/SPEED digest still shows. MAIN/SUB pills are hidden (nothing to switch).
+- Width: fits existing 132 px bridge. No change to <code>--vfo-bridge-width</code>.</p>
+<p><strong>Responsive consideration:</strong> the existing <code>@media (max-width: 1024px)</code> collapses the bridge onto its own row and flips <code>.vfo-ops</code> to horizontal. The new block inherits this — in collapsed mode it lives inline with VfoOps on the horizontal row. That's acceptable because on narrow screens there's less space pressure on the spectrum toolbar anyway.</p>
+<p><strong>Does not break dual-receiver:</strong> no grid-area changes. Nothing is added to MAIN/SUB VfoPanels. The SPAN-label badge proposed in §5a is deferred to a later issue — flagged in §10 as open question.</p>
+<hr />
+<h2 id="7-visual-spec">7. Visual spec<a class="headerlink" href="#7-visual-spec" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Toolbar height</td>
+<td><strong>32 px</strong> (↑ from 28) — one extra vertical pixel pays for better separator visibility and 11 px font</td>
+</tr>
+<tr>
+<td>Base font</td>
+<td><code>11 px</code> Roboto Mono (↑ from 10) — numeric readability tested; 10 px is below comfortable small-cap threshold</td>
+</tr>
+<tr>
+<td>Group separator</td>
+<td><code>2px</code> wide, <code>var(--panel-border)</code>, full 20 px height, <code>margin: 0 6px</code></td>
+</tr>
+<tr>
+<td>In-group sub-separator</td>
+<td><code>1px</code> wide, <code>var(--panel-border)</code> alpha 0.5, 14 px height, <code>margin: 0 4px</code></td>
+</tr>
+<tr>
+<td>Group B+C wash</td>
+<td><code>rgba(0, 212, 255, 0.03)</code> — applied to group container <code>background</code></td>
+</tr>
+<tr>
+<td>Group D wash</td>
+<td><code>rgba(255, 255, 255, 0.02)</code></td>
+</tr>
+<tr>
+<td>Active button (unchanged)</td>
+<td>cyan <code>#00d4ff</code> text + <code>rgba(0,212,255,0.1)</code> bg + <code>rgba(0,212,255,0.3)</code> border</td>
+</tr>
+<tr>
+<td>Label vs value weight</td>
+<td>labels <code>500</code>, values <code>600</code> — replaces current uniform <code>400</code> for scanning</td>
+</tr>
+<tr>
+<td>Min touch target</td>
+<td>22×22 (unchanged — desktop only)</td>
+</tr>
+<tr>
+<td>Button gap within group</td>
+<td>3 px (↑ from 2 — breathes at 11 px font)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-responsive-behavior">8. Responsive behavior<a class="headerlink" href="#8-responsive-behavior" title="Permanent link">&para;</a></h2>
+<p>At <strong>≤1280 px</strong> center column (<code>container-query</code>: <code>@container spectrum (max-width: 800px)</code> on toolbar container):</p>
+<p><strong>Overflow priority (last to collapse first — i.e. stays visible longest):</strong>
+1. STEP (never collapses)
+2. Scope-mode quad (never collapses — it IS the scope)
+3. SPAN (never collapses — it's <em>the</em> primary scope tuning knob)
+4. fullscreen (stays — one-click escape)
+5. ⚙ (stays — accesses overflow)
+6. AVG / PEAK (collapse into ⚙ popover first)
+7. BRT (collapse into ⚙)
+8. REF (collapse into ⚙)
+9. SPEED, HOLD (collapse into ⚙)
+10. EDGE (never visible outside FIX/S-F, so not a budget issue)
+11. Palette dropdown (collapse into ⚙)
+12. BANDS+▾ (collapse into ⚙ — dropdown itself is already a popover, becomes a submenu)</p>
+<p><strong>Strategy:</strong> rather than a <code>More…</code> button, use the existing <code>⚙</code> popover as the overflow target. Add a <code>overflowed: boolean[]</code> CSS-driven state; the popover shows duplicates of whatever the container-query CSS has hidden. This keeps logic simple: no JS measurement.</p>
+<p>At <strong>≤1024 px</strong> (tablet), the whole spectrum panel already rearranges — out of scope here, covered by #812.</p>
+<hr />
+<h2 id="9-interaction-notes">9. Interaction notes<a class="headerlink" href="#9-interaction-notes" title="Permanent link">&para;</a></h2>
+<p><strong>Tooltips</strong> (<code>title=</code> on hover, shown after 500 ms by browser):</p>
+<table>
+<thead>
+<tr>
+<th>Label</th>
+<th>Tooltip text</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>STEP</td>
+<td>"Tuning step — click cycles up, right-click cycles down. A = auto-step follows band"</td>
+</tr>
+<tr>
+<td>AVG</td>
+<td>"Spectrum averaging (client-side display only)"</td>
+</tr>
+<tr>
+<td>PEAK</td>
+<td>"Peak hold overlay (client-side display only)"</td>
+</tr>
+<tr>
+<td>BRT</td>
+<td>"Waterfall brightness (palette gain, display only)"</td>
+</tr>
+<tr>
+<td>REF</td>
+<td>"Scope reference level in dB — radio setting"</td>
+</tr>
+<tr>
+<td>CTR</td>
+<td>"Scope mode: CENTER — VFO centered in window"</td>
+</tr>
+<tr>
+<td>FIX</td>
+<td>"Scope mode: FIXED edges — choose EDGE preset 1–4"</td>
+</tr>
+<tr>
+<td>S-C</td>
+<td>"Scope mode: SCROLL-CENTER — window scrolls instead of recentering"</td>
+</tr>
+<tr>
+<td>S-F</td>
+<td>"Scope mode: SCROLL-FIXED — fixed window auto-advances"</td>
+</tr>
+<tr>
+<td>EDGE 1..4</td>
+<td>"Edge preset N — configure in scope settings ⚙"</td>
+</tr>
+<tr>
+<td>SPAN</td>
+<td>"Scope span ±freq (CTR and S-C modes only)"</td>
+</tr>
+<tr>
+<td>SPEED</td>
+<td>"Scope sweep speed: FST fastest / MID / SLO slowest"</td>
+</tr>
+<tr>
+<td>HOLD</td>
+<td>"Freeze scope waterfall — release to resume"</td>
+</tr>
+<tr>
+<td>⚙</td>
+<td>"Scope settings (ATT, VBW, expand, overflowed controls)"</td>
+</tr>
+<tr>
+<td>⛶</td>
+<td>"Toggle fullscreen spectrum (F)"</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Do not</strong> expand the on-button labels themselves. <code>CTR/FIX/S-C/S-F</code> are reproducing the Icom front-panel labels and operators with any prior IC-7xxx experience expect them. Changing <code>SPD → SPEED</code> is the only label edit (4 chars saved elsewhere buys it).</p>
+<p><strong>Cursor affordance:</strong> stepper buttons <code>◀ ▶</code> get <code>cursor: ew-resize</code> on hover to signal "scrubable" (future: add <code>&lt;wheel&gt;</code> on stepper-container to cycle).</p>
+<hr />
+<h2 id="10-atomic-implementation-issues">10. Atomic implementation issues<a class="headerlink" href="#10-atomic-implementation-issues" title="Permanent link">&para;</a></h2>
+<p>Each ≤3 files, ≤200 LOC, TDD (pure logic in <code>*-logic.ts</code>, test first).</p>
+<h3 id="issue-a-toolbar-grouping-separators-visual-spec">Issue #A — Toolbar grouping, separators, visual spec<a class="headerlink" href="#issue-a-toolbar-grouping-separators-visual-spec" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Files: <code>SpectrumToolbar.svelte</code>, <code>spectrum-toolbar-logic.ts</code> (label constants), <code>__tests__/spectrum-toolbar-logic.test.ts</code></li>
+<li>Scope: wrap groups in <code>.toolbar-group-b</code> / <code>.toolbar-group-c</code> / <code>.toolbar-group-d</code> containers with the wash backgrounds; 2 px vs 1 px separator classes; height bump 28 → 32; font 10 → 11; <code>SPD → SPEED</code> label; weight 500/600 split.</li>
+<li>No new behavior. Snapshot test only.</li>
+<li>LOC: ~80.</li>
+</ul>
+<h3 id="issue-b-tooltips-keyboard-shortcuts">Issue #B — Tooltips + keyboard shortcuts<a class="headerlink" href="#issue-b-tooltips-keyboard-shortcuts" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Files: <code>SpectrumToolbar.svelte</code>, <code>KeyboardHandler.svelte</code>, <code>shortcut-hints.ts</code></li>
+<li>Scope: add <code>title=</code> to every button per §9 table; register <code>[</code>, <code>]</code>, <code>-</code>, <code>=</code>, <code>H</code>, <code>D</code>, <code>F</code> in KeyboardHandler; update shortcut-hints registry.</li>
+<li>Tests: <code>keyboard-map.ts</code> pure-fn tests for new bindings.</li>
+<li>LOC: ~120.</li>
+</ul>
+<h3 id="issue-c-move-dual-mainsub-spanspeed-digest-to-vfoheader-bridge">Issue #C — Move DUAL + MAIN/SUB + SPAN/SPEED digest to VfoHeader bridge<a class="headerlink" href="#issue-c-move-dual-mainsub-spanspeed-digest-to-vfoheader-bridge" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Files: <code>VfoHeader.svelte</code>, <code>SpectrumToolbar.svelte</code> (remove DUAL + MAIN/SUB block), <code>__tests__/vfo-header.test.ts</code></li>
+<li>Scope: add <code>ScopeStatus</code> subcomponent (inline or new file — inline keeps file count at 2); wire <code>scopeControls</code> from <code>radio.current</code> into VfoHeader via new prop; remove moved blocks from toolbar; adjust responsive CSS for ≤1024 px bridge-horizontal mode.</li>
+<li><strong>Gotcha:</strong> VfoHeader currently doesn't know about <code>scopeControls</code>. Pass as prop from <code>RadioLayout.svelte</code> (NOT imported directly — preserves <code>components-v2/layout/</code> purity per CLAUDE.md frontend layering rule).</li>
+<li>LOC: ~180.</li>
+</ul>
+<h3 id="issue-d-stretch-optional-overflow-via-popover-at-narrow-widths">Issue #D (stretch — optional) — Overflow via ⚙ popover at narrow widths<a class="headerlink" href="#issue-d-stretch-optional-overflow-via-popover-at-narrow-widths" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Files: <code>SpectrumToolbar.svelte</code>, <code>ScopeSettingsPopover.svelte</code></li>
+<li>Scope: container-query CSS hides overflow-eligible groups below 800 px; popover renders the same controls conditionally.</li>
+<li>LOC: ~150.</li>
+<li>Defer if #A–#C land cleanly and 1440 px+ feedback is positive; narrow widths are a smaller segment of usage.</li>
+</ul>
+<p><strong>Recommended order:</strong> A → B → C → (D). Each ships independently; A is pure visual and reviewable fastest, C is highest-value but depends on A's group container markup.</p>
+<hr />
+<h2 id="11-open-questions">11. Open questions<a class="headerlink" href="#11-open-questions" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>SPAN-label mirror on VfoPanel (§5a last row).</strong> Does adding a "±25k" pill to the main VFO's badge row clutter the frequency display, or is it useful passive readout? Recommend A/B with two radio operators before committing. Out of scope for the three atomic issues above.</li>
+<li><strong>Palette dropdown — keep on toolbar or move to ⚙?</strong> Operators who switch palettes do so maybe once per session. Moving it saves 78 px but some users visually reach for it. Default: <strong>keep on toolbar for now</strong>; revisit if #A user-tests reveal nobody uses it.</li>
+<li><strong>EDGE preset editing.</strong> Currently EDGE 1..4 is select-only; configuration of each edge's low/high lives in ⚙ popover (presumed — to verify). If not, that's a separate issue.</li>
+<li><strong>DUAL scope semantics when MAIN/SUB is in VFO bridge.</strong> In current toolbar, <code>MAIN/SUB</code> button is a <em>scope-source</em> selector. After move, is there a risk of confusion with the <em>active-receiver</em> ACTIVE/STANDBY already shown on each VfoPanel? Consider labelling the bridge pills explicitly <code>SCOPE SRC</code> to disambiguate.</li>
+<li><strong>Container-query support.</strong> We rely on <code>@container</code> (baseline in modern Chromium/Firefox/Safari). Confirm the spectrum panel has <code>container-type: inline-size</code> set or add it. If project targets pre-2023 browsers, fall back to JS measurement — unlikely given Svelte 5 baseline.</li>
+<li><strong>Mobile skin.</strong> #812 owns mobile. This plan's VFO-bridge-move (Issue #C) MUST be verified against <code>MobileRadioLayout.svelte</code> so the bridge doesn't explode in the mobile layout — add that as a regression-check line-item when #C lands.</li>
+</ol>
+<hr />
+<h2 id="12-non-goals">12. Non-goals<a class="headerlink" href="#12-non-goals" title="Permanent link">&para;</a></h2>
+<ul>
+<li>No changes to waterfall renderer or canvas logic.</li>
+<li>No new commands in <code>commands/</code> or CI-V protocol work.</li>
+<li>No new abstractions beyond the <code>ScopeStatus</code> bridge subcomponent.</li>
+<li>No behavioural changes to what each button does — every control maps 1:1 to current handlers.</li>
+<li>Color scheme tokens stay as-is; only adding two new alpha washes.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/morozsm/icom-lan" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

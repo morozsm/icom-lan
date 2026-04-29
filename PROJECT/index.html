@@ -1814,34 +1814,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../internals/rfc-web-ui-v1/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web UI RFC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../internals/cli-design/" class="md-nav__link">
         
   
@@ -2270,15 +2242,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-10-multi-radio-expansion-m5-in-progress" class="md-nav__link">
+  <a href="#phase-10-multi-radio-expansion-m5-complete-2026-03-23" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 10 — Multi-Radio Expansion (M5) 🚧 IN PROGRESS
+        Phase 10 — Multi-Radio Expansion (M5) ✅ COMPLETE (2026-03-23)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Phase 10 — Multi-Radio Expansion (M5) 🚧 IN PROGRESS">
+    <nav class="md-nav" aria-label="Phase 10 — Multi-Radio Expansion (M5) ✅ COMPLETE (2026-03-23)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2399,6 +2371,17 @@
         
       </ul>
     </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-12-dual-vfo-dual-receiver-architecture-overhaul-708-in-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 12 — Dual VFO / Dual Receiver architecture overhaul (#708) 🚧 IN PROGRESS
+      
+    </span>
+  </a>
   
 </li>
         
@@ -2559,14 +2542,13 @@
 <ul>
 <li>Connect to Icom over network (authentication, keep-alive)</li>
 <li>Send/receive CI-V commands (frequency, mode, power, meters)</li>
-<li>Receive/transmit audio stream (Opus)</li>
+<li>Receive/transmit audio stream (PCM default, Opus optional)</li>
 <li>Simple Pythonic API (sync + async)</li>
 <li>Keep one <code>Radio</code> contract for API/CLI/Web/rigctld consumers</li>
 <li>Support IC-7610 first, then expand to other models/families via backend/profile architecture</li>
 </ul>
 <h3 id="non-goals-for-now">Non-goals (for now)<a class="headerlink" href="#non-goals-for-now" title="Permanent link">&para;</a></h3>
 <ul>
-<li>GUI</li>
 <li>Full wfview replacement</li>
 <li>Non-IC-7610 serial expansion before IC-7610 USB MVP is stable</li>
 <li>Cross-platform USB/audio polish beyond macOS-first rollout</li>
@@ -2584,7 +2566,7 @@
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│            backends.factory.create_radio()                   │
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│                 │                                            │
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│                 ▼                                            │
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│     Icom7610CoreRadio (shared commander/state/civ routing)   │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│     CoreRadio (shared commander/state/civ routing)   │
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│          ┌───────────────────────────────┴─────────────────┐ │
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│          ▼                                                 ▼ │
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│  Icom7610LanRadio                                Icom7610SerialRadio
@@ -2618,7 +2600,7 @@
 </tr>
 <tr>
 <td>50003</td>
-<td>Audio — bidirectional audio stream (Opus)</td>
+<td>Audio — bidirectional audio stream (PCM default, Opus optional)</td>
 </tr>
 </tbody>
 </table>
@@ -2629,7 +2611,7 @@
 <li><strong>Auth</strong> — receiving token/confirmation</li>
 <li><strong>Keep-alive</strong> — periodic ping (~500ms), otherwise the radio drops the connection</li>
 <li><strong>CI-V</strong> — sending/receiving CI-V commands via UDP wrapper</li>
-<li><strong>Audio</strong> — audio streaming (Opus codec, 8/16/24 kHz)</li>
+<li><strong>Audio</strong> — audio streaming (PCM default, Opus optional; 8/16/24/48 kHz)</li>
 <li><strong>Disconnect</strong> — graceful shutdown</li>
 </ol>
 <h3 id="packet-structure">Packet Structure<a class="headerlink" href="#packet-structure" title="Permanent link">&para;</a></h3>
@@ -2760,7 +2742,7 @@
 <h3 id="phase-7-platform-foundation-m2-complete">Phase 7 — Platform Foundation (M2) ✅ COMPLETE<a class="headerlink" href="#phase-7-platform-foundation-m2-complete" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Backend-neutral architecture for stable platform evolution.</p>
 <ul>
-<li>[x] Extract shared IC-7610 executable core (<code>Icom7610CoreRadio</code>) with LAN compatibility wrapper</li>
+<li>[x] Extract shared IC-7610 executable core (<code>CoreRadio</code>) with LAN compatibility wrapper</li>
 <li>[x] Introduce profile-driven model/capability abstraction (<code>RadioProfile</code>)</li>
 <li>[x] Establish backend factory/config wiring (<code>create_radio</code>, backend config objects)</li>
 <li>[x] Add serial CI-V link foundation + deterministic serial test matrix</li>
@@ -2791,12 +2773,12 @@
 <li>[x] <code>#137</code> advanced scope controls</li>
 <li>[x] <code>#138</code> cross-surface exposure (API / CLI / Web / rigctld) — Phase A complete (49 Protocol methods + exemplar CLI); follow-up surfaces (Web UI, additional CLI, rigctld, docs) deferred as optional incremental work</li>
 </ul>
-<h3 id="phase-10-multi-radio-expansion-m5-in-progress">Phase 10 — Multi-Radio Expansion (M5) 🚧 IN PROGRESS<a class="headerlink" href="#phase-10-multi-radio-expansion-m5-in-progress" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Establish backend architecture and implementations for IC-705, IC-7300, IC-9700 radios using shared Icom7610CoreRadio foundation.</p>
+<h3 id="phase-10-multi-radio-expansion-m5-complete-2026-03-23">Phase 10 — Multi-Radio Expansion (M5) ✅ COMPLETE (2026-03-23)<a class="headerlink" href="#phase-10-multi-radio-expansion-m5-complete-2026-03-23" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Establish backend architecture and implementations for IC-705, IC-7300, IC-9700 radios using shared CoreRadio foundation.</p>
 <h4 id="m51-ic-705-backend-complete-2026-03-23">M5.1 IC-705 Backend ✅ COMPLETE (2026-03-23)<a class="headerlink" href="#m51-ic-705-backend-complete-2026-03-23" title="Permanent link">&para;</a></h4>
 <ul>
 <li>[x] Profile research (ic705.toml with full capabilities)</li>
-<li>[x] Ic705SerialRadio class (inherits Icom7610CoreRadio)</li>
+<li>[x] Ic705SerialRadio class (inherits CoreRadio)</li>
 <li>[x] Factory routing (model="IC-705" detection)</li>
 <li>[x] Test suite (5 tests: factory, profile, inheritance)</li>
 <li><strong>Blocker:</strong> IC-705 hardware not yet procured</li>
@@ -2804,7 +2786,7 @@
 <h4 id="m52-ic-7300-backend-complete-2026-03-23">M5.2 IC-7300 Backend ✅ COMPLETE (2026-03-23)<a class="headerlink" href="#m52-ic-7300-backend-complete-2026-03-23" title="Permanent link">&para;</a></h4>
 <ul>
 <li>[x] Profile research (ic7300.toml with full capabilities)</li>
-<li>[x] Ic7300SerialRadio class (inherits Icom7610CoreRadio)</li>
+<li>[x] Ic7300SerialRadio class (inherits CoreRadio)</li>
 <li>[x] Factory routing (case-insensitive model routing)</li>
 <li>[x] Test suite (5 tests: factory, profile, case-insensitive routing)</li>
 <li><strong>Blocker:</strong> IC-7300 hardware not yet procured</li>
@@ -2812,7 +2794,7 @@
 <h4 id="m53-ic-9700-backend-complete-2026-03-23">M5.3 IC-9700 Backend ✅ COMPLETE (2026-03-23)<a class="headerlink" href="#m53-ic-9700-backend-complete-2026-03-23" title="Permanent link">&para;</a></h4>
 <ul>
 <li>[x] Profile research + TOML definition (ic9700.toml, CI-V addr 0xA2, dual-receiver)</li>
-<li>[x] Ic9700SerialRadio class (inherits Icom7610CoreRadio)</li>
+<li>[x] Ic9700SerialRadio class (inherits CoreRadio)</li>
 <li>[x] Factory routing (model="IC-9700" detection, case-insensitive)</li>
 <li>[x] Test suite (6 tests: factory, profile, dual-receiver, case-insensitive, inheritance)</li>
 <li><strong>Blocker:</strong> IC-9700 hardware not yet procured</li>
@@ -2821,17 +2803,17 @@
 <ul>
 <li>Factory.create_radio() routes by model parameter</li>
 <li>Profile-driven CI-V address resolution</li>
-<li>Shared command logic (Icom7610CoreRadio base)</li>
+<li>Shared command logic (CoreRadio base)</li>
 <li>Case-insensitive model matching</li>
 <li>Extensible pattern for future models</li>
 <li>Zero code duplication (drivers reused)</li>
 <li>3365 tests passing (+16 multi-model tests)</li>
 </ul>
 <h3 id="current-status">Current Status<a class="headerlink" href="#current-status" title="Permanent link">&para;</a></h3>
-<p><strong>Package version in <code>pyproject.toml</code>: <code>0.11.0</code>.</strong>
+<p><strong>Package version in <code>pyproject.toml</code>: <code>0.18.0</code>.</strong>
 <strong>Reliability integration backlog (items 1-13) completed on 2026-03-05.</strong>
-<strong>Latest full regression (local, 2026-03-06):</strong> green; exact counts are tracked in issue comments because the total moves as the parity/integration suite grows.
-- <strong>M2 Platform Foundation (step #141):</strong> extracted shared IC-7610 executable core (<code>Icom7610CoreRadio</code>) with LAN compatibility wrapper (<code>IcomRadio</code>) and no behavior changes.
+<strong>Latest full regression:</strong> green; test count maintained as test suite evolves (~4784 tests as of 2026-04-23).
+- <strong>M2 Platform Foundation (step #141):</strong> extracted shared IC-7610 executable core (<code>CoreRadio</code>) with LAN compatibility wrapper (<code>IcomRadio</code>) and no behavior changes.
 - <strong>M2 profile abstraction (issue #119):</strong> runtime <code>RadioProfile</code> matrix added for multi-model behavior; <code>model</code>/<code>capabilities</code> and receiver/cmd29 routing are now profile-driven with explicit unsupported-operation guards.
 - <strong>M3 serial scope guardrails (issue #146, 2026-03-06):</strong> serial backend keeps the shared error contract in disconnected state (<code>ConnectionError</code> before low-baud guardrail evaluation), includes deterministic low-baud guardrail with explicit override (<code>allow_low_baud_scope</code> / <code>ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD</code>), and now has dedicated serial integration scope profile/gating (<code>ICOM_SERIAL_DEVICE</code>, <code>ICOM_SERIAL_BAUDRATE</code>, <code>ICOM_SERIAL_RADIO_ADDR</code>) alongside serial-specific CI-V pacing (<code>ICOM_SERIAL_CIV_MIN_INTERVAL_MS</code>) while LAN scope behavior remains unchanged.
 - <strong>M3 CLI integration (issue #147, 2026-03-06):</strong> unified CLI backend selection now routes through <code>create_radio(...)</code>, includes serial/audio flags, supports JSON audio-device listing, and preserves backward-compatible LAN defaults.
@@ -2843,11 +2825,11 @@
 - <strong>M5.1 IC-705 Multi-Radio Backend (2026-03-23):</strong> IC-705 serial backend complete with Ic705SerialRadio class, profile-driven routing (ic705.toml, CI-V addr 0xA4), factory integration, and 5 new backend tests. Commit 2e10765. <strong>Blocked on hardware procurement</strong> (research complete).
 - <strong>M5.2 IC-7300 Multi-Radio Backend (2026-03-23):</strong> IC-7300 serial backend complete with Ic7300SerialRadio class, case-insensitive model routing, factory update (dual-model support validated), and 5 new backend tests. Commit 01dfb1b. <strong>Blocked on hardware procurement</strong> (research complete).
 - <strong>M5.3 IC-9700 Multi-Radio Backend (2026-03-23):</strong> IC-9700 serial backend complete with Ic9700SerialRadio class, dual-receiver support (receiver_count=2, unique to IC-9700), LAN-capable profile (ic9700.toml, CI-V addr 0xA2), factory routing with case-insensitive matching, and 6 new backend tests validating dual-receiver capability. <strong>Blocked on hardware procurement</strong> (research and profile complete).
-- <strong>Multi-model factory architecture (2026-03-23):</strong> Factory.create_radio() now routes by model parameter: IC-7610 → Icom7610SerialRadio (default), IC-705 → Ic705SerialRadio, IC-7300 → Ic7300SerialRadio, IC-9700 → Ic9700SerialRadio. All backends inherit from Icom7610CoreRadio (shared command logic). Profile-driven CI-V address resolution (0x80, 0xA4, 0x94, 0xA2). Extensible pattern for future models (IC-705 and IC-9700 are LAN-capable).
+- <strong>Multi-model factory architecture (2026-03-23):</strong> Factory.create_radio() now routes by model parameter: IC-7610 → Icom7610SerialRadio (default), IC-705 → Ic705SerialRadio, IC-7300 → Ic7300SerialRadio, IC-9700 → Ic9700SerialRadio. All backends inherit from CoreRadio (shared command logic). Profile-driven CI-V address resolution (0x80, 0xA4, 0x94, 0xA2). Extensible pattern for future models (IC-705 and IC-9700 are LAN-capable).
 - <strong>State contract unification (issue #301, 2026-03-17):</strong> web HTTP/WS public state and the web runtime path now derive from canonical <code>RadioState</code> without a web-side <code>StateCache</code> runtime dependency; default <code>rigctld</code> reads are <code>RadioState</code>-first with only handler-local fallback/optimistic state, and default server startup no longer binds consumer layers to backend-shared <code>StateCache</code>/poller state.</p>
 <h3 id="phase-11-m6-productization-m6-in-progress-34-core-all-optimizations-complete">Phase 11 — M6 Productization (M6) 🚧 IN PROGRESS (3/4 CORE + ALL OPTIMIZATIONS COMPLETE)<a class="headerlink" href="#phase-11-m6-productization-m6-in-progress-34-core-all-optimizations-complete" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Production-ready library with audio codec support, documentation, and performance optimization.
-<strong>Status</strong>: Core tasks 3/4 complete (M6.1, M6.3, M6.P2); M6.2 blocked on hardware testing. All optimizations complete.</p>
+<strong>Status</strong>: Core tasks 3/4 complete (M6.1, M6.3, M6.P2); M6.2 research phase complete, implementation blocked on hardware testing.</p>
 <h4 id="m61-ulawpcm-audio-codec-decoder-complete-2026-03-23">M6.1 ulaw→pcm Audio Codec Decoder ✅ COMPLETE (2026-03-23)<a class="headerlink" href="#m61-ulawpcm-audio-codec-decoder-complete-2026-03-23" title="Permanent link">&para;</a></h4>
 <ul>
 <li>[x] Pure-Python ulaw→PCM16 decoder (<code>_audio_codecs.py</code>) with standard 256-entry lookup table</li>
@@ -2918,6 +2900,8 @@
 <li><strong>Documentation</strong>: docs/AUDIO_STREAMING_PROFILE.md with detailed analysis</li>
 <li><strong>Result:</strong> Pipeline is production-ready; no optimizations needed</li>
 </ul>
+<h3 id="phase-12-dual-vfo-dual-receiver-architecture-overhaul-708-in-progress">Phase 12 — Dual VFO / Dual Receiver architecture overhaul (#708) 🚧 IN PROGRESS<a class="headerlink" href="#phase-12-dual-vfo-dual-receiver-architecture-overhaul-708-in-progress" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Public <code>Radio</code> protocol expresses <code>Transceiver → Receiver → VFO</code> unambiguously across IC-7610, IC-9700, IC-7300, IC-705 and FTX-1, with no model-specific branches at call sites. Audit: <code>.claude/workflow/dual-vfo-audit.md</code>; architecture: <code>.claude/architecture/protocol.md</code> "Receiver tier"; schema: <code>rigs/_schema_v2.md</code>. Landed foundation: #709 (<code>VfoSlotState</code> + per-receiver <code>active_slot</code> on <code>ReceiverState</code>), #710 (split TOML <code>swap_ab</code>/<code>equal_ab</code> vs <code>swap_main_sub</code>/<code>equal_main_sub</code> with legacy <code>swap</code>/<code>equal</code> deprecation), #711 (<code>ReceiverBankCapable</code> + <code>VfoSlotCapable</code> runtime-checkable Protocols), #713 (IC-9700 profile rewritten as <code>scheme = "main_sub"</code> with empty <code>cmd29.routes</code> per wfview <code>HasCommand29=false</code>). Pending: #712 <code>TransceiverBankCapable</code> for FTX-1, plus the phase 2–4 backend, frontend and rigctld wiring tracked under epic #708.</p>
 <h3 id="reliability-test-expansion-2026-03-05">Reliability Test Expansion (2026-03-05)<a class="headerlink" href="#reliability-test-expansion-2026-03-05" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Added extended integration coverage scaffolding for:</li>
