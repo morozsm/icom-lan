@@ -7,7 +7,7 @@ import pytest
 from icom_lan import IC_7610_ADDR
 from icom_lan.commands import CONTROLLER_ADDR, build_civ_frame
 from icom_lan.commander import Priority
-from icom_lan.exceptions import ConnectionError, CommandError
+from icom_lan.exceptions import CommandError, ConnectionError, TimeoutError
 from icom_lan.radio import IcomRadio
 from icom_lan.types import CivFrame, Mode, bcd_encode
 
@@ -186,6 +186,35 @@ class TestSplitMode:
         radio._last_split = None
         radio._send_civ_expect = AsyncMock(  # type: ignore[method-assign]
             side_effect=CommandError("No response for get_split")
+        )
+        assert await radio.get_split() is False
+
+    @pytest.mark.asyncio
+    async def test_get_split_falls_back_to_cache_on_timeout(
+        self, radio: IcomRadio
+    ) -> None:
+        """Issue #1158: ``get_split`` must also fall back to cache when
+        ``_send_civ_expect`` raises ``TimeoutError`` — that is the actual
+        exception the CI-V runtime raises on real radio silence (see
+        ``_civ_rx._execute_civ_raw``).
+        """
+        radio._last_split = True
+        radio._send_civ_expect = AsyncMock(  # type: ignore[method-assign]
+            side_effect=TimeoutError("CI-V response timed out")
+        )
+        assert await radio.get_split() is True
+
+    @pytest.mark.asyncio
+    async def test_get_split_timeout_no_cache_returns_false(
+        self, radio: IcomRadio
+    ) -> None:
+        """Issue #1158: when there is no cached value and the radio times out,
+        ``get_split`` should return ``False`` instead of propagating
+        ``TimeoutError``.
+        """
+        radio._last_split = None
+        radio._send_civ_expect = AsyncMock(  # type: ignore[method-assign]
+            side_effect=TimeoutError("CI-V response timed out")
         )
         assert await radio.get_split() is False
 

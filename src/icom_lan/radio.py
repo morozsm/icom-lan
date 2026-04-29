@@ -2910,7 +2910,7 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         civ = get_split(to_addr=self._radio_addr)
         try:
             resp = await self._send_civ_expect(civ, label="get_split")
-        except CommandError:
+        except (CommandError, TimeoutError):
             if self._last_split is not None:
                 logger.debug(
                     "get_split: no response, returning cached %s", self._last_split
