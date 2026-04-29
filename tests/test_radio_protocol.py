@@ -326,3 +326,29 @@ def test_scope_capable_get_scope_ref_is_float() -> None:
     assert hints.get("return") is float, (
         f"ScopeCapable.get_scope_ref must return float, got {hints.get('return')!r}"
     )
+
+
+def test_scope_capable_set_scope_ref_accepts_float() -> None:
+    """#1142: set_scope_ref must accept float so round-trip with get_scope_ref type-checks.
+
+    Guards type symmetry: ``await radio.set_scope_ref(await radio.get_scope_ref())``
+    must be valid under static type checking. Since ``get_scope_ref`` returns
+    ``float`` (per #1126 / P3-10), ``set_scope_ref`` must accept ``float``.
+    """
+    import typing
+
+    from icom_lan.radio_protocol import ScopeCapable
+
+    hints = typing.get_type_hints(ScopeCapable.set_scope_ref)
+    assert hints.get("ref") is float, (
+        f"ScopeCapable.set_scope_ref must accept float, got {hints.get('ref')!r}"
+    )
+
+    # Structural round-trip: the value type returned by get_scope_ref must be
+    # acceptable as the parameter type of set_scope_ref.
+    get_return = typing.get_type_hints(ScopeCapable.get_scope_ref).get("return")
+    set_param = typing.get_type_hints(ScopeCapable.set_scope_ref).get("ref")
+    assert get_return is set_param, (
+        f"ScopeCapable.get_scope_ref()->{get_return!r} must round-trip into "
+        f"set_scope_ref(ref: {set_param!r})"
+    )
