@@ -1,10 +1,11 @@
 /**
- * ESLint flat config — frontend architecture guardrails.
+ * ESLint flat config — frontend architecture guardrails (v2 layering only).
  *
  * Enforces import boundaries defined in ADR 2026-04-12:
  *   - Presentational components (panels, layout, skins, semantic, primitives)
- *     must NOT import runtime/transport modules directly.
+ *     must NOT import runtime/transport modules directly (alias or relative).
  *   - Only wiring/ (adapter layer) and lib/ internals may import these.
+ *   - lib/runtime/** must NOT import from components-v2/ (no circular deps).
  *
  * @see docs/plans/2026-04-12-target-frontend-architecture.md
  */
@@ -27,9 +28,16 @@ const FORBIDDEN_RUNTIME_IMPORTS = {
   ],
   patterns: [
     {
-      group: ['$lib/transport/*'],
+      group: ['$lib/transport/*', '**/lib/transport/*'],
       message:
         'Presentation components must not import transport modules (sendCommand, getChannel). ' +
+        'Use callback props from the adapter/wiring layer instead. ' +
+        'See ADR 2026-04-12.',
+    },
+    {
+      group: ['**/lib/audio/audio-manager'],
+      message:
+        'Presentation components must not import audioManager directly (relative paths included). ' +
         'Use callback props from the adapter/wiring layer instead. ' +
         'See ADR 2026-04-12.',
     },
@@ -134,17 +142,6 @@ export default [
           ],
         },
       ],
-    },
-  },
-
-  // ── Legacy V1 components — same restrictions ──
-  {
-    files: [
-      'src/components/**/*.svelte',
-      'src/components/**/*.ts',
-    ],
-    rules: {
-      'no-restricted-imports': ['warn', FORBIDDEN_RUNTIME_IMPORTS],
     },
   },
 
