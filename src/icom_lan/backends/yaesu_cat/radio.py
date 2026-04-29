@@ -1520,13 +1520,39 @@ class YaesuCatRadio:
     async def get_dual_watch(self) -> bool:
         raise NotImplementedError("Dual watch query not supported on Yaesu radios")
 
-    # -- APF / Twin Peak (not supported on Yaesu) -----------------------------
+    # -- Audio Peak Filter (canonical 3-mode adapter over Yaesu bool APF) -----
 
     async def set_audio_peak_filter(self, mode: int, receiver: int = 0) -> None:
-        raise NotImplementedError("APF not supported on Yaesu radios")
+        """Set Audio Peak Filter via the canonical 3-mode contract.
+
+        The cross-vendor contract is `mode = 0=off, 1=soft, 2=sharp`
+        (`DspControlCapable.set_audio_peak_filter`). Yaesu hardware exposes
+        APF as a plain on/off toggle (CO02) plus a tunable centre frequency
+        (CO03), so this adapter degrades the 3-mode form onto the bool form:
+
+        - mode 0 → APF off.
+        - mode 1 → APF on; centre frequency set to 0 (CW-pitch centred,
+          the natural "soft" default).
+        - mode 2 → not supported; the hardware has no separate "sharp" mode.
+
+        Delegates to the backend-internal `set_apf` / `set_apf_freq` CAT
+        primitives.
+        """
+        if mode == 0:
+            await self.set_apf(False, receiver=receiver)
+        elif mode == 1:
+            await self.set_apf(True, receiver=receiver)
+            await self.set_apf_freq(0, receiver=receiver)
+        else:
+            raise NotImplementedError(
+                f"APF mode {mode} (sharp) not supported on Yaesu — "
+                "only off (0) and on (1)"
+            )
 
     async def get_audio_peak_filter(self, receiver: int = 0) -> int:
         raise NotImplementedError("APF not supported on Yaesu radios")
+
+    # -- Twin Peak Filter (not supported on Yaesu) ----------------------------
 
     async def set_twin_peak_filter(self, on: bool, receiver: int = 0) -> None:
         raise NotImplementedError("Twin Peak not supported on Yaesu radios")

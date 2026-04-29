@@ -881,6 +881,41 @@ async def test_set_apf_freq(connected_radio):
 
 
 # ---------------------------------------------------------------------------
+# Canonical APF adapter (DspControlCapable.set_audio_peak_filter)
+# Mode 0/1/2 → Yaesu bool APF (with mode-2 raising clearly)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_set_audio_peak_filter_mode_0_disables_apf(connected_radio):
+    """Mode 0 (off) → CO020000;"""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_audio_peak_filter(0)
+    connected_radio._transport.write.assert_called_once_with("CO020000;")
+
+
+@pytest.mark.asyncio
+async def test_set_audio_peak_filter_mode_1_enables_apf_and_centres_freq(
+    connected_radio,
+):
+    """Mode 1 (soft) → APF on (CO020001;) plus centre-frequency reset (CO030000;)."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_audio_peak_filter(1)
+    assert connected_radio._transport.write.await_count == 2
+    sent = [c.args[0] for c in connected_radio._transport.write.await_args_list]
+    assert sent == ["CO020001;", "CO030000;"]
+
+
+@pytest.mark.asyncio
+async def test_set_audio_peak_filter_mode_2_raises(connected_radio):
+    """Mode 2 (sharp) → NotImplementedError; Yaesu has no sharp mode."""
+    connected_radio._transport.write = AsyncMock()
+    with pytest.raises(NotImplementedError, match="sharp"):
+        await connected_radio.set_audio_peak_filter(2)
+    connected_radio._transport.write.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # D9: Tone/TSQL
 # ---------------------------------------------------------------------------
 
