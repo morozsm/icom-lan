@@ -23,7 +23,7 @@ from .ic705 import (
 )
 from .radio import IcomRadio as _AsyncIcomRadio, _DEFAULT_AUDIO_CODEC  # noqa: TID251
 from .capabilities import CAP_METERS, CAP_POWER_CONTROL
-from .types import AudioCapabilities, AudioCodec, Mode, ScopeCompletionPolicy
+from .types import AudioCodec, Mode, ScopeCompletionPolicy
 
 T = TypeVar("T")
 
@@ -485,8 +485,3 @@ class IcomRadio:
     def audio_sample_rate(self) -> int:
         """Configured audio sample rate."""
         return self._radio.audio_sample_rate
-
-    @staticmethod
-    def audio_capabilities() -> AudioCapabilities:
-        """Return icom-lan audio capabilities and deterministic defaults."""
-        return _AsyncIcomRadio.audio_capabilities()

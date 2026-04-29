@@ -67,7 +67,9 @@ class TestSyncAudioNaming:
         r._loop.close()
 
     def test_audio_capabilities(self) -> None:
-        caps = IcomRadio.audio_capabilities()
+        from icom_lan.types import get_audio_capabilities
+
+        caps = get_audio_capabilities()
         assert caps.default_codec.name == "PCM_2CH_16BIT"
         assert caps.default_sample_rate_hz == 48000
         assert caps.default_channels == 2

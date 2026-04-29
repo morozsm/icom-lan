@@ -74,7 +74,9 @@ class TestAudioCapabilities:
         assert caps.default_channels in caps.supported_channels
 
     def test_radio_exposes_audio_capabilities(self) -> None:
-        caps = IcomRadio.audio_capabilities()
+        # ``audio_capabilities()`` was removed from the class surface in #1106.
+        # The module-level helper remains the single source of truth.
+        caps = get_audio_capabilities()
         assert caps == get_audio_capabilities()
 
     def test_to_dict_json_shape(self) -> None:

@@ -22,7 +22,7 @@ from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
 from .audio import AudioStats, AudioStream
 from .exceptions import ConnectionError
 from .transport import IcomTransport
-from .types import AudioCapabilities, AudioCodec, get_audio_capabilities
+from .types import AudioCodec
 
 logger = logging.getLogger(__name__)
 
@@ -445,11 +445,6 @@ class AudioRuntimeMixin(_MixinBase):  # type: ignore[misc]
     def audio_sample_rate(self) -> int:
         """Configured audio sample rate in Hz."""
         return self._audio_sample_rate
-
-    @staticmethod
-    def audio_capabilities() -> AudioCapabilities:
-        """Return icom-lan audio capabilities and deterministic defaults."""
-        return get_audio_capabilities()
 
     async def _ensure_audio_transport(self) -> None:
         """Connect the audio transport if not already connected."""

@@ -44,7 +44,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Protocol, runtime_checkable
 
 from .radio_state import RadioState, VfoSlotState
-from .types import BreakInMode, Mode
+from .types import AudioCodec, BreakInMode, Mode
 
 if TYPE_CHECKING:
     from ._state_cache import StateCache
@@ -486,6 +486,26 @@ class AudioCapable(Protocol):
         Returns an :class:`~icom_lan.audio_bus.AudioBus` that manages
         subscriptions and automatically starts/stops the radio's audio
         stream based on subscriber count.
+        """
+        ...
+
+    @property
+    def audio_codec(self) -> AudioCodec:
+        """Configured audio codec for the radio's audio stream.
+
+        Backends fix this once at construction time (e.g. Yaesu USB-audio
+        always reports :attr:`~icom_lan.types.AudioCodec.PCM_1CH_16BIT`);
+        Icom LAN backends honour the value supplied to the constructor.
+        """
+        ...
+
+    @property
+    def audio_sample_rate(self) -> int:
+        """Configured audio sample rate in Hz.
+
+        Used by the web audio broadcaster to clock the relay correctly
+        (see ``web/handlers/audio.py``); a missing property would silently
+        fall back to a default rate and mis-clock playback.
         """
         ...
 

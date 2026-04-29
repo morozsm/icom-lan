@@ -239,6 +239,11 @@ class YaesuCatRadio:
         return AudioCodec.PCM_1CH_16BIT
 
     @property
+    def audio_sample_rate(self) -> int:
+        """Configured audio sample rate in Hz (default 48000)."""
+        return self._audio_sample_rate
+
+    @property
     def audio_bus(self) -> "AudioBus":
         """AudioBus instance for pub/sub audio distribution."""
         if self._audio_bus is None:
