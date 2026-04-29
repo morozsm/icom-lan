@@ -399,12 +399,12 @@ class YaesuCatRadio:
         logger.debug("set_drive_gain: not supported on this radio")
 
     async def get_compressor_level(self) -> int:
-        """Compressor level not available via CAT on FTX-1."""
-        return 0
+        """Alias for LevelsCapable compatibility — delegates to processor level."""
+        return await self.get_processor_level()
 
     async def set_compressor_level(self, level: int) -> None:
-        """Compressor level not available via CAT on FTX-1."""
-        logger.debug("set_compressor_level: not supported on this radio")
+        """Alias for LevelsCapable compatibility — delegates to processor level."""
+        await self.set_processor_level(level)
 
     # -- Optional commands (profile-dependent) ------------------------------
 
