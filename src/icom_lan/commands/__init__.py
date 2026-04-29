@@ -16,6 +16,9 @@ Reference: wfview icomcommander.cpp, IC-7610.rig
 
 # Re-export everything from sub-modules -- no logic in this file.
 
+import warnings as _warnings
+from typing import Any as _Any
+
 from ..types import bcd_decode
 
 # --- _frame.py (kernel) ---
@@ -121,11 +124,9 @@ from .levels import (
     get_nr_level,
     get_pbt_inner,
     get_pbt_outer,
-    get_power,
     get_ref_adjust,
     get_rf_gain,
     get_rf_power,
-    get_sql,
     get_squelch,
     get_vox_delay,
     get_vox_gain,
@@ -148,11 +149,9 @@ from .levels import (
     set_nr_level,
     set_pbt_inner,
     set_pbt_outer,
-    set_power,
     set_ref_adjust,
     set_rf_gain,
     set_rf_power,
-    set_sql,
     set_squelch,
     set_vox_delay,
     set_vox_gain,
@@ -417,6 +416,31 @@ from .config import (
     set_lan_mod_level,
     set_usb_mod_level,
 )
+
+# Backward-compat aliases — DEPRECATED in v0.19, will be removed in v0.20.
+# Access via ``icom_lan.commands.<alias>`` emits ``DeprecationWarning``.
+# Use the canonical builders directly: ``get_rf_power``, ``set_rf_power``,
+# ``get_squelch``, ``set_squelch``.
+_DEPRECATED_ALIASES: dict[str, str] = {
+    "get_power": "get_rf_power",
+    "set_power": "set_rf_power",
+    "get_sql": "get_squelch",
+    "set_sql": "set_squelch",
+}
+
+
+def __getattr__(name: str) -> _Any:
+    """Forward deprecated alias access with a warning (PEP 562)."""
+    canonical = _DEPRECATED_ALIASES.get(name)
+    if canonical is not None:
+        _warnings.warn(
+            f"icom_lan.commands.{name} is deprecated since v0.19 and will be "
+            f"removed in v0.20; use {canonical} instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return globals()[canonical]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 __all__ = [

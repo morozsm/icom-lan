@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- **`icom_lan.commands.levels` backward-compat aliases (#1167).** The four
+  CI-V frame-builder aliases `get_power`, `set_power`, `get_sql`, and
+  `set_sql` are deprecated and will be removed in v0.20. Accessing them via
+  `icom_lan.commands.<name>` or `icom_lan.commands.levels.<name>` now emits
+  `DeprecationWarning`. Use the canonical builders directly: `get_rf_power` /
+  `set_rf_power` and `get_squelch` / `set_squelch`.
+
 ### Changed
 
 - **Audio-bridge dependencies folded into core install (#1090).** `opuslib`,
