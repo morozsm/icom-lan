@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from icom_lan.radio_protocol import MetersCapable, PowerControlCapable, Radio
+from icom_lan.radio_protocol import (
+    MetersCapable,
+    PowerControlCapable,
+    Radio,
+    VoiceControlCapable,
+)
 from icom_lan.radio_state import RadioState
 
 
@@ -102,3 +107,104 @@ def test_power_stub_satisfies_both_protocols() -> None:
     stub = _PowerStub()
     assert isinstance(stub, PowerControlCapable)
     assert isinstance(stub, MetersCapable)
+
+
+# ---------------------------------------------------------------------------
+# VoiceControlCapable: get_compressor + set_compressor pair (issue #1097)
+# ---------------------------------------------------------------------------
+
+
+class _VoiceStub:
+    """Minimal stub exposing every VoiceControlCapable method."""
+
+    def __init__(self) -> None:
+        self._compressor: bool = False
+        self._vox: bool = False
+        self._vox_gain: int = 0
+        self._anti_vox_gain: int = 0
+        self._vox_delay: int = 0
+        self._monitor: bool = False
+        self._monitor_gain: int = 0
+        self._ssb_tx_bandwidth: int = 0
+
+    async def get_vox(self) -> bool:
+        return self._vox
+
+    async def set_vox(self, on: bool) -> None:
+        self._vox = on
+
+    async def get_vox_gain(self) -> int:
+        return self._vox_gain
+
+    async def set_vox_gain(self, level: int) -> None:
+        self._vox_gain = level
+
+    async def get_anti_vox_gain(self) -> int:
+        return self._anti_vox_gain
+
+    async def set_anti_vox_gain(self, level: int) -> None:
+        self._anti_vox_gain = level
+
+    async def get_vox_delay(self) -> int:
+        return self._vox_delay
+
+    async def set_vox_delay(self, level: int) -> None:
+        self._vox_delay = level
+
+    async def get_compressor(self) -> bool:
+        return self._compressor
+
+    async def set_compressor(self, on: bool) -> None:
+        self._compressor = on
+
+    async def get_monitor(self) -> bool:
+        return self._monitor
+
+    async def set_monitor(self, on: bool) -> None:
+        self._monitor = on
+
+    async def get_monitor_gain(self) -> int:
+        return self._monitor_gain
+
+    async def set_monitor_gain(self, level: int) -> None:
+        self._monitor_gain = level
+
+    async def set_acc1_mod_level(self, level: int) -> None: ...
+    async def set_usb_mod_level(self, level: int) -> None: ...
+    async def set_lan_mod_level(self, level: int) -> None: ...
+    async def get_ssb_tx_bandwidth(self) -> int:
+        return self._ssb_tx_bandwidth
+
+    async def set_ssb_tx_bandwidth(self, value: int) -> None:
+        self._ssb_tx_bandwidth = value
+
+
+def test_voice_control_capable_includes_get_compressor() -> None:
+    """A class implementing every VoiceControlCapable method satisfies isinstance."""
+    assert isinstance(_VoiceStub(), VoiceControlCapable)
+
+
+def test_voice_control_capable_missing_get_compressor_fails() -> None:
+    """Without get_compressor the class no longer satisfies the protocol."""
+
+    class _MissingGetCompressor(_VoiceStub):
+        get_compressor = None  # type: ignore[assignment]
+
+    assert not isinstance(_MissingGetCompressor(), VoiceControlCapable)
+
+
+async def _voice_compressor_round_trip(radio: VoiceControlCapable) -> tuple[bool, bool]:
+    """Helper: read-set-read round trip on a VoiceControlCapable radio."""
+    initial = await radio.get_compressor()
+    await radio.set_compressor(not initial)
+    return initial, await radio.get_compressor()
+
+
+def test_voice_compressor_round_trip_protocol_typed() -> None:
+    """get→set→get works against a VoiceControlCapable-typed reference."""
+    import asyncio
+
+    stub = _VoiceStub()
+    initial, after = asyncio.run(_voice_compressor_round_trip(stub))
+    assert initial is False
+    assert after is True

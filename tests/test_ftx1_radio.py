@@ -1226,6 +1226,29 @@ async def test_set_dial_lock_delegates_to_set_lock(connected_radio):
 
 
 @pytest.mark.asyncio
+async def test_get_compressor_delegates_to_get_processor(connected_radio):
+    """Yaesu get_compressor alias mirrors set_compressor → set_processor (issue #1097)."""
+    connected_radio._transport.query = AsyncMock(return_value="PR01")
+    assert await connected_radio.get_compressor() is True
+    connected_radio._transport.query.assert_called_once_with("PR0;")
+
+
+@pytest.mark.asyncio
+async def test_compressor_round_trip(connected_radio):
+    """Round-trip get→set→get works through the Icom-spelled protocol surface."""
+    connected_radio._transport.write = AsyncMock()
+    connected_radio._transport.query = AsyncMock(side_effect=["PR00", "PR01"])
+
+    before = await connected_radio.get_compressor()
+    await connected_radio.set_compressor(True)
+    after = await connected_radio.get_compressor()
+
+    assert before is False
+    assert after is True
+    connected_radio._transport.write.assert_called_once_with("PR01;")
+
+
+@pytest.mark.asyncio
 async def test_set_compressor_delegates_to_set_processor(connected_radio):
     connected_radio._transport.write = AsyncMock()
     await connected_radio.set_compressor(True)

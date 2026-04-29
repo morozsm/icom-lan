@@ -1415,6 +1415,10 @@ class YaesuCatRadio:
         """Alias for AdvancedControlCapable compatibility."""
         await self.set_lock(on)
 
+    async def get_compressor(self) -> bool:
+        """Alias for VoiceControlCapable compatibility."""
+        return await self.get_processor()
+
     async def set_compressor(self, on: bool) -> None:
         """Alias for AdvancedControlCapable compatibility."""
         await self.set_processor(on)
