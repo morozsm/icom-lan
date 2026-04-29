@@ -24,6 +24,7 @@ __all__ = ["main", "check_ports_available"]
 
 import argparse
 import asyncio
+import errno
 import json
 import logging
 from logging.handlers import RotatingFileHandler
@@ -2705,13 +2706,27 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
         try:
             await candidate.start()
         except OSError as exc:
-            logger.warning(
-                "rigctld disabled: failed to bind port %d: %s "
-                "(another rigctld may already be running; pass --no-rigctld to silence)",
-                rigctld_port,
-                exc,
-            )
-            rigctld_server = None
+            # Only port-busy (EADDRINUSE) is treated as graceful degrade —
+            # another rigctld is likely already running. Other errno values
+            # (EACCES on privileged ports, EMFILE on fd exhaustion,
+            # ENETUNREACH, etc.) indicate a misconfigured environment and
+            # must surface so the operator can fix it.
+            if exc.errno == errno.EADDRINUSE:
+                logger.warning(
+                    "rigctld disabled: failed to bind port %d: %s "
+                    "(another rigctld may already be running; pass --no-rigctld to silence)",
+                    rigctld_port,
+                    exc,
+                )
+                rigctld_server = None
+            else:
+                logger.error(
+                    "rigctld failed to start on port %d: %s (errno=%s)",
+                    rigctld_port,
+                    exc,
+                    exc.errno,
+                )
+                raise
         else:
             rigctld_server = candidate
             rigctld_addr = f"0.0.0.0:{rigctld_port}"

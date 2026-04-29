@@ -805,8 +805,9 @@ class TestWebRigctldDefault:
         assert "rigctld:" not in out
 
     async def test_cli_web_rigctld_port_busy_graceful(self, caplog, capsys):
-        """Port-busy on rigctld logs warning and continues serving the web."""
+        """EADDRINUSE on rigctld logs warning and continues serving the web."""
         import asyncio
+        import errno
         import logging
 
         from icom_lan.cli import _cmd_web
@@ -819,7 +820,7 @@ class TestWebRigctldDefault:
                 self.cfg = cfg
 
             async def start(self):
-                raise OSError(48, "Address already in use")
+                raise OSError(errno.EADDRINUSE, "Address already in use")
 
             async def stop(self):  # pragma: no cover - never called
                 pass
@@ -852,6 +853,101 @@ class TestWebRigctldDefault:
         out = capsys.readouterr().out
         assert "rigctld:" not in out, (
             "banner must not advertise rigctld when bind failed"
+        )
+
+    async def test_cli_web_rigctld_eacces_surfaces(self, caplog):
+        """EACCES (privileged port) must NOT degrade silently — surfaces as error."""
+        import errno
+        import logging
+
+        from icom_lan.cli import _cmd_web
+
+        radio = AsyncMock()
+        radio.model = "IC-7610"
+
+        class PrivilegedRigctldServer:
+            def __init__(self, _radio, cfg):
+                self.cfg = cfg
+
+            async def start(self):
+                raise OSError(errno.EACCES, "Permission denied")
+
+            async def stop(self):  # pragma: no cover - never called
+                pass
+
+        class FakeWebServer:  # pragma: no cover - rigctld fails before web starts
+            def __init__(self, _radio, _cfg):
+                pass
+
+            async def serve_forever(self):
+                raise AssertionError("web must not start when rigctld fails hard")
+
+        p = _build_parser()
+        args = p.parse_args(["--host", "1.2.3.4", "web"])
+
+        with (
+            patch("icom_lan.web.server.WebServer", FakeWebServer),
+            patch("icom_lan.rigctld.server.RigctldServer", PrivilegedRigctldServer),
+            caplog.at_level(logging.ERROR, logger="icom_lan.cli"),
+        ):
+            with pytest.raises(OSError) as exc_info:
+                await _cmd_web(radio, args)
+
+        assert exc_info.value.errno == errno.EACCES
+        # ERROR-level log must surface the failure — no silent degrade.
+        assert any(
+            "rigctld" in rec.message.lower() and rec.levelno >= logging.ERROR
+            for rec in caplog.records
+        ), (
+            "expected ERROR log for EACCES, got "
+            f"{[(r.levelname, r.message) for r in caplog.records]}"
+        )
+
+    async def test_cli_web_rigctld_emfile_surfaces(self, caplog):
+        """EMFILE (fd exhaustion) must NOT degrade silently — surfaces as error."""
+        import errno
+        import logging
+
+        from icom_lan.cli import _cmd_web
+
+        radio = AsyncMock()
+        radio.model = "IC-7610"
+
+        class ExhaustedRigctldServer:
+            def __init__(self, _radio, cfg):
+                self.cfg = cfg
+
+            async def start(self):
+                raise OSError(errno.EMFILE, "Too many open files")
+
+            async def stop(self):  # pragma: no cover - never called
+                pass
+
+        class FakeWebServer:  # pragma: no cover - rigctld fails before web starts
+            def __init__(self, _radio, _cfg):
+                pass
+
+            async def serve_forever(self):
+                raise AssertionError("web must not start when rigctld fails hard")
+
+        p = _build_parser()
+        args = p.parse_args(["--host", "1.2.3.4", "web"])
+
+        with (
+            patch("icom_lan.web.server.WebServer", FakeWebServer),
+            patch("icom_lan.rigctld.server.RigctldServer", ExhaustedRigctldServer),
+            caplog.at_level(logging.ERROR, logger="icom_lan.cli"),
+        ):
+            with pytest.raises(OSError) as exc_info:
+                await _cmd_web(radio, args)
+
+        assert exc_info.value.errno == errno.EMFILE
+        assert any(
+            "rigctld" in rec.message.lower() and rec.levelno >= logging.ERROR
+            for rec in caplog.records
+        ), (
+            "expected ERROR log for EMFILE, got "
+            f"{[(r.levelname, r.message) for r in caplog.records]}"
         )
 
 
