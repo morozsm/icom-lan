@@ -203,16 +203,16 @@ The browser app startup path is implemented in `frontend/src/App.svelte` and
 
 ### Boot sequence
 
-1. Initialize UI version selector (`?ui=v1|v2` takes priority over localStorage).
+1. Initialize the skin selector from URL/localStorage (see "Layout and skin resolution" below).
 2. Register MediaSession handlers (when API is available).
 3. Start HTTP polling loop for `/api/v1/state` (interval set to `1000ms` in app bootstrap).
 4. Start battery monitor (progressive enhancement) and adjust polling multiplier.
 5. Fetch capabilities once from `/api/v1/capabilities`.
 6. Connect control WebSocket (`/api/v1/ws`) and subscribe to events.
 
-### v2 runtime ownership (actual code paths)
+### Runtime ownership (actual code paths)
 
-v2 keeps one behavior path and splits responsibilities by module:
+The frontend keeps one behavior path and splits responsibilities by module:
 
 | Responsibility | Current implementation path | Notes |
 |---|---|---|
@@ -221,9 +221,8 @@ v2 keeps one behavior path and splits responsibilities by module:
 | WS command dispatch | `frontend/src/components-v2/wiring/command-bus.ts` | Maps UI callbacks to `sendCommand(...)` calls and optimistic state patches. |
 | HTTP system actions | `frontend/src/lib/runtime/system-controller.ts` via `runtime.system.*` | Owns radio connect/disconnect, power on/off, and EiBi identify calls. |
 
-Current skin files in `frontend/src/skins/*` are migration wrappers that delegate
-to `components-v2/layout/*`; behavior is still implemented in the v2 layout and
-wiring modules listed above.
+Current skin files in `frontend/src/skins/*` delegate to `components-v2/layout/*`;
+behavior is implemented in the layout and wiring modules listed above.
 
 ### Backend CI-V poll cadence (state freshness)
 
@@ -295,7 +294,7 @@ Implementation path: `frontend/src/lib/media/media-session.ts`.
 | `Space` | Toggle PTT |
 | `Escape` | Close frequency-entry modal |
 
-## Mobile v2 Interaction Model
+## Mobile Interaction Model
 
 Mobile-first interaction logic is implemented in:
 
@@ -304,12 +303,7 @@ Mobile-first interaction logic is implemented in:
 - `frontend/src/components-v2/controls/BottomSheet.svelte`
 - `frontend/src/components-v2/controls/CollapsiblePanel.svelte`
 
-### Enabling v2 UI
-
-`v2` can be selected with `?ui=v2` (or stored in localStorage by the app).
-Without selection, UI version defaults to `v1`.
-
-### Layout and skin resolution in v2
+### Layout and skin resolution
 
 Skin/layout is resolved in `frontend/src/components-v2/layout/RadioLayout.svelte`
 using `resolveSkinId(...)` and `getLayoutMode()`:

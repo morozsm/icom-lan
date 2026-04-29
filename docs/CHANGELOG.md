@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- **Web UI v1 layout shell (#874, #1220).** The legacy `AppShell` /
+  `DesktopLayout` / `MobileLayout` tree under `frontend/src/components/layout/`
+  is deprecated; v2 (`RadioLayoutV2` + `frontend/src/components-v2/`) is the
+  only supported path going forward. v2 has been the default since v0.15.1.
+  The `?ui=v1` URL fallback is on track for removal alongside the v1 code
+  drop (tracked under epic #874 / sub-issues #1216, #1217). Documentation
+  has been updated to v2-only language in this release; user-facing docs no
+  longer describe the v1 shell.
+
 ### Removed
 
 - **`meter_cal._TABLES` and `meter_cal.calibrate()` (#1209).** The hardcoded
