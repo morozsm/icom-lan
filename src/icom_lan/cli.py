@@ -1270,11 +1270,10 @@ async def _run(args: argparse.Namespace) -> int:
     radio = create_radio(config)
 
     if args.command == "web":
-        ports_to_check: list[int] = [args.web_port]
-        if getattr(args, "web_rigctld", False):
-            ports_to_check.append(getattr(args, "web_rigctld_port", 4532))
+        # Only the web port is required. rigctld is best-effort: if its port
+        # is busy we log a warning and continue (handled in _cmd_web).
         try:
-            check_ports_available(ports_to_check)
+            check_ports_available([args.web_port])
         except RuntimeError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
@@ -2668,7 +2667,8 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     if bridge_device is None:
         loopback_hint = _detect_loopback_hint()
 
-    # Start rigctld if requested
+    # Start rigctld if requested. Failure (e.g. port already in use) is
+    # logged as a warning and skipped — the web server keeps serving.
     rigctld_server = None
     rigctld_addr: str | None = None
     if getattr(args, "web_rigctld", False):
@@ -2681,16 +2681,20 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
             port=rigctld_port,
             wsjtx_compat=getattr(args, "wsjtx_compat", False),
         )
-        rigctld_server = RigctldServer(radio, rigctld_config)
+        candidate = RigctldServer(radio, rigctld_config)
         try:
-            await rigctld_server.start()
-        except Exception as exc:
-            print(
-                f"Error: failed to start rigctld on port {rigctld_port}: {exc}",
-                file=sys.stderr,
+            await candidate.start()
+        except OSError as exc:
+            logger.warning(
+                "rigctld disabled: failed to bind port %d: %s "
+                "(another rigctld may already be running; pass --no-rigctld to silence)",
+                rigctld_port,
+                exc,
             )
-            return 1
-        rigctld_addr = f"0.0.0.0:{rigctld_port}"
+            rigctld_server = None
+        else:
+            rigctld_server = candidate
+            rigctld_addr = f"0.0.0.0:{rigctld_port}"
 
     scheme = "https" if config_kwargs.get("tls") else "http"
     web_url = f"{scheme}://{args.web_host}:{args.web_port}/"

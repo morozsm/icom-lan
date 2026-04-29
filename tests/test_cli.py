@@ -712,6 +712,149 @@ class TestPresets:
             _apply_preset(args, "nonexistent")
 
 
+class TestWebRigctldDefault:
+    """Issue #1089: rigctld is on by default with --no-rigctld opt-out."""
+
+    def test_parser_default_enables_rigctld(self):
+        p = _build_parser()
+        args = p.parse_args(["--host", "1.2.3.4", "web"])
+        assert args.web_rigctld is True
+        assert args.web_rigctld_port == 4532
+
+    def test_parser_no_rigctld_flag_disables(self):
+        p = _build_parser()
+        args = p.parse_args(["--host", "1.2.3.4", "web", "--no-rigctld"])
+        assert args.web_rigctld is False
+
+    async def test_cli_web_default_rigctld(self, capsys):
+        """rigctld starts by default (no flag passed) and banner shows it."""
+        import asyncio
+
+        from icom_lan.cli import _cmd_web
+
+        radio = AsyncMock()
+        radio.model = "IC-7610"
+
+        started = []
+
+        class FakeRigctldServer:
+            def __init__(self, _radio, cfg):
+                self.cfg = cfg
+
+            async def start(self):
+                started.append(self.cfg.port)
+
+            async def stop(self):
+                pass
+
+        class FakeWebServer:
+            def __init__(self, _radio, _cfg):
+                pass
+
+            async def serve_forever(self):
+                raise asyncio.CancelledError
+
+        p = _build_parser()
+        args = p.parse_args(["--host", "1.2.3.4", "web"])
+
+        with (
+            patch("icom_lan.web.server.WebServer", FakeWebServer),
+            patch("icom_lan.rigctld.server.RigctldServer", FakeRigctldServer),
+        ):
+            rc = await _cmd_web(radio, args)
+
+        assert rc == 0
+        assert started == [4532], "rigctld should start on default port 4532"
+        out = capsys.readouterr().out
+        assert "rigctld:" in out
+        assert "4532" in out
+
+    async def test_cli_web_no_rigctld_opt_out(self, capsys):
+        """`--no-rigctld` disables rigctld; banner omits the rigctld line."""
+        import asyncio
+
+        from icom_lan.cli import _cmd_web
+
+        radio = AsyncMock()
+        radio.model = "IC-7610"
+
+        class ExplodingRigctldServer:
+            def __init__(self, *_args, **_kwargs):
+                raise AssertionError(
+                    "rigctld must not be constructed when --no-rigctld is set"
+                )
+
+        class FakeWebServer:
+            def __init__(self, _radio, _cfg):
+                pass
+
+            async def serve_forever(self):
+                raise asyncio.CancelledError
+
+        p = _build_parser()
+        args = p.parse_args(["--host", "1.2.3.4", "web", "--no-rigctld"])
+
+        with (
+            patch("icom_lan.web.server.WebServer", FakeWebServer),
+            patch("icom_lan.rigctld.server.RigctldServer", ExplodingRigctldServer),
+        ):
+            rc = await _cmd_web(radio, args)
+
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "rigctld:" not in out
+
+    async def test_cli_web_rigctld_port_busy_graceful(self, caplog, capsys):
+        """Port-busy on rigctld logs warning and continues serving the web."""
+        import asyncio
+        import logging
+
+        from icom_lan.cli import _cmd_web
+
+        radio = AsyncMock()
+        radio.model = "IC-7610"
+
+        class BusyRigctldServer:
+            def __init__(self, _radio, cfg):
+                self.cfg = cfg
+
+            async def start(self):
+                raise OSError(48, "Address already in use")
+
+            async def stop(self):  # pragma: no cover - never called
+                pass
+
+        class FakeWebServer:
+            def __init__(self, _radio, _cfg):
+                pass
+
+            async def serve_forever(self):
+                raise asyncio.CancelledError
+
+        p = _build_parser()
+        args = p.parse_args(["--host", "1.2.3.4", "web"])
+
+        with (
+            patch("icom_lan.web.server.WebServer", FakeWebServer),
+            patch("icom_lan.rigctld.server.RigctldServer", BusyRigctldServer),
+            caplog.at_level(logging.WARNING, logger="icom_lan.cli"),
+        ):
+            rc = await _cmd_web(radio, args)
+
+        assert rc == 0, "web must keep running even if rigctld port is busy"
+        # Warning must mention the port and surface the problem.
+        assert any(
+            "rigctld" in rec.message.lower() and "4532" in rec.message
+            for rec in caplog.records
+        ), (
+            f"expected rigctld port-busy warning, got {[r.message for r in caplog.records]}"
+        )
+        out = capsys.readouterr().out
+        assert "rigctld:" not in out, (
+            "banner must not advertise rigctld when bind failed"
+        )
+
+
 class TestBackendAwareDiscover:
     def test_discover_serial_exits_with_error(self, capsys):
         with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
