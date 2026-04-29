@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from icom_lan.radio_protocol import Radio
+from icom_lan.radio_protocol import MetersCapable, PowerControlCapable, Radio
 from icom_lan.radio_state import RadioState
 
 
@@ -63,3 +63,42 @@ def test_backend_id_known_values() -> None:
     """backend_id can hold any of the documented family values."""
     known_ids = {"icom_lan", "icom_serial", "yaesu_cat"}
     assert _StubRadio().backend_id in known_ids
+
+
+class _PowerStub:
+    """Stub implementing both PowerControlCapable and MetersCapable surfaces.
+
+    Verifies that ``get_rf_power`` declared on PowerControlCapable does not
+    break the duplicate declaration on MetersCapable — both ``isinstance``
+    checks must still pass for backends that implement the read+write pair.
+    """
+
+    async def get_powerstat(self) -> bool: return True
+    async def set_powerstat(self, on: bool) -> None: ...
+    async def get_rf_power(self) -> int: return 128
+    async def set_rf_power(self, level: int) -> None: ...
+    # MetersCapable surface
+    async def get_s_meter(self, receiver: int = 0) -> int: return 0
+    async def get_swr(self) -> float: return 1.0
+    async def get_comp_meter(self) -> int: return 0
+    async def get_id_meter(self) -> int: return 0
+    async def get_vd_meter(self) -> int: return 0
+
+
+def test_get_rf_power_visible_on_power_control_capable() -> None:
+    """get_rf_power is reachable through a PowerControlCapable typed reference.
+
+    The declaration was lifted into PowerControlCapable so the read+write pair
+    lives together, while remaining declared on MetersCapable for backwards
+    compatibility (refs #1109).
+    """
+    stub: PowerControlCapable = _PowerStub()
+    assert hasattr(stub, "get_rf_power")
+    assert hasattr(stub, "set_rf_power")
+
+
+def test_power_stub_satisfies_both_protocols() -> None:
+    """A radio implementing get_rf_power satisfies both protocols."""
+    stub = _PowerStub()
+    assert isinstance(stub, PowerControlCapable)
+    assert isinstance(stub, MetersCapable)

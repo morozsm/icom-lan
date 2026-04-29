@@ -324,7 +324,14 @@ class MetersCapable(Protocol):
         ...
 
     async def get_rf_power(self) -> int:
-        """Get TX power level (0-255 normalised scale)."""
+        """Get TX power level (0-255 normalised scale).
+
+        .. deprecated::
+            Redundant with :meth:`PowerControlCapable.get_rf_power`. Kept here
+            to preserve ``isinstance(radio, MetersCapable)`` checks. New code
+            should program against :class:`PowerControlCapable`, which exposes
+            both ``get_rf_power`` and ``set_rf_power`` together.
+        """
         ...
 
     async def get_comp_meter(self) -> int:
@@ -357,6 +364,15 @@ class PowerControlCapable(Protocol):
 
         Args:
             on: True to power on, False to power off.
+        """
+        ...
+
+    async def get_rf_power(self) -> int:
+        """Get TX power level (0-255 normalised scale).
+
+        Paired with :meth:`set_rf_power`. Also declared on
+        :class:`MetersCapable` for backwards compatibility with existing
+        ``isinstance`` checks.
         """
         ...
 
