@@ -1297,17 +1297,62 @@ async def test_set_nr_off_sends_level_zero(connected_radio):
 
 
 @pytest.mark.asyncio
-async def test_get_cw_pitch_delegates_to_get_key_pitch(connected_radio):
+async def test_get_cw_pitch_returns_hz_from_idx(connected_radio):
+    """get_cw_pitch maps idx (0-75) → Hz via 300 + idx * 10. (#1162)"""
     connected_radio._transport.query = AsyncMock(return_value="KP25")
-    assert await connected_radio.get_cw_pitch() == 25
+    # idx 25 → 300 + 25*10 = 550 Hz
+    assert await connected_radio.get_cw_pitch() == 550
     connected_radio._transport.query.assert_called_once_with("KP;")
 
 
 @pytest.mark.asyncio
-async def test_set_cw_pitch_delegates_to_set_key_pitch(connected_radio):
+async def test_set_cw_pitch_accepts_hz(connected_radio):
+    """set_cw_pitch maps Hz → idx via (Hz - 300) // 10. (#1162)"""
     connected_radio._transport.write = AsyncMock()
-    await connected_radio.set_cw_pitch(30)
-    connected_radio._transport.write.assert_called_once_with("KP30;")
+    # 700 Hz → idx 40
+    await connected_radio.set_cw_pitch(700)
+    connected_radio._transport.write.assert_called_once_with("KP40;")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "hz, idx",
+    [(300, 0), (700, 40), (1050, 75)],
+)
+async def test_cw_pitch_round_trip_hz_idx(connected_radio, hz, idx):
+    """Boundary + middle round-trips: get returns Hz, set sends idx. (#1162)"""
+    connected_radio._transport.query = AsyncMock(return_value=f"KP{idx:02d}")
+    assert await connected_radio.get_cw_pitch() == hz
+
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_cw_pitch(hz)
+    connected_radio._transport.write.assert_called_once_with(f"KP{idx:02d};")
+
+
+@pytest.mark.asyncio
+async def test_set_cw_pitch_rejects_out_of_range(connected_radio):
+    """Hz outside 300-1050 raises ValueError. (#1162)"""
+    connected_radio._transport.write = AsyncMock()
+    with pytest.raises(ValueError, match="300-1050"):
+        await connected_radio.set_cw_pitch(299)
+    with pytest.raises(ValueError, match="300-1050"):
+        await connected_radio.set_cw_pitch(1051)
+    connected_radio._transport.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_key_pitch_still_returns_idx(connected_radio):
+    """Yaesu-named get_key_pitch keeps idx contract (no break). (#1162)"""
+    connected_radio._transport.query = AsyncMock(return_value="KP40")
+    assert await connected_radio.get_key_pitch() == 40
+
+
+@pytest.mark.asyncio
+async def test_set_key_pitch_still_takes_idx(connected_radio):
+    """Yaesu-named set_key_pitch keeps idx contract (no break). (#1162)"""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_key_pitch(40)
+    connected_radio._transport.write.assert_called_once_with("KP40;")
 
 
 @pytest.mark.asyncio

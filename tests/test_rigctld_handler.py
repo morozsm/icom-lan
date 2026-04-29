@@ -1168,6 +1168,19 @@ async def test_set_level_nr(handler: RigctldHandler, mock_radio: AsyncMock) -> N
 
 
 @pytest.mark.asyncio
+async def test_rigctld_set_level_sql_icom(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """set_level SQL on Icom dispatches to set_squelch — symmetric to #1093
+    get-side fix (#1118 get_squelch). (#1163)"""
+    mock_radio.set_squelch = AsyncMock()
+    resp = await handler.execute(set_cmd("set_level", "SQL", "0.500000"))
+    assert resp.ok
+    # 0.5 * 255 = 127.5, rounds to 128 (banker's rounding: round-half-to-even)
+    mock_radio.set_squelch.assert_awaited_once_with(128)
+
+
+@pytest.mark.asyncio
 async def test_set_level_nb(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
     resp = await handler.execute(set_cmd("set_level", "NB", "0.200000"))
     assert resp.ok
@@ -1800,7 +1813,8 @@ async def test_yaesu_get_level_nr(
 async def test_yaesu_get_level_cwpitch(
     yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
 ) -> None:
-    yaesu_radio.get_cw_pitch.return_value = 40  # index → 300 + 40*10 = 700 Hz
+    """Routing passes Hz through; backend converts idx → Hz internally. (#1162)"""
+    yaesu_radio.get_cw_pitch.return_value = 700  # backend returns Hz directly
     resp = await yaesu_handler.execute(get_cmd("get_level", "CWPITCH"))
     assert resp.ok
     assert resp.values == ["700"]
@@ -1906,9 +1920,10 @@ async def test_yaesu_set_level_nr(
 async def test_yaesu_set_level_cwpitch(
     yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
 ) -> None:
+    """Routing passes Hz through; backend converts Hz → idx internally. (#1162)"""
     resp = await yaesu_handler.execute(set_cmd("set_level", "CWPITCH", "700"))
     assert resp.ok
-    yaesu_radio.set_cw_pitch.assert_awaited_once_with(40)  # (700 - 300) / 10
+    yaesu_radio.set_cw_pitch.assert_awaited_once_with(700)  # Hz pass-through
 
 
 @pytest.mark.asyncio

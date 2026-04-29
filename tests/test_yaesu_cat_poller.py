@@ -92,7 +92,8 @@ def make_radio(
     radio.get_swr_meter = AsyncMock(return_value=0)
     radio._read_meter = AsyncMock(return_value=(0, 0))
     radio.get_keyer_speed = AsyncMock(return_value=20)
-    radio.get_key_pitch = AsyncMock(return_value=600)
+    radio.get_key_pitch = AsyncMock(return_value=30)  # idx — Yaesu-internal API
+    radio.get_cw_pitch = AsyncMock(return_value=600)  # Hz — Icom-spelled API (#1162)
     radio.get_break_in = AsyncMock(return_value=False)
     radio.get_break_in_delay = AsyncMock(return_value=0)
     radio.get_cw_spot = AsyncMock(return_value=False)
@@ -617,10 +618,10 @@ async def test_tx_meter_partial_failure_does_not_block_others() -> None:
 
 @pytest.mark.asyncio
 async def test_slow_poll_reads_cw_params() -> None:
-    """Slow poll should read keyer speed, key pitch, and break-in when CW capable."""
+    """Slow poll should read keyer speed, CW pitch (Hz), and break-in when CW capable."""
     radio = make_radio()
     radio.get_keyer_speed = AsyncMock(return_value=25)
-    radio.get_key_pitch = AsyncMock(return_value=700)
+    radio.get_cw_pitch = AsyncMock(return_value=700)  # Hz (#1162)
     radio.get_break_in = AsyncMock(return_value=True)
 
     poller = YaesuCatPoller(
@@ -635,7 +636,7 @@ async def test_slow_poll_reads_cw_params() -> None:
     await poller.stop()
 
     radio.get_keyer_speed.assert_called()
-    radio.get_key_pitch.assert_called()
+    radio.get_cw_pitch.assert_called()
     radio.get_break_in.assert_called()
     assert radio.radio_state.key_speed == 25
     assert radio.radio_state.cw_pitch == 700
@@ -660,7 +661,7 @@ async def test_slow_poll_skips_cw_without_capability() -> None:
     await poller.stop()
 
     radio.get_keyer_speed.assert_not_called()
-    radio.get_key_pitch.assert_not_called()
+    radio.get_cw_pitch.assert_not_called()
     radio.get_break_in.assert_not_called()
 
 
@@ -669,7 +670,7 @@ async def test_cw_partial_failure_does_not_block_others() -> None:
     """If get_keyer_speed fails, pitch and break-in must still be polled."""
     radio = make_radio()
     radio.get_keyer_speed = AsyncMock(side_effect=RuntimeError("CAT timeout"))
-    radio.get_key_pitch = AsyncMock(return_value=700)
+    radio.get_cw_pitch = AsyncMock(return_value=700)  # Hz (#1162)
     radio.get_break_in = AsyncMock(return_value=False)
 
     poller = YaesuCatPoller(
@@ -683,7 +684,7 @@ async def test_cw_partial_failure_does_not_block_others() -> None:
     await asyncio.sleep(0.05)
     await poller.stop()
 
-    radio.get_key_pitch.assert_called()
+    radio.get_cw_pitch.assert_called()
     radio.get_break_in.assert_called()
     assert radio.radio_state.cw_pitch == 700
     assert radio.radio_state.break_in == 0
@@ -785,7 +786,7 @@ async def test_slow_poll_reads_full_cw_block() -> None:
     """Slow poll populates key_speed, cw_pitch, break_in, break_in_delay, cw_spot."""
     radio = make_radio()
     radio.get_keyer_speed = AsyncMock(return_value=30)
-    radio.get_key_pitch = AsyncMock(return_value=750)
+    radio.get_cw_pitch = AsyncMock(return_value=750)  # Hz (#1162)
     radio.get_break_in = AsyncMock(return_value=True)
     radio.get_break_in_delay = AsyncMock(return_value=42)
     radio.get_cw_spot = AsyncMock(return_value=True)
