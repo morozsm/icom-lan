@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import { initBatteryMonitor } from './lib/utils/battery';
   import { initUiVersion, getUiVersion } from './lib/stores/ui-version.svelte';
-  import AppShell from './components/layout/AppShell.svelte';
   import RadioLayoutV2 from './components-v2/layout/RadioLayout.svelte';
   import ControlButtonDemo from './components-v2/controls/ControlButtonDemo.svelte';
   import LocalExtensionsHost from './lib/local-extensions/LocalExtensionsHost.svelte';
@@ -90,7 +89,7 @@
 {:else if uiVersion === 'v2'}
   <RadioLayoutV2 />
 {:else}
-  <AppShell />
+  <RadioLayoutV2 />
 {/if}
 
 {#if demoMode !== 'control-buttons' && !backendError}
