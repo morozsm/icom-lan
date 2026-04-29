@@ -17,6 +17,7 @@ import logging
 import os
 import socket as _socket
 import time
+import warnings
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -447,7 +448,9 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
             # Meters
             "get_s_meter",
             "get_swr",
+            "get_swr_meter",
             "get_alc",
+            "get_alc_meter",
             "get_rf_power",
             "set_rf_power",
             "get_power_meter",
@@ -2474,12 +2477,40 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         resp = await self._send_civ_expect(civ, label="get_swr")
         return parse_meter_response(resp)
 
-    async def get_alc(self) -> int:
-        """Read the ALC meter value (0-255)."""
+    async def get_swr_meter(self) -> int:
+        """Read the raw SWR meter value (0-255).
+
+        Mirrors the Yaesu ``*_meter`` naming on ``MetersCapable``. Unlike
+        :meth:`get_swr` (which is documented to return a calibrated float
+        ratio but currently returns the raw int on Icom — see issue
+        #1104), this method is contractually a raw 0-255 integer.
+        """
+        self._check_connected()
+        civ = get_swr(to_addr=self._radio_addr)
+        resp = await self._send_civ_expect(civ, label="get_swr_meter")
+        return parse_meter_response(resp)
+
+    async def get_alc_meter(self) -> int:
+        """Read the ALC meter value (raw 0-255)."""
         self._check_connected()
         civ = get_alc(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, label="get_alc")
+        resp = await self._send_civ_expect(civ, label="get_alc_meter")
         return parse_meter_response(resp)
+
+    async def get_alc(self) -> int:
+        """Read the ALC meter value (0-255).
+
+        .. deprecated::
+            Use :meth:`get_alc_meter` instead. This alias is kept for
+            backward compatibility and will be removed in a future
+            release.
+        """
+        warnings.warn(
+            "IcomRadio.get_alc is deprecated; use get_alc_meter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return await self.get_alc_meter()
 
     async def set_ptt(self, on: bool) -> None:
         """Toggle PTT (Push-To-Talk).

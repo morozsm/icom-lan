@@ -112,6 +112,7 @@ def mock_radio():
     radio.get_s_meter = AsyncMock(return_value=120)
     radio.get_swr = AsyncMock(return_value=50)
     radio.get_alc = AsyncMock(return_value=30)
+    radio.get_alc_meter = AsyncMock(return_value=30)
     radio.get_comp_meter = AsyncMock(return_value=0)
     radio.get_id_meter = AsyncMock(return_value=0)
     radio.get_vd_meter = AsyncMock(return_value=0)

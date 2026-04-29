@@ -48,7 +48,7 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.get_rf_power = AsyncMock(return_value=200)
     r._radio.get_s_meter = AsyncMock(return_value=99)
     r._radio.get_swr = AsyncMock(return_value=10)
-    r._radio.get_alc = AsyncMock(return_value=5)
+    r._radio.get_alc_meter = AsyncMock(return_value=5)
     r._radio.get_attenuator_level = AsyncMock(return_value=18)
     r._radio.get_attenuator = AsyncMock(return_value=True)
     r._radio.get_preamp = AsyncMock(return_value=1)

@@ -379,3 +379,19 @@ class TestDisconnect:
         await radio.disconnect()
         assert not fake_driver.rx_running
         assert not fake_driver.tx_running
+
+
+# ---------------------------------------------------------------------------
+# MetersCapable protocol satisfaction (#1104)
+# ---------------------------------------------------------------------------
+
+
+class TestMetersCapableProtocol:
+    """Yaesu backend satisfies the extended MetersCapable protocol (#1104)."""
+
+    def test_yaesu_satisfies_meters_capable(self, radio: YaesuCatRadio) -> None:
+        from icom_lan.radio_protocol import MetersCapable
+
+        assert isinstance(radio, MetersCapable)
+        for name in ("get_power_meter", "get_alc_meter", "get_swr_meter"):
+            assert callable(getattr(radio, name)), f"{name} missing"

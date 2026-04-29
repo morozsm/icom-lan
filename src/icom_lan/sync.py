@@ -209,7 +209,7 @@ class IcomRadio:
         """Read the ALC meter (0-255)."""
         if CAP_METERS not in self._radio.capabilities:
             raise AttributeError("get_alc is not supported by this radio")
-        return self._run(self._radio.get_alc())
+        return self._run(self._radio.get_alc_meter())
 
     # ------------------------------------------------------------------
     # PTT
