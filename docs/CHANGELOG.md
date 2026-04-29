@@ -31,6 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the sentinel `__all__` entries in `icom_lan.commands.levels` and
   `icom_lan.commands` have been deleted. Use the canonical builders
   directly: `get_rf_power`, `set_rf_power`, `get_squelch`, `set_squelch`.
+- **`IcomRadio.set_vfo("A"/"B"/"MAIN"/"SUB")` legacy overload + `select_vfo`
+  alias (#1206).** Deprecated in v0.19 (#1187, #1172) and replaced by the
+  receiver-tier protocols `ReceiverBankCapable.select_receiver` (MAIN/SUB)
+  and `VfoSlotCapable.set_vfo_slot` (A/B). The matching `SyncRadio.set_vfo`
+  / `SyncRadio.select_vfo` wrappers are removed in lockstep. Internal
+  callers (`apply_profile`, `restore_state`) now route through the
+  capability protocols or the silent `_set_vfo_wire` helper. Legacy fallback
+  paths in `web/radio_poller.py` and `rigctld/handler.py` remain for
+  third-party backends that only expose the legacy overload.
 
 ## [0.19.0] — 2026-04-29
 

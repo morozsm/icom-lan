@@ -26,7 +26,9 @@ async def test_prepare_ic705_data_profile_applies_expected_sequence() -> None:
     assert snapshot == {"frequency": 145_825_000}
     radio.snapshot_state.assert_awaited_once()
     radio.set_vox.assert_awaited_once_with(False)
-    radio.set_vfo.assert_any_await("A")
+    # #1206: ``apply_profile`` routes ``vfo="A"`` through the canonical
+    # ``set_vfo_slot`` (the legacy ``set_vfo`` overload was removed).
+    radio.set_vfo_slot.assert_any_await("A")
     radio.set_split.assert_awaited_once_with(False)
     radio.set_freq.assert_awaited_once_with(145_825_000)
     radio.set_mode.assert_awaited_once_with("FM")
@@ -46,7 +48,8 @@ async def test_prepare_ic705_data_profile_applies_expected_sequence() -> None:
     )
     radio.set_scope_mode.assert_awaited_once_with(0)
     radio.set_scope_span.assert_awaited_once_with(7)
-    assert radio.set_vfo.await_count == 2
+    # ``vfo="A"`` is applied twice: once after VOX, once after scope.
+    assert radio.set_vfo_slot.await_count == 2
 
 
 @pytest.mark.asyncio

@@ -256,8 +256,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:select_vfo",
-        "icom_lan.radio:CoreRadio.select_vfo"
+        "icom_lan.commands:set_vfo",
+        "icom_lan.radio:CoreRadio.set_vfo_slot"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_main"
@@ -364,8 +364,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:select_vfo",
-        "icom_lan.radio:CoreRadio.select_vfo"
+        "icom_lan.commands:set_vfo",
+        "icom_lan.radio:CoreRadio.select_receiver"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_main"
@@ -382,8 +382,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:select_vfo",
-        "icom_lan.radio:CoreRadio.select_vfo"
+        "icom_lan.commands:set_vfo",
+        "icom_lan.radio:CoreRadio.select_receiver"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_sub"

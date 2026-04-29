@@ -222,13 +222,6 @@ class IcomRadio:
     # VFO / Split
     # ------------------------------------------------------------------
 
-    def set_vfo(self, vfo: str = "A") -> None:
-        """Select VFO (A, B, MAIN, SUB)."""
-        self._run(self._radio.set_vfo(vfo))
-
-    # Backward-compat alias
-    select_vfo = set_vfo
-
     def vfo_equalize(self) -> None:
         """Copy VFO A to VFO B (dispatches to canonical async method)."""
         # Inline the dispatch previously hidden behind the deprecated

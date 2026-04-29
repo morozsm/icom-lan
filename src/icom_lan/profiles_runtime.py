@@ -41,6 +41,40 @@ __all__ = [
 ]
 
 
+async def _apply_vfo(radio: Any, vfo: str) -> None:
+    """Apply ``profile.vfo`` via the canonical receiver-tier protocols.
+
+    Routes ``"MAIN"`` / ``"SUB"`` through
+    :meth:`~icom_lan.radio_protocol.ReceiverBankCapable.select_receiver`
+    and ``"A"`` / ``"B"`` through
+    :meth:`~icom_lan.radio_protocol.VfoSlotCapable.set_vfo_slot`, falling
+    back to the other if only one is implemented.  The legacy
+    ``set_vfo("A"/"B"/"MAIN"/"SUB")`` overload was removed in v0.20
+    (#1206), so backends must expose the typed protocol surface.
+    """
+    target = vfo.upper()
+    is_receiver = target in ("MAIN", "SUB")
+    is_slot = target in ("A", "B")
+
+    select_receiver = getattr(radio, "select_receiver", None)
+    set_vfo_slot = getattr(radio, "set_vfo_slot", None)
+
+    if is_receiver and select_receiver is not None:
+        await select_receiver(target)
+        return
+    if is_slot and set_vfo_slot is not None:
+        await set_vfo_slot(target)
+        return
+    # Cross-protocol fallback for backends that only implement one tier.
+    if select_receiver is not None and is_slot:
+        await select_receiver("MAIN" if target == "A" else "SUB")
+        return
+    if set_vfo_slot is not None and is_receiver:
+        await set_vfo_slot("A" if target == "MAIN" else "B")
+        return
+    logger.debug("apply_profile: radio has no select_receiver / set_vfo_slot, skipping")
+
+
 @dataclass
 class OperatingProfile:
     """Declarative desired radio state.
@@ -123,10 +157,7 @@ async def apply_profile(radio: Any, profile: OperatingProfile) -> dict[str, obje
             logger.debug("apply_profile: radio has no set_vox, skipping")
 
     if profile.vfo is not None:
-        if hasattr(radio, "set_vfo"):
-            await radio.set_vfo(profile.vfo)
-        else:
-            logger.debug("apply_profile: radio has no set_vfo, skipping")
+        await _apply_vfo(radio, profile.vfo)
 
     if profile.split is not None:
         if hasattr(radio, "set_split"):
@@ -228,8 +259,7 @@ async def apply_profile(radio: Any, profile: OperatingProfile) -> dict[str, obje
 
     # Re-select VFO at the end to ensure consistent state after all operations.
     if profile.vfo is not None:
-        if hasattr(radio, "set_vfo"):
-            await radio.set_vfo(profile.vfo)
+        await _apply_vfo(radio, profile.vfo)
 
     return snapshot  # type: ignore[no-any-return]
 

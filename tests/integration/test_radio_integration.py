@@ -262,39 +262,39 @@ class TestPTT:
 class TestVFO:
     """VFO operations tests."""
 
-    async def test_select_vfo(self, radio: IcomRadio) -> None:
-        """Select MAIN/SUB VFO."""
+    async def test_select_receiver(self, radio: IcomRadio) -> None:
+        """Select MAIN/SUB receiver."""
         # Select MAIN
-        await radio.select_vfo("MAIN")
+        await radio.select_receiver("MAIN")
         print("VFO MAIN ✓")
 
         # Select SUB (if supported)
         try:
-            await radio.select_vfo("SUB")
+            await radio.select_receiver("SUB")
             print("VFO SUB ✓")
             # Back to MAIN
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
         except Exception as e:
             print(f"VFO SUB not supported: {e}")
 
     async def test_vfo_exchange_roundtrip(self, radio: IcomRadio) -> None:
         """Exchange MAIN/SUB frequencies and restore."""
         try:
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
             main0 = await radio.get_frequency()
-            await radio.select_vfo("SUB")
+            await radio.select_receiver("SUB")
             sub0 = await radio.get_frequency()
 
             if main0 == sub0:
-                await radio.select_vfo("SUB")
+                await radio.select_receiver("SUB")
                 await radio.set_frequency(main0 + 1000)
                 sub0 = await radio.get_frequency()
 
             await radio.swap_main_sub()
 
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
             main1 = await radio.get_frequency()
-            await radio.select_vfo("SUB")
+            await radio.select_receiver("SUB")
             sub1 = await radio.get_frequency()
 
             assert main1 == sub0, f"Expected MAIN={sub0}, got {main1}"
@@ -303,7 +303,7 @@ class TestVFO:
 
             # Restore original placement
             await radio.swap_main_sub()
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
         except Exception as e:
             pytest.skip(f"VFO exchange not supported in current rig state: {e}")
 
@@ -314,17 +314,17 @@ class TestVFO:
         This test validates command acceptance and keeps rig state restorable.
         """
         try:
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
             main0 = await radio.get_frequency()
-            await radio.select_vfo("SUB")
+            await radio.select_receiver("SUB")
             sub0 = await radio.get_frequency()
 
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
             await radio.equalize_main_sub()
 
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
             main1 = await radio.get_frequency()
-            await radio.select_vfo("SUB")
+            await radio.select_receiver("SUB")
             sub1 = await radio.get_frequency()
 
             # At minimum: command executed, values are readable and valid.
@@ -332,11 +332,11 @@ class TestVFO:
             print(f"VFO equalize ✓ (MAIN {main0}->{main1}, SUB {sub0}->{sub1})")
 
             # Best-effort restore to pre-test values
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
             await radio.set_frequency(main0)
-            await radio.select_vfo("SUB")
+            await radio.select_receiver("SUB")
             await radio.set_frequency(sub0)
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
         except Exception as e:
             pytest.skip(f"VFO equalize not supported in current rig state: {e}")
 
@@ -369,7 +369,7 @@ class TestFrontEnd:
     async def _prepare_strict_frontend_state(radio: IcomRadio) -> None:
         """Apply deterministic preconditions for strict ATT/PREAMP validation."""
         await radio.set_split(False)
-        await radio.select_vfo("MAIN")
+        await radio.select_receiver("MAIN")
         await radio.set_mode(Mode.USB)
         # On IC-7610 PREAMP and DIGI-SEL are mutually exclusive.
         await radio.set_digisel(False)
@@ -478,7 +478,7 @@ class TestCW:
 
         try:
             await radio.set_split(False)
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
             await radio.set_frequency(14_050_000)
             await radio.set_mode(Mode.CW)
             await radio.set_power(max(1, round(255 * 0.05)))
@@ -518,7 +518,7 @@ class TestCW:
 
         try:
             await radio.set_split(False)
-            await radio.select_vfo("MAIN")
+            await radio.select_receiver("MAIN")
             await radio.set_frequency(cw_freq)
             await radio.set_mode(Mode.CW)
             await radio.set_power(cw_power)

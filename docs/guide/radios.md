@@ -11,7 +11,7 @@ Adding a new radio = adding a new `.toml` file — see [Adding a New Radio](rig-
 - **LAN Ports:** 50001 (control), 50002 (CI-V), 50003 (audio)
 - **USB:** Serial CI-V + USB audio devices ([setup guide](ic7610-usb-setup.md))
 - **Features verified:** frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying, VFO select, split, attenuator, preamp, power on/off, discovery (LAN only), scope/waterfall
-- **Dual receiver:** use `select_vfo("MAIN")` / `select_vfo("SUB")`
+- **Dual receiver:** use `select_receiver("MAIN")` / `select_receiver("SUB")`
 
 #### Backend Comparison
 

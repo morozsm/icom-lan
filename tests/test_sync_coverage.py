@@ -63,7 +63,6 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.set_data_mode = AsyncMock()
     r._radio.set_rf_power = AsyncMock()
     r._radio.set_ptt = AsyncMock()
-    r._radio.set_vfo = AsyncMock()
     r._radio.equalize_main_sub = AsyncMock()
     r._radio.swap_main_sub = AsyncMock()
     r._radio.set_split = AsyncMock()
@@ -106,7 +105,6 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r.set_data_mode(True)
     r.set_rf_power(150)
     r.set_ptt(True)
-    r.set_vfo("B")
     r.vfo_equalize()
     r.vfo_exchange()
     r.set_split(True)
@@ -132,7 +130,6 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.set_data_mode.assert_awaited_once_with(True, receiver=0)
     r._radio.set_rf_power.assert_awaited_once_with(150)
     r._radio.set_ptt.assert_awaited_once_with(True)
-    r._radio.set_vfo.assert_awaited_once_with("B")
     # IC-7610 (default profile, receiver_count=2) → canonical dual-RX methods
     r._radio.equalize_main_sub.assert_awaited_once()
     r._radio.swap_main_sub.assert_awaited_once()

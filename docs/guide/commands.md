@@ -123,17 +123,22 @@ await radio.set_ptt(False)
 ## VFO Control
 
 ```python
-# Select VFO
-await radio.set_vfo("A")     # VFO A (simpler radios)
-await radio.set_vfo("B")     # VFO B
-await radio.set_vfo("MAIN")  # Main receiver (IC-7610)
-await radio.set_vfo("SUB")   # Sub receiver (IC-7610)
+# Select VFO slot within the active receiver (A/B)
+await radio.set_vfo_slot("A")     # VFO A
+await radio.set_vfo_slot("B")     # VFO B
 
-# A=B command (semantics can vary on MAIN/SUB radios; use with care)
-await radio.vfo_equalize()
+# Select receiver on dual-RX rigs (IC-7610 / IC-9700)
+await radio.select_receiver("MAIN")
+await radio.select_receiver("SUB")
 
-# Swap VFO A and B
-await radio.vfo_exchange()
+# A=B command on the active receiver
+await radio.equalize_vfo_ab()
+
+# Swap VFO A and B on the active receiver
+await radio.swap_vfo_ab()
+
+# Swap MAIN/SUB on dual-RX rigs
+await radio.swap_main_sub()
 
 # Split mode
 await radio.set_split(True)   # TX on VFO B, RX on VFO A

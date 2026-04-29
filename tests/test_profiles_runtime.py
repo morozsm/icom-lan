@@ -141,9 +141,11 @@ class TestApplyProfileFull:
     @pytest.mark.asyncio()
     async def test_applies_vfo(self, radio: AsyncMock) -> None:
         await apply_profile(radio, OperatingProfile(vfo="A"))
-        # VFO is set twice: once at start, once at end
-        assert radio.set_vfo.await_count == 2
-        radio.set_vfo.assert_awaited_with("A")
+        # VFO is set twice: once at start, once at end.  Per #1206 the
+        # legacy ``set_vfo`` overload is gone — A/B routes through the
+        # canonical ``VfoSlotCapable.set_vfo_slot``.
+        assert radio.set_vfo_slot.await_count == 2
+        radio.set_vfo_slot.assert_awaited_with("A")
 
     @pytest.mark.asyncio()
     async def test_applies_data_mode(self, radio: AsyncMock) -> None:
@@ -234,7 +236,8 @@ class TestApplyProfileFull:
         )
         await apply_profile(radio, profile)
         radio.set_vox.assert_awaited()
-        radio.set_vfo.assert_awaited()
+        # #1206: ``vfo="A"`` routes through ``set_vfo_slot``.
+        radio.set_vfo_slot.assert_awaited()
         radio.set_split.assert_awaited()
         radio.set_freq.assert_awaited()
         radio.set_mode.assert_awaited()

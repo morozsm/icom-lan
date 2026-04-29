@@ -492,7 +492,7 @@ class TestSwapMainSubVsSwapVfoAb:
 
         send = _RecordingSend()
         with (
-            patch.object(r, "set_vfo", _fake_set_vfo),
+            patch.object(r, "_set_vfo_wire", _fake_set_vfo),
             patch.object(r, "_send_civ_raw", send),
         ):
             with pytest.raises(CommandError) as exc_info:
@@ -519,7 +519,7 @@ class TestSwapMainSubVsSwapVfoAb:
 
         send = _RecordingSend()
         with (
-            patch.object(r, "set_vfo", _fake_set_vfo),
+            patch.object(r, "_set_vfo_wire", _fake_set_vfo),
             patch.object(r, "_send_civ_raw", send),
         ):
             with pytest.raises(CommandError) as exc_info:
@@ -557,7 +557,7 @@ class TestSwapMainSubVsSwapVfoAb:
 
         send = _RecordingSend()
         with (
-            patch.object(r, "set_vfo", _fake_set_vfo),
+            patch.object(r, "_set_vfo_wire", _fake_set_vfo),
             patch.object(r, "_send_civ_raw", send),
         ):
             await r.swap_vfo_ab(receiver=0)

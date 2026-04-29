@@ -52,62 +52,40 @@ def radio(mock_transport: MockTransport) -> IcomRadio:
 
 class TestVFO:
     @pytest.mark.asyncio
-    async def test_select_vfo_a(
+    async def test_set_vfo_wire_a(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        with pytest.warns(DeprecationWarning, match="select_receiver"):
-            await radio.set_vfo("A")
+        await radio._set_vfo_wire("A")
         assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
-    async def test_select_vfo_b(
+    async def test_set_vfo_wire_b(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        with pytest.warns(DeprecationWarning, match="select_receiver"):
-            await radio.set_vfo("B")
+        await radio._set_vfo_wire("B")
 
     @pytest.mark.asyncio
-    async def test_select_vfo_main(
+    async def test_set_vfo_wire_main(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        with pytest.warns(DeprecationWarning, match="select_receiver"):
-            await radio.set_vfo("MAIN")
+        await radio._set_vfo_wire("MAIN")
 
     @pytest.mark.asyncio
-    async def test_select_vfo_nak(
+    async def test_set_vfo_wire_nak(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_nak_response())
-        with pytest.raises(CommandError), pytest.warns(DeprecationWarning):
-            await radio.set_vfo("A")
+        with pytest.raises(CommandError):
+            await radio._set_vfo_wire("A")
 
     @pytest.mark.asyncio
-    async def test_select_vfo_disconnected(self) -> None:
+    async def test_set_vfo_wire_disconnected(self) -> None:
         r = IcomRadio("192.168.1.100")
-        with pytest.raises(ConnectionError), pytest.warns(DeprecationWarning):
-            await r.set_vfo("A")
-
-    @pytest.mark.asyncio
-    async def test_set_vfo_emits_deprecation_warning(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """Issue #1172: legacy ``set_vfo`` overload warns; removal v0.20.
-
-        The warning message must mention both ``select_receiver`` (the new
-        Receiver-tier replacement) and ``set_vfo_slot`` (the new VFO-slot
-        replacement) so users know which API to migrate to.
-        """
-        mock_transport.queue_response(_ack_response())
-        with pytest.warns(DeprecationWarning) as record:
-            await radio.set_vfo("MAIN")
-        assert len(record) == 1
-        msg = str(record[0].message)
-        assert "select_receiver" in msg
-        assert "set_vfo_slot" in msg
-        assert "v0.20" in msg
+        with pytest.raises(ConnectionError):
+            await r._set_vfo_wire("A")
 
     @pytest.mark.asyncio
     async def test_set_vfo_wire_does_not_warn(
@@ -120,6 +98,16 @@ class TestVFO:
         with warnings.catch_warnings():
             warnings.simplefilter("error", DeprecationWarning)
             await radio._set_vfo_wire("A")
+
+    def test_set_vfo_attribute_removed(self) -> None:
+        """Deprecated ``set_vfo`` overload is removed in v0.20 (#1206)."""
+        r = IcomRadio("192.168.1.100")
+        assert not hasattr(r, "set_vfo")
+
+    def test_select_vfo_alias_removed(self) -> None:
+        """Deprecated ``select_vfo`` alias is removed in v0.20 (#1206)."""
+        r = IcomRadio("192.168.1.100")
+        assert not hasattr(r, "select_vfo")
 
     def test_vfo_exchange_attribute_removed(self) -> None:
         """Deprecated ``vfo_exchange`` alias is removed in v0.19."""

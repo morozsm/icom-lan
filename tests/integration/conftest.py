@@ -146,7 +146,7 @@ async def radio(radio_config: dict) -> AsyncGenerator[IcomRadio, None]:
         except Exception:
             pass
         try:
-            await r.select_vfo("MAIN")
+            await r.select_receiver("MAIN")
         except Exception:
             pass
 
