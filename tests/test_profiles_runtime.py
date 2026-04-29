@@ -338,47 +338,30 @@ class TestEqualizeVfoDispatch:
 
 
 # ---------------------------------------------------------------------------
-# apply_profile — set_split / set_split_mode fallback (issue #1144)
+# apply_profile — set_split dispatch
 # ---------------------------------------------------------------------------
 
 
-class TestApplySplitFallback:
-    """Verify ``apply_profile`` handles the v0.19 deprecation window.
+class TestApplySplit:
+    """Verify ``apply_profile`` calls ``set_split`` when supported.
 
-    PR #1130 introduced ``set_split`` and deprecated ``set_split_mode``
-    (warned in v0.19, removed in v0.20). During the deprecation window
-    ``apply_profile`` must:
-
-    * call ``set_split`` on adapters that expose the canonical name; and
-    * fall back to ``set_split_mode`` on legacy adapters that still only
-      expose the deprecated alias — without raising or silently skipping
-      the split step.
+    The legacy ``set_split_mode`` deprecation alias was removed in v0.20
+    (issue #1205). ``apply_profile`` only dispatches to ``set_split``.
     """
 
     @pytest.mark.asyncio()
-    async def test_canonical_set_split_is_preferred(self) -> None:
-        radio = AsyncMock(spec=["snapshot_state", "set_split", "set_split_mode"])
+    async def test_set_split_is_called(self) -> None:
+        radio = AsyncMock(spec=["snapshot_state", "set_split"])
         radio.snapshot_state = AsyncMock(return_value={})
         radio.set_split = AsyncMock()
-        radio.set_split_mode = AsyncMock()
         await apply_profile(radio, OperatingProfile(split=True))
         radio.set_split.assert_awaited_once_with(True)
-        radio.set_split_mode.assert_not_awaited()
-
-    @pytest.mark.asyncio()
-    async def test_legacy_set_split_mode_fallback(self) -> None:
-        # Legacy adapter exposes only the deprecated alias.
-        radio = AsyncMock(spec=["snapshot_state", "set_split_mode"])
-        radio.snapshot_state = AsyncMock(return_value={})
-        radio.set_split_mode = AsyncMock()
-        await apply_profile(radio, OperatingProfile(split=True))
-        radio.set_split_mode.assert_awaited_once_with(True)
 
     @pytest.mark.asyncio()
     async def test_no_split_setter_is_skipped_silently(self) -> None:
         radio = AsyncMock(spec=["snapshot_state"])
         radio.snapshot_state = AsyncMock(return_value={})
-        # Should not raise even though radio has neither setter.
+        # Should not raise even though radio has no setter.
         snapshot = await apply_profile(radio, OperatingProfile(split=True))
         assert snapshot == {}
 

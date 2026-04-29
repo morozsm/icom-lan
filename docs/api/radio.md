@@ -360,10 +360,10 @@ async def vfo_exchange(self) -> None
 
 Swap VFO A and VFO B.
 
-### `set_split_mode()`
+### `set_split()`
 
 ```python
-async def set_split_mode(self, on: bool) -> None
+async def set_split(self, on: bool) -> None
 ```
 
 Enable or disable split mode (TX on VFO B, RX on VFO A).

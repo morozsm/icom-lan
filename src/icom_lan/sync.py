@@ -260,22 +260,6 @@ class IcomRadio:
         """Enable or disable split mode."""
         self._run(self._radio.set_split(on))
 
-    def set_split_mode(self, on: bool) -> None:
-        """Deprecated alias for :meth:`set_split`.
-
-        .. deprecated:: 0.19
-            Use :meth:`set_split` instead.  Removal scheduled for v0.20.
-        """
-        import warnings
-
-        warnings.warn(
-            "sync.IcomRadio.set_split_mode() is deprecated; use set_split() "
-            "instead. Removal scheduled for v0.20.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.set_split(on)
-
     def get_split(self) -> bool:
         """Read split mode state."""
         return self._run(self._radio.get_split())

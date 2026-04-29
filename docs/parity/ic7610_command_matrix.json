@@ -510,7 +510,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:set_split",
-        "icom_lan.radio:CoreRadio.set_split_mode",
+        "icom_lan.radio:CoreRadio.set_split",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [

@@ -2919,23 +2919,6 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
             raise CommandError(f"Radio rejected split {'on' if on else 'off'}")
         self._last_split = on
 
-    async def set_split_mode(self, on: bool) -> None:
-        """Deprecated alias for :meth:`set_split`.
-
-        .. deprecated:: 0.19
-            Use :meth:`set_split` instead.  ``set_split_mode`` will be removed
-            in v0.20.
-        """
-        import warnings
-
-        warnings.warn(
-            "IcomRadio.set_split_mode() is deprecated; use set_split() "
-            "instead. Removal scheduled for v0.20.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        await self.set_split(on)
-
     async def get_split(self) -> bool:
         """Read split mode state (CI-V ``0x0F``).
 

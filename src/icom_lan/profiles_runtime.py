@@ -131,16 +131,6 @@ async def apply_profile(radio: Any, profile: OperatingProfile) -> dict[str, obje
     if profile.split is not None:
         if hasattr(radio, "set_split"):
             await radio.set_split(profile.split)
-        elif hasattr(radio, "set_split_mode"):
-            # TODO(post-v0.20): drop this fallback once ``set_split_mode`` is
-            # removed (see PR #1130 deprecation schedule). During the v0.19
-            # window legacy adapters may still expose only the deprecated
-            # alias — call it so profiles continue to apply fully.
-            logger.debug(
-                "apply_profile: radio has no set_split, "
-                "falling back to deprecated set_split_mode"
-            )
-            await radio.set_split_mode(profile.split)
         else:
             logger.debug("apply_profile: radio has no set_split, skipping")
 

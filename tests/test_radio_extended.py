@@ -167,16 +167,6 @@ class TestSplitMode:
             await r.set_split(True)
 
     @pytest.mark.asyncio
-    async def test_set_split_mode_deprecation(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """``set_split_mode`` still works but emits a DeprecationWarning."""
-        mock_transport.queue_response(_ack_response())
-        with pytest.warns(DeprecationWarning, match="set_split_mode"):
-            await radio.set_split_mode(True)
-        assert radio._last_split is True
-
-    @pytest.mark.asyncio
     async def test_get_split_round_trip(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:

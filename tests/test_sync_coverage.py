@@ -214,22 +214,6 @@ def test_audio_wrappers_canonical_only() -> None:
     r._loop.close()
 
 
-def test_sync_set_split_mode_emits_deprecation_warning() -> None:
-    """``sync.IcomRadio.set_split_mode`` is a deprecated alias for ``set_split``."""
-    r = _radio()
-    r._radio._ctrl_transport = MagicMock()
-    r._radio._ctrl_transport._udp_transport = MagicMock()
-    r._radio._civ_transport = MagicMock()
-    r._radio._conn_state = RadioConnectionState.CONNECTED
-    r._radio.set_split = AsyncMock()
-
-    with pytest.warns(DeprecationWarning, match="set_split_mode"):
-        r.set_split_mode(True)
-
-    r._radio.set_split.assert_awaited_once_with(True)
-    r._loop.close()
-
-
 @pytest.mark.parametrize(
     "name",
     [

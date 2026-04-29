@@ -136,8 +136,8 @@ await radio.vfo_equalize()
 await radio.vfo_exchange()
 
 # Split mode
-await radio.set_split_mode(True)   # TX on VFO B, RX on VFO A
-await radio.set_split_mode(False)
+await radio.set_split(True)   # TX on VFO B, RX on VFO A
+await radio.set_split(False)
 ```
 
 ## Attenuator & Preamp

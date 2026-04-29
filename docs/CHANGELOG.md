@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `RadioProfile.meter_calibrations` (loaded from TOML
   `[[meters.<name>.calibration]]`). No public-API impact —
   `MeterType` and `interpolate_swr` remain exported.
+- **`IcomRadio.set_split_mode` deprecation alias (#1205).** The async method
+  on `icom_lan.radio.IcomRadio`, the sync wrapper on `icom_lan.sync.IcomRadio`,
+  and the `profiles_runtime.apply_profile` fallback branch are gone. Use
+  `set_split(...)` (`SplitCapable` protocol) — the canonical name introduced
+  in #1108. Deprecation was announced in v0.19; this is the scheduled v0.20
+  cleanup.
 
 ## [0.19.0] — 2026-04-29
 
