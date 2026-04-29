@@ -22,10 +22,10 @@ from collections.abc import Coroutine
 from typing import TYPE_CHECKING, Any
 
 from ..startup_checks import assert_radio_startup_ready
-from . import audit as _audit
-from .circuit_breaker import CircuitBreaker, CircuitState
-from .contract import ClientSession, HamlibError, RigctldConfig
-from .utils import get_mode_reader
+from . import audit as _audit  # noqa: TID251
+from .circuit_breaker import CircuitBreaker, CircuitState  # noqa: TID251
+from .contract import ClientSession, HamlibError, RigctldConfig  # noqa: TID251
+from .utils import get_mode_reader  # noqa: TID251
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -140,12 +140,12 @@ class RigctldServer:
         assert_radio_startup_ready(self._radio, component="rigctld startup")
 
         if self._protocol is None:
-            from . import protocol as _proto_mod  # noqa: PLC0415
+            from . import protocol as _proto_mod  # noqa: PLC0415, TID251
 
             self._protocol = _proto_mod
 
         if self._rig_handler is None:
-            from . import handler as _handler_mod  # noqa: PLC0415
+            from . import handler as _handler_mod  # noqa: PLC0415, TID251
 
             self._rig_handler = _handler_mod.RigctldHandler(self._radio, self._config)
 

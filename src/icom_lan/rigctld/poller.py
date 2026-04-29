@@ -24,9 +24,9 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, cast
 from ..exceptions import ConnectionError as IcomConnectionError
 from ..exceptions import TimeoutError as IcomTimeoutError
 from ..radio_protocol import ModeInfoCapable
-from .circuit_breaker import CircuitBreaker, CircuitState
-from .contract import CIV_TO_HAMLIB_MODE, RigctldConfig
-from .state_cache import StateCache
+from .circuit_breaker import CircuitBreaker, CircuitState  # noqa: TID251
+from .contract import CIV_TO_HAMLIB_MODE, RigctldConfig  # noqa: TID251
+from .state_cache import StateCache  # noqa: TID251
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio

@@ -37,18 +37,18 @@ from ..capabilities import CAP_AUDIO, CAP_SCOPE
 from ..audio_analyzer import AudioAnalyzer
 from ..audio_fft_scope import AudioFftScope
 from ..startup_checks import assert_radio_startup_ready
-from ._delta_encoder import DeltaEncoder
-from .discovery import DiscoveryResponder, RadioInfo
-from .dx_cluster import DXClusterClient, SpotBuffer
-from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, ScopeHandler
-from .rtc import handle_rtc_offer, rtc_capability_info, webrtc_available
-from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
-from .runtime_helpers import (
+from ._delta_encoder import DeltaEncoder  # noqa: TID251
+from .discovery import DiscoveryResponder, RadioInfo  # noqa: TID251
+from .dx_cluster import DXClusterClient, SpotBuffer  # noqa: TID251
+from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, ScopeHandler  # noqa: TID251
+from .rtc import handle_rtc_offer, rtc_capability_info, webrtc_available  # noqa: TID251
+from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller  # noqa: TID251
+from .runtime_helpers import (  # noqa: TID251
     build_public_state_payload,
     radio_ready,
     runtime_capabilities,
 )
-from .websocket import (
+from .websocket import (  # noqa: TID251
     WS_KEEPALIVE_INTERVAL,
     WebSocketConnection,
     make_accept_key,
@@ -345,11 +345,11 @@ class WebServer:
         self._bg_tasks: set[asyncio.Task[Any]] = set()
         self._scope_health_max_retries: int = 3  # give up after N failed re-enables
         # Band plan registry
-        from .band_plan import BandPlanRegistry
+        from .band_plan import BandPlanRegistry  # noqa: TID251
 
         self._band_plan = BandPlanRegistry()
         # EiBi broadcast database
-        from .eibi import EiBiProvider
+        from .eibi import EiBiProvider  # noqa: TID251
 
         self._eibi = EiBiProvider()
         # DX cluster
@@ -940,7 +940,7 @@ class WebServer:
 
         ssl_ctx = None
         if self._config.tls:
-            from .tls import build_ssl_context
+            from .tls import build_ssl_context  # noqa: TID251
 
             ssl_ctx = build_ssl_context(
                 cert_path=self._config.tls_cert or None,
@@ -1443,7 +1443,7 @@ class WebServer:
             # Fallback to FCC for US AM stations if no EiBi match
             if not matches and 530_000 <= freq <= 1_700_000:
                 try:
-                    from .eibi import fcc_identify
+                    from .eibi import fcc_identify  # noqa: TID251
 
                     matches = await fcc_identify(freq, tol)
                 except Exception:

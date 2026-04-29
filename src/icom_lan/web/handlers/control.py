@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 from ...profiles import RadioProfile
 from ...radio_state import RadioState
-from ..protocol import (
+from ..protocol import (  # noqa: TID251
     decode_json,
     encode_json,
 )
-from ..radio_poller import (
+from ..radio_poller import (  # noqa: TID251
     PttOff,
     PttOn,
     ScanSetDfSpan,
@@ -132,12 +132,12 @@ from ..radio_poller import (
     QuickSplitTrigger,
     Speak,
 )
-from ..runtime_helpers import (
+from ..runtime_helpers import (  # noqa: TID251
     build_public_state_payload,
     radio_ready,
     runtime_capabilities,
 )
-from ..websocket import WS_OP_TEXT, WebSocketConnection
+from ..websocket import WS_OP_TEXT, WebSocketConnection  # noqa: TID251
 
 if TYPE_CHECKING:
     from ...radio_protocol import Radio
@@ -995,7 +995,7 @@ class ControlHandler:
                 await radio.set_tuner_status(value)
             else:
                 # Route through command queue
-                from ..radio_poller import SetTunerStatus
+                from ..radio_poller import SetTunerStatus  # noqa: TID251
 
                 q = self._server.command_queue if self._server is not None else None
                 if q is None:

@@ -23,7 +23,7 @@ from ..commands import build_civ_frame
 from ..exceptions import ConnectionError, TimeoutError
 from ..radio_state import RadioState, ReceiverState
 from ..types import Mode
-from .contract import (
+from .contract import (  # noqa: TID251
     CIV_TO_HAMLIB_MODE,
     HAMLIB_MODE_MAP,
     HamlibError,
@@ -31,13 +31,13 @@ from .contract import (
     RigctldConfig,
     RigctldResponse,
 )
-from .utils import get_mode_reader
+from .utils import get_mode_reader  # noqa: TID251
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
 from ..capabilities import CAP_METERS
-from .routing import create_routing
+from .routing import create_routing  # noqa: TID251
 
 __all__ = ["RigctldHandler"]
 

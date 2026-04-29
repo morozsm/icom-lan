@@ -23,9 +23,9 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
-    from .handler import _FallbackRigState
+    from .handler import _FallbackRigState  # noqa: TID251
 
-from .contract import HamlibError, RigctldResponse
+from .contract import HamlibError, RigctldResponse  # noqa: TID251
 
 logger = logging.getLogger(__name__)
 

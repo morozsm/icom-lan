@@ -15,7 +15,7 @@ from ...env_config import (
     get_audio_client_high_watermark,
 )
 from ...types import AudioCodec
-from ..protocol import (
+from ..protocol import (  # noqa: TID251
     AUDIO_CODEC_OPUS,
     AUDIO_CODEC_PCM16,
     AUDIO_HEADER_SIZE,
@@ -24,7 +24,7 @@ from ..protocol import (
     encode_audio_frame,
     encode_json,
 )
-from ..websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
+from ..websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection  # noqa: TID251
 
 if TYPE_CHECKING:
     from ...capabilities import CAP_AUDIO as _CAP_AUDIO_TYPE  # noqa: F401

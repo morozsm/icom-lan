@@ -10,6 +10,6 @@ Entrypoint::
     await server.serve_forever()
 """
 
-from .server import WebConfig, WebServer, run_web_server
+from .server import WebConfig, WebServer, run_web_server  # noqa: TID251
 
 __all__ = ["WebConfig", "WebServer", "run_web_server"]

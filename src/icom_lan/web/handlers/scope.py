@@ -6,8 +6,8 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
-from ..protocol import decode_json, encode_scope_frame
-from ..websocket import WS_OP_TEXT, WebSocketConnection
+from ..protocol import decode_json, encode_scope_frame  # noqa: TID251
+from ..websocket import WS_OP_TEXT, WebSocketConnection  # noqa: TID251
 
 if TYPE_CHECKING:
     from ...scope import ScopeFrame

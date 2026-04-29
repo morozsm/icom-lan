@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 
-from .contract import (
+from .contract import (  # noqa: TID251
     COMMAND_TABLE,
     ClientSession,
     RigctldCommand,

@@ -11,7 +11,7 @@ Usage::
 """
 
 try:
-    from .server import RigctldServer
+    from .server import RigctldServer  # noqa: TID251
 
     __all__ = ["RigctldServer"]
 except ImportError:
