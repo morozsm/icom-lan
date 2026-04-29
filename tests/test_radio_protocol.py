@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from icom_lan import radio_protocol
 from icom_lan.radio_protocol import (
     MetersCapable,
     PowerControlCapable,
     Radio,
+    RitXitCapable,
+    TransceiverStatusCapable,
     VoiceControlCapable,
 )
 from icom_lan.radio_state import RadioState
@@ -211,3 +214,69 @@ def test_voice_compressor_round_trip_protocol_typed() -> None:
     initial, after = asyncio.run(_voice_compressor_round_trip(stub))
     assert initial is False
     assert after is True
+
+
+# ---------------------------------------------------------------------------
+# RitXitCapable / TransceiverStatusCapable split (issue #1099)
+# ---------------------------------------------------------------------------
+
+
+class _RitXitStub:
+    """Minimal stub that satisfies RitXitCapable (six methods)."""
+
+    async def get_rit_frequency(self) -> int: return 0
+    async def set_rit_frequency(self, freq_hz: int) -> None: ...
+    async def get_rit_status(self) -> bool: return False
+    async def set_rit_status(self, on: bool) -> None: ...
+    async def get_rit_tx_status(self) -> bool: return False
+    async def set_rit_tx_status(self, on: bool) -> None: ...
+
+
+class _TxMonitorStub:
+    """Minimal stub that satisfies the reduced TransceiverStatusCapable."""
+
+    async def get_tx_freq_monitor(self) -> bool: return False
+    async def set_tx_freq_monitor(self, on: bool) -> None: ...
+
+
+class _IcomLikeStub(_RitXitStub, _TxMonitorStub):
+    """Stub mimicking IcomRadio: satisfies BOTH protocols simultaneously."""
+
+
+def test_ritxit_capable_in_all() -> None:
+    """The new RitXitCapable protocol is publicly exported."""
+    assert "RitXitCapable" in radio_protocol.__all__
+
+
+def test_ritxit_capable_isinstance() -> None:
+    """A class implementing the six RIT/XIT methods satisfies RitXitCapable."""
+    assert isinstance(_RitXitStub(), RitXitCapable)
+
+
+def test_transceiver_status_capable_only_tx_monitor() -> None:
+    """TransceiverStatusCapable is now only the tx_freq_monitor pair."""
+    assert isinstance(_TxMonitorStub(), TransceiverStatusCapable)
+    # A stub with only RIT methods must NOT satisfy TransceiverStatusCapable.
+    assert not isinstance(_RitXitStub(), TransceiverStatusCapable)
+
+
+def test_icom_like_stub_satisfies_both_protocols() -> None:
+    """IcomRadio-shaped class satisfies both RitXitCapable and TransceiverStatusCapable."""
+    stub = _IcomLikeStub()
+    assert isinstance(stub, RitXitCapable)
+    assert isinstance(stub, TransceiverStatusCapable)
+
+
+def test_yaesu_cat_radio_satisfies_ritxit_capable() -> None:
+    """YaesuCatRadio class declares the canonical six methods (PR-7 migration)."""
+    from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
+
+    for name in (
+        "get_rit_frequency",
+        "set_rit_frequency",
+        "get_rit_status",
+        "set_rit_status",
+        "get_rit_tx_status",
+        "set_rit_tx_status",
+    ):
+        assert hasattr(YaesuCatRadio, name), f"YaesuCatRadio missing {name}"

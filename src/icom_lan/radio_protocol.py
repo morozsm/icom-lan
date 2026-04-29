@@ -77,6 +77,7 @@ __all__ = [
     "PowerControlCapable",
     "SplitCapable",
     "StateNotifyCapable",
+    "RitXitCapable",
     "TransceiverStatusCapable",
     "MemoryCapable",
 ]
@@ -1087,8 +1088,13 @@ class AdvancedControlCapable(
 
 
 @runtime_checkable
-class TransceiverStatusCapable(Protocol):
-    """Radio supports RIT/XIT and transceiver status queries (M4 transceiver_status family)."""
+class RitXitCapable(Protocol):
+    """Radio supports RIT/XIT (a.k.a. clarifier) frequency offset and on/off control.
+
+    Cross-vendor surface: Icom calls this RIT/XIT, Yaesu calls it the
+    "clarifier" — semantically identical six-method contract on every HF
+    rig in the project (IC-7610, IC-7300, IC-705, IC-9700, FTX-1).
+    """
 
     async def get_rit_frequency(self) -> int:
         """Get RIT frequency offset in Hz."""
@@ -1113,6 +1119,15 @@ class TransceiverStatusCapable(Protocol):
     async def set_rit_tx_status(self, on: bool) -> None:
         """Set RIT TX (XIT) on/off status."""
         ...
+
+
+@runtime_checkable
+class TransceiverStatusCapable(Protocol):
+    """Radio supports TX frequency monitor (M4 transceiver_status family).
+
+    RIT/XIT lives in :class:`RitXitCapable` — the two were previously bundled
+    here but have unrelated semantics.
+    """
 
     async def get_tx_freq_monitor(self) -> bool:
         """Get TX frequency monitor on/off status."""
