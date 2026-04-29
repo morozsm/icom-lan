@@ -161,7 +161,7 @@ class _FakeUsbAudioDriver:
     async def stop_tx(self) -> None:
         self.tx_running = False
 
-    async def push_tx_pcm(self, frame: bytes) -> None:
+    async def _push_tx_pcm(self, frame: bytes) -> None:
         self.tx_frames.append(bytes(frame))
 
     def emit_rx_pcm(self, frame: bytes) -> None:

@@ -217,7 +217,7 @@ async def test_stop_audio_rx_pcm(radio, mock_audio_driver):
 
 
 # ---------------------------------------------------------------------------
-# start_audio_tx_pcm / stop_audio_tx_pcm / push_pcm_tx
+# start_audio_tx_pcm / stop_audio_tx_pcm / _push_pcm_tx
 # ---------------------------------------------------------------------------
 
 
@@ -241,18 +241,18 @@ async def test_stop_audio_tx_pcm(radio, mock_audio_driver):
 
 async def test_push_pcm_tx(radio, mock_audio_driver):
     frame = b"\xab" * 960
-    await radio.push_pcm_tx(frame)
-    mock_audio_driver.push_tx_pcm.assert_called_once_with(frame)
+    await radio._push_pcm_tx(frame)
+    mock_audio_driver._push_tx_pcm.assert_called_once_with(frame)
 
 
 async def test_push_pcm_tx_not_bytes(radio):
     with pytest.raises(TypeError, match="frame must be bytes"):
-        await radio.push_pcm_tx("string")
+        await radio._push_pcm_tx("string")
 
 
 async def test_push_pcm_tx_empty(radio):
     with pytest.raises(ValueError, match="frame must not be empty"):
-        await radio.push_pcm_tx(b"")
+        await radio._push_pcm_tx(b"")
 
 
 # ---------------------------------------------------------------------------

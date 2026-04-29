@@ -142,7 +142,7 @@ async def test_usb_audio_driver_lifecycle_start_stop_and_io() -> None:
     tx_stream = backend.tx_streams[0]
     assert tx_stream.running is True
 
-    await driver.push_tx_pcm(pcm_frame)
+    await driver._push_tx_pcm(pcm_frame)
     assert tx_stream.written_frames == [pcm_frame]
 
     await driver.stop_tx()
@@ -162,7 +162,7 @@ async def test_usb_audio_driver_double_start_and_missing_tx_guardrails() -> None
     with pytest.raises(
         AudioDriverLifecycleError, match="Audio TX stream is not started"
     ):
-        await driver.push_tx_pcm(b"\x00\x01" * 960)
+        await driver._push_tx_pcm(b"\x00\x01" * 960)
     await driver.stop_rx()
     await driver.stop_rx()  # idempotent
 

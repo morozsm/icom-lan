@@ -89,7 +89,7 @@ def yaesu_radio(ftx1_config):
 
 
 class TestYaesuSupportsCommand:
-    """YaesuCatRadio.supports_command delegates to has_command."""
+    """YaesuCatRadio.supports_command delegates to _has_command."""
 
     def test_defined_commands_return_true(self, yaesu_radio):
         for cmd in (
@@ -113,9 +113,9 @@ class TestYaesuSupportsCommand:
             )
 
     def test_matches_has_command(self, yaesu_radio, ftx1_config):
-        """supports_command must agree with has_command for every TOML key."""
+        """supports_command must agree with _has_command for every TOML key."""
         for name in ftx1_config.commands:
-            assert yaesu_radio.supports_command(name) == yaesu_radio.has_command(name)
+            assert yaesu_radio.supports_command(name) == yaesu_radio._has_command(name)
 
 
 # ---------------------------------------------------------------------------

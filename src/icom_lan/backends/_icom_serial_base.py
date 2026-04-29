@@ -68,7 +68,7 @@ class _SerialAudioDriver(Protocol):
 
     async def stop_tx(self) -> None: ...
 
-    async def push_tx_pcm(self, frame: bytes) -> None: ...
+    async def _push_tx_pcm(self, frame: bytes) -> None: ...
 
     @property
     def tx_running(self) -> bool: ...
@@ -474,14 +474,14 @@ class _IcomSerialRadioBase(CoreRadio):
     async def stop_audio_tx_pcm(self) -> None:
         await self._serial_audio_driver.stop_tx()
 
-    async def push_pcm_tx(self, frame: bytes) -> None:
+    async def _push_pcm_tx(self, frame: bytes) -> None:
         if not isinstance(frame, bytes):
             raise TypeError(f"frame must be bytes, got {type(frame).__name__}.")
         if len(frame) == 0:
             raise ValueError("frame must not be empty.")
 
         self._check_connected()
-        await self._serial_audio_driver.push_tx_pcm(frame)
+        await self._serial_audio_driver._push_tx_pcm(frame)
 
     # ------------------------------------------------------------------
     # Serial stubs (no-ops for serial transport)
