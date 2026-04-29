@@ -951,3 +951,142 @@ async def test_setpower_icom_poller_rejects_watts_unit() -> None:
     with pytest.raises(ValueError, match="raw_255"):
         await poller._execute(SetPower(level=50, unit="watts"))  # noqa: SLF001
     radio.set_rf_power.assert_not_awaited()
+
+
+# ----------------------------------------------------------------------
+# Scope poller: bounded latency on dropped responses (#1181)
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.asyncio
+async def test_fetch_scope_controls_bounds_latency_on_dropped_response() -> None:
+    """A getter that never resolves must not stall _fetch_scope_controls.
+
+    Regression test for #1181: PR #1178 replaced fire-and-forget 0x27 sends
+    with awaited get_scope_*() calls. A single dropped response could block
+    the EnableScope hot path and the poller's command-queue drain for the
+    full CI-V GET timeout (up to 2 s), and 12 misses compounded to ~24 s.
+    Without the bounded ``_SCOPE_GETTER_TIMEOUT``, this test would hang.
+    """
+    radio = _make_radio()
+    state = RadioState()
+    poller = RadioPoller(radio, StateCache(), CommandQueue(), radio_state=state)
+
+    # Make every scope getter "hang" (await an event that is never set).
+    never = asyncio.Event()
+
+    async def _hang() -> None:
+        await never.wait()
+
+    for name in (
+        "get_scope_receiver",
+        "get_scope_dual",
+        "get_scope_during_tx",
+        "get_scope_center_type",
+        "get_scope_mode",
+        "get_scope_span",
+        "get_scope_edge",
+        "get_scope_hold",
+        "get_scope_ref",
+        "get_scope_speed",
+        "get_scope_vbw",
+        "get_scope_rbw",
+    ):
+        setattr(radio, name, AsyncMock(side_effect=_hang))
+
+    # Tighten the timeout for the test so we don't wait 12 * 0.2 s = 2.4 s.
+    poller._SCOPE_GETTER_TIMEOUT = 0.02  # noqa: SLF001
+
+    start = asyncio.get_event_loop().time()
+    await poller._fetch_scope_controls()  # noqa: SLF001
+    elapsed = asyncio.get_event_loop().time() - start
+
+    # 12 getters * (0.02 s timeout + ~0 s gap) ≈ 0.24 s.  Allow generous
+    # slack so the test is not flaky on slow CI; the important property
+    # is that we are NOT blocked for 12 * 2.0 s = 24 s.
+    assert elapsed < 2.0, f"poller stalled for {elapsed:.2f}s on dropped responses"
+
+    # Every getter was attempted exactly once even though they all hung.
+    radio.get_scope_receiver.assert_awaited_once()
+    radio.get_scope_rbw.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_fetch_scope_controls_normal_path_still_works() -> None:
+    """Normal scope-control fetch path: every getter is awaited exactly once."""
+    radio = _make_radio()
+    state = RadioState()
+    poller = RadioPoller(radio, StateCache(), CommandQueue(), radio_state=state)
+
+    await poller._fetch_scope_controls()  # noqa: SLF001
+
+    # Each getter awaited once on the happy path.
+    for name in (
+        "get_scope_receiver",
+        "get_scope_dual",
+        "get_scope_during_tx",
+        "get_scope_center_type",
+        "get_scope_mode",
+        "get_scope_span",
+        "get_scope_edge",
+        "get_scope_hold",
+        "get_scope_ref",
+        "get_scope_speed",
+        "get_scope_vbw",
+        "get_scope_rbw",
+    ):
+        getter = getattr(radio, name)
+        getter.assert_awaited_once()
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.asyncio
+async def test_fetch_scope_controls_repeated_timeouts_do_not_accumulate() -> None:
+    """Consecutive _fetch_scope_controls calls stay bounded across drops.
+
+    If cancellation leaked tracker entries we would expect the per-call
+    cost to grow.  We assert that the cost of N calls scales linearly
+    with N (no accumulation between calls).
+    """
+    radio = _make_radio()
+    state = RadioState()
+    poller = RadioPoller(radio, StateCache(), CommandQueue(), radio_state=state)
+
+    never = asyncio.Event()
+
+    async def _hang() -> None:
+        await never.wait()
+
+    for name in (
+        "get_scope_receiver",
+        "get_scope_dual",
+        "get_scope_during_tx",
+        "get_scope_center_type",
+        "get_scope_mode",
+        "get_scope_span",
+        "get_scope_edge",
+        "get_scope_hold",
+        "get_scope_ref",
+        "get_scope_speed",
+        "get_scope_vbw",
+        "get_scope_rbw",
+    ):
+        setattr(radio, name, AsyncMock(side_effect=_hang))
+
+    poller._SCOPE_GETTER_TIMEOUT = 0.01  # noqa: SLF001
+
+    loop = asyncio.get_event_loop()
+    start = loop.time()
+    for _ in range(3):
+        await poller._fetch_scope_controls()  # noqa: SLF001
+    elapsed = loop.time() - start
+
+    # 3 calls * 12 getters * 0.01 s = 0.36 s nominal.  Generous upper
+    # bound so the test is robust on slow CI but still rejects the
+    # 3 * 24 s = 72 s blowup.
+    assert elapsed < 3.0, f"3 successive calls took {elapsed:.2f}s — accumulated"
+
+    # Each getter was attempted exactly 3 times (no early exit).
+    assert radio.get_scope_receiver.await_count == 3
+    assert radio.get_scope_rbw.await_count == 3
