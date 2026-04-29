@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`meter_cal._TABLES` and `meter_cal.calibrate()` (#1209).** The hardcoded
+  IC-7610 calibration tables and the `calibrate()` lookup wrapper were
+  unreachable since #1173 shipped per-rig TOML calibration in v0.19. All
+  consumers route through `interpolate_swr` against
+  `RadioProfile.meter_calibrations` (loaded from TOML
+  `[[meters.<name>.calibration]]`). No public-API impact —
+  `MeterType` and `interpolate_swr` remain exported.
+
 ## [0.19.0] — 2026-04-29
 
 ### Tier-1 API stability commitment

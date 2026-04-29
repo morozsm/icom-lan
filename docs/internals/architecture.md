@@ -948,17 +948,21 @@ classDiagram
     AudioError <|-- AudioTranscodeError
 ```
 
-### `meter_cal.py` — Calibration Lookup
+### `meter_cal.py` — SWR Interpolation
 
 ```mermaid
 flowchart LR
-    Raw["raw value 0–255"] --> Cal["calibrate(meter, raw)"]
-    Cal --> Tbl{_TABLES lookup}
-    Tbl -->|table found| Interp["_interp()\npiecewise linear"]
-    Tbl -->|unknown type| Pass["return float(raw)"]
-    Interp --> Out["calibrated float\ne.g. dBm, watts, SWR"]
-    Pass --> Out
+    Raw["raw value 0–255"] --> Interp["interpolate_swr(raw, meter_calibrations)"]
+    Interp --> Tbl{TOML swr table?}
+    Tbl -->|points present| PWL["piecewise-linear\nover anchor points"]
+    Tbl -->|no table| Legacy["legacy linear\n1.0 + raw/255 * 8.9"]
+    PWL --> Out["calibrated SWR ratio"]
+    Legacy --> Out
 ```
+
+Calibration tables are sourced exclusively from per-rig TOML
+(`rigs/*.toml` `[[meters.<name>.calibration]]`) and reach this helper via
+`RadioProfile.meter_calibrations`.
 
 ### `protocol.py` — Packet Header I/O
 
