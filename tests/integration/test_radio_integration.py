@@ -290,7 +290,7 @@ class TestVFO:
                 await radio.set_frequency(main0 + 1000)
                 sub0 = await radio.get_frequency()
 
-            await radio.vfo_exchange()
+            await radio.swap_main_sub()
 
             await radio.select_vfo("MAIN")
             main1 = await radio.get_frequency()
@@ -302,7 +302,7 @@ class TestVFO:
             print("VFO exchange ✓")
 
             # Restore original placement
-            await radio.vfo_exchange()
+            await radio.swap_main_sub()
             await radio.select_vfo("MAIN")
         except Exception as e:
             pytest.skip(f"VFO exchange not supported in current rig state: {e}")
@@ -320,7 +320,7 @@ class TestVFO:
             sub0 = await radio.get_frequency()
 
             await radio.select_vfo("MAIN")
-            await radio.vfo_equalize()
+            await radio.equalize_main_sub()
 
             await radio.select_vfo("MAIN")
             main1 = await radio.get_frequency()

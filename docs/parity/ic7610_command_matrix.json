@@ -275,7 +275,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:vfo_swap",
-        "icom_lan.radio:CoreRadio.vfo_exchange"
+        "icom_lan.radio:CoreRadio.swap_main_sub"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_swap"
@@ -293,7 +293,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:vfo_a_equals_b",
-        "icom_lan.radio:CoreRadio.vfo_equalize"
+        "icom_lan.radio:CoreRadio.equalize_main_sub"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_a_equals_b"

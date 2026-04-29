@@ -82,38 +82,20 @@ class TestVFO:
             await radio.set_vfo("A")
 
     @pytest.mark.asyncio
-    async def test_vfo_equalize(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        mock_transport.queue_response(_ack_response())
-        await radio.vfo_equalize()
-        assert len(mock_transport.sent_packets) > 0
-
-    @pytest.mark.asyncio
-    async def test_vfo_exchange(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        mock_transport.queue_response(_ack_response())
-        await radio.vfo_exchange()
-        assert len(mock_transport.sent_packets) > 0
-
-    @pytest.mark.asyncio
     async def test_select_vfo_disconnected(self) -> None:
         r = IcomRadio("192.168.1.100")
         with pytest.raises(ConnectionError):
             await r.set_vfo("A")
 
-    @pytest.mark.asyncio
-    async def test_vfo_equalize_disconnected(self) -> None:
+    def test_vfo_exchange_attribute_removed(self) -> None:
+        """Deprecated ``vfo_exchange`` alias is removed in v0.19."""
         r = IcomRadio("192.168.1.100")
-        with pytest.raises(ConnectionError):
-            await r.vfo_equalize()
+        assert not hasattr(r, "vfo_exchange")
 
-    @pytest.mark.asyncio
-    async def test_vfo_exchange_disconnected(self) -> None:
+    def test_vfo_equalize_attribute_removed(self) -> None:
+        """Deprecated ``vfo_equalize`` alias is removed in v0.19."""
         r = IcomRadio("192.168.1.100")
-        with pytest.raises(ConnectionError):
-            await r.vfo_exchange()
+        assert not hasattr(r, "vfo_equalize")
 
 
 # ---------------------------------------------------------------------------

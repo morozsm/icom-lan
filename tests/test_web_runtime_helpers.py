@@ -83,9 +83,14 @@ def test_runtime_capabilities_falls_back_to_protocols_when_caps_missing() -> Non
         async def push_audio_tx_opus(self, data: bytes) -> None:  # noqa: ARG002
             ...
 
-        async def vfo_exchange(self) -> None: ...
+        async def swap_main_sub(self) -> None: ...
 
-        async def vfo_equalize(self) -> None: ...
+        async def equalize_main_sub(self) -> None: ...
+
+        async def set_main_sub_tracking(self, on: bool) -> None: ...  # noqa: ARG002
+
+        async def get_main_sub_tracking(self) -> bool:
+            return False
 
     radio = _ProtoRadio()
     caps = runtime_capabilities(radio)

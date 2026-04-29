@@ -502,8 +502,6 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
             "set_dual_watch",
             # VFO / split / scan
             "set_vfo",
-            "vfo_equalize",
-            "vfo_exchange",
             "get_split",
             "set_split",
             "get_tuning_step",
@@ -2862,46 +2860,6 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         if ack is False:
             raise CommandError(f"Radio rejected VFO select {vfo}")
         self._last_vfo = vfo.upper()
-
-    async def vfo_equalize(self) -> None:
-        """Copy VFO state (deprecated — use ``equalize_main_sub`` or ``equalize_vfo_ab``).
-
-        On dual-RX profiles this delegates to :meth:`equalize_main_sub`; on
-        single-RX profiles it delegates to :meth:`equalize_vfo_ab` with
-        ``receiver=0``.
-        """
-        import warnings
-
-        warnings.warn(
-            "vfo_equalize() is deprecated; use equalize_main_sub() or "
-            "equalize_vfo_ab() explicitly",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if self._profile.receiver_count > 1:
-            await self.equalize_main_sub()
-        else:
-            await self.equalize_vfo_ab(0)
-
-    async def vfo_exchange(self) -> None:
-        """Swap VFO state (deprecated — use ``swap_main_sub`` or ``swap_vfo_ab``).
-
-        On dual-RX profiles this delegates to :meth:`swap_main_sub`; on
-        single-RX profiles it delegates to :meth:`swap_vfo_ab` with
-        ``receiver=0``.
-        """
-        import warnings
-
-        warnings.warn(
-            "vfo_exchange() is deprecated; use swap_main_sub() or "
-            "swap_vfo_ab() explicitly",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if self._profile.receiver_count > 1:
-            await self.swap_main_sub()
-        else:
-            await self.swap_vfo_ab(0)
 
     async def set_split(self, on: bool) -> None:
         """Enable or disable split mode (CI-V ``0x0F``)."""

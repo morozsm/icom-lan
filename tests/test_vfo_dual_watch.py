@@ -1,6 +1,5 @@
 """Unit tests for VFO/dual-watch/scanning commands (Issue #132)."""
 
-import warnings
 from unittest.mock import patch
 
 import pytest
@@ -579,34 +578,31 @@ class TestSwapMainSubVsSwapVfoAb:
         # IC-7300 declares equal = [0xA0] in scheme=ab → equal_ab_code.
         assert send.frames[0].endswith(b"\x07\xa0\xfd")
 
-    @pytest.mark.asyncio
-    async def test_vfo_exchange_alias_emits_deprecation_warning(self) -> None:
+    def test_vfo_exchange_alias_removed(self) -> None:
+        """v0.19: deprecated ``vfo_exchange`` alias is gone (raises AttributeError)."""
         r = _make_radio("IC-7610")
-        send = _RecordingSend()
-        with patch.object(r, "_send_civ_raw", send):
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                await r.vfo_exchange()
-        # DeprecationWarning raised once, pointing to caller (this test file).
-        dep = [w for w in caught if issubclass(w.category, DeprecationWarning)]
-        assert len(dep) == 1
-        assert "vfo_exchange" in str(dep[0].message)
-        assert dep[0].filename.endswith("test_vfo_dual_watch.py")
-        # Still dispatches to swap_main_sub under the hood.
-        assert len(send.frames) == 1
-        assert send.frames[0].endswith(b"\x07\xb0\xfd")
+        assert not hasattr(r, "vfo_exchange")
+        with pytest.raises(AttributeError):
+            r.vfo_exchange  # noqa: B018
 
-    @pytest.mark.asyncio
-    async def test_vfo_equalize_alias_emits_deprecation_warning(self) -> None:
+    def test_vfo_equalize_alias_removed(self) -> None:
+        """v0.19: deprecated ``vfo_equalize`` alias is gone (raises AttributeError)."""
         r = _make_radio("IC-7300")
-        send = _RecordingSend()
-        with patch.object(r, "_send_civ_raw", send):
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                await r.vfo_equalize()
-        dep = [w for w in caught if issubclass(w.category, DeprecationWarning)]
-        assert len(dep) == 1
-        assert "vfo_equalize" in str(dep[0].message)
-        assert dep[0].filename.endswith("test_vfo_dual_watch.py")
-        assert len(send.frames) == 1
-        assert send.frames[0].endswith(b"\x07\xa0\xfd")
+        assert not hasattr(r, "vfo_equalize")
+        with pytest.raises(AttributeError):
+            r.vfo_equalize  # noqa: B018
+
+    def test_dual_rx_satisfies_dual_receiver_capable_protocol(self) -> None:
+        """IC-7610 backend still satisfies ``DualReceiverCapable`` after the
+        legacy ``vfo_exchange`` / ``vfo_equalize`` declarations were replaced
+        with the canonical ``swap_main_sub`` / ``equalize_main_sub`` methods.
+        """
+        from icom_lan.radio_protocol import DualReceiverCapable
+
+        r = _make_radio("IC-7610")
+        assert isinstance(r, DualReceiverCapable)
+        # Canonical methods are present and callable.
+        assert callable(r.swap_main_sub)
+        assert callable(r.equalize_main_sub)
+        assert callable(r.set_main_sub_tracking)
+        assert callable(r.get_main_sub_tracking)

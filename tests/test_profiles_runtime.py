@@ -169,14 +169,13 @@ class TestApplyProfileFull:
 
     @pytest.mark.asyncio()
     async def test_applies_equalize_vfo(self, radio: AsyncMock) -> None:
-        # #1113: apply_profile now dispatches to the canonical
+        # #1114: apply_profile dispatches to the canonical
         # ``equalize_main_sub`` (dual-RX) or ``equalize_vfo_ab(0)``
-        # (single-RX) instead of the deprecated ``vfo_equalize`` alias.
+        # (single-RX). The legacy ``vfo_equalize`` alias has been removed.
         # The bare AsyncMock fixture has no real ``profile`` attribute, so
         # the dispatch falls through to the single-RX path.
         await apply_profile(radio, OperatingProfile(equalize_vfo=True))
         radio.equalize_vfo_ab.assert_awaited_once_with(0)
-        radio.vfo_equalize.assert_not_awaited()
 
     @pytest.mark.asyncio()
     async def test_scope_enabled(self, radio: AsyncMock) -> None:
@@ -291,16 +290,16 @@ class TestApplyProfileMinimal:
 
 
 # ---------------------------------------------------------------------------
-# apply_profile — equalize_vfo dispatch (issue #1113)
+# apply_profile — equalize_vfo dispatch (issues #1113 / #1114)
 # ---------------------------------------------------------------------------
 
 
 class TestEqualizeVfoDispatch:
     """Verify ``equalize_vfo=True`` dispatches to the right canonical method.
 
-    Regression coverage for #1113: ``apply_profile`` must NOT call the
-    deprecated ``vfo_equalize`` alias on the radio.  Dual-RX profiles route
-    to ``equalize_main_sub``; single-RX profiles route to ``equalize_vfo_ab(0)``.
+    Regression coverage for #1113/#1114: ``apply_profile`` calls only the
+    canonical methods. Dual-RX profiles route to ``equalize_main_sub``;
+    single-RX profiles route to ``equalize_vfo_ab(0)``.
     """
 
     @pytest.mark.asyncio()

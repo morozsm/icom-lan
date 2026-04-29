@@ -651,11 +651,11 @@ class ScopeCapable(Protocol):
 class DualReceiverCapable(Protocol):
     """Radio has two independent receivers (e.g. IC-7610 Main/Sub)."""
 
-    async def vfo_exchange(self) -> None:
+    async def swap_main_sub(self) -> None:
         """Swap Main and Sub VFO frequencies."""
         ...
 
-    async def vfo_equalize(self) -> None:
+    async def equalize_main_sub(self) -> None:
         """Set Sub VFO frequency equal to Main."""
         ...
 

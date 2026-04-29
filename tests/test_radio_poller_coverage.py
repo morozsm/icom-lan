@@ -257,12 +257,12 @@ async def test_execute_event_emitting_commands_and_vfo_paths() -> None:
 
     await poller._execute(VfoSwap())  # noqa: SLF001
     assert any(name == "vfo_swapped" for name, _ in events)
-    # #1113: poller now calls canonical ``swap_main_sub`` directly; the
-    # deprecated ``vfo_exchange`` alias must no longer be touched here.
+    # #1114: poller calls canonical ``swap_main_sub`` directly; the
+    # deprecated wrapper has been removed.
     radio.swap_main_sub.assert_awaited_once_with()
 
-    # #1113: VfoEqualize routes to canonical ``equalize_main_sub``; the
-    # deprecated ``vfo_equalize`` alias must no longer be touched here.
+    # #1114: VfoEqualize routes to canonical ``equalize_main_sub``; the
+    # deprecated wrapper has been removed.
     eq_before = radio.equalize_main_sub.await_count
     await poller._execute(VfoEqualize())  # noqa: SLF001
     assert radio.equalize_main_sub.await_count == eq_before + 1

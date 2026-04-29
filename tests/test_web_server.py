@@ -348,13 +348,8 @@ def mock_radio() -> MagicMock:
     radio.set_preamp = AsyncMock()
     radio.set_vfo = AsyncMock()
     radio.vfo_swap = AsyncMock()
-    # ``vfo_exchange`` / ``vfo_equalize`` are kept here so the radio still
-    # satisfies the ``DualReceiverCapable`` Protocol (#1113 migrated callers
-    # but the Protocol declarations are untouched until PR-22 / #1114).
-    radio.vfo_exchange = AsyncMock()
-    radio.vfo_equalize = AsyncMock()
-    # Canonical dual-RX VFO methods (post-#1113 migration); the radio_poller
-    # invokes ``swap_main_sub`` / ``equalize_main_sub`` directly now.
+    # Canonical dual-RX VFO methods on ``DualReceiverCapable`` (post-#1114);
+    # the radio_poller invokes these directly.
     radio.swap_main_sub = AsyncMock()
     radio.equalize_main_sub = AsyncMock()
     radio.vfo_a_equals_b = AsyncMock()
@@ -877,9 +872,8 @@ class TestControlChannel:
             assert resp["ok"] is True
             # vfo_swap goes through command queue; wait for poller to drain it
             await asyncio.sleep(0.05)
-            # #1113: the poller dispatches to ``swap_main_sub`` directly on
-            # dual-RX rigs; the deprecated ``vfo_exchange`` alias is no longer
-            # called from the poller path.
+            # #1114: the poller dispatches to ``swap_main_sub`` directly on
+            # dual-RX rigs; the deprecated wrapper has been removed.
             mock_radio.swap_main_sub.assert_awaited_once()
         finally:
             await _close_ws(writer)
@@ -2449,12 +2443,8 @@ class TestRadioPoller:
         radio.set_freq = AsyncMock()
         radio.set_mode = AsyncMock()
         radio.set_ptt = AsyncMock()
-        # Keep the deprecated aliases so the radio still satisfies
-        # ``DualReceiverCapable`` (Protocol untouched until #1114).
-        radio.vfo_exchange = AsyncMock()
-        radio.vfo_equalize = AsyncMock()
-        # Canonical dual-RX VFO methods (post-#1113); poller calls these
-        # directly now instead of the deprecated aliases.
+        # Canonical dual-RX VFO methods (DualReceiverCapable post-#1114);
+        # poller calls these directly.
         radio.swap_main_sub = AsyncMock()
         radio.equalize_main_sub = AsyncMock()
         radio.send_civ = AsyncMock()  # RadioPoller now calls send_civ directly
@@ -2646,10 +2636,7 @@ class TestSwitchScopeReceiver:
         radio.set_nr = AsyncMock()
         radio.set_digisel = AsyncMock()
         radio.set_ip_plus = AsyncMock()
-        # Keep deprecated aliases for ``DualReceiverCapable`` compliance.
-        radio.vfo_exchange = AsyncMock()
-        radio.vfo_equalize = AsyncMock()
-        # Canonical dual-RX VFO methods (post-#1113).
+        # Canonical dual-RX VFO methods on ``DualReceiverCapable`` (post-#1114).
         radio.swap_main_sub = AsyncMock()
         radio.equalize_main_sub = AsyncMock()
         return radio
