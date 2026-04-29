@@ -351,14 +351,14 @@ class YaesuCatRadio:
     async def stop_audio_tx_pcm(self) -> None:
         await self._audio_driver.stop_tx()
 
-    async def push_pcm_tx(self, frame: bytes) -> None:
+    async def _push_pcm_tx(self, frame: bytes) -> None:
         if not isinstance(frame, bytes):
             raise TypeError(f"frame must be bytes, got {type(frame).__name__}.")
         if len(frame) == 0:
             raise ValueError("frame must not be empty.")
 
         self._require_connected()
-        await self._audio_driver.push_tx_pcm(frame)
+        await self._audio_driver._push_tx_pcm(frame)
 
     # -- AudioCapable TX methods --------------------------------------------
 
@@ -366,11 +366,11 @@ class YaesuCatRadio:
         """Forward Opus TX data as PCM (USB audio is always PCM)."""
         # Browser sends Opus; AudioBroadcaster transcodes to PCM before calling.
         # If raw Opus arrives here, just push as-is (driver handles it).
-        await self.push_pcm_tx(data)
+        await self._push_pcm_tx(data)
 
     async def push_audio_tx_pcm(self, data: bytes) -> None:
         """Push raw PCM TX data."""
-        await self.push_pcm_tx(data)
+        await self._push_pcm_tx(data)
 
     async def start_audio_tx_opus(self) -> None:
         """No-op: USB audio TX is started via start_audio_tx_pcm."""
@@ -415,9 +415,9 @@ class YaesuCatRadio:
         ``set_nb_level(0)`` for off and ``set_nb_level(default)`` for on.
         No-op if neither ``set_nb`` nor ``set_nb_level`` is defined.
         """
-        if self.has_write_command("set_nb"):
+        if self._has_write_command("set_nb"):
             await self._write("set_nb", state="1" if on else "0")
-        elif self.has_write_command("set_nb_level"):
+        elif self._has_write_command("set_nb_level"):
             if on:
                 current = self._state.main.nb_level
                 level = current if current > 0 else self._default_nb_level()
@@ -432,9 +432,9 @@ class YaesuCatRadio:
         ``set_nr_level(0)`` for off and ``set_nr_level(default)`` for on.
         No-op if neither ``set_nr`` nor ``set_nr_level`` is defined.
         """
-        if self.has_write_command("set_nr"):
+        if self._has_write_command("set_nr"):
             await self._write("set_nr", state="1" if on else "0")
-        elif self.has_write_command("set_nr_level"):
+        elif self._has_write_command("set_nr_level"):
             if on:
                 current = self._state.main.nr_level
                 level = current if current > 0 else self._default_nr_level()
@@ -448,19 +448,19 @@ class YaesuCatRadio:
         No-op with warning if the rig profile does not define a
         ``set_dual_watch`` command.
         """
-        if self.has_write_command("set_dual_watch"):
+        if self._has_write_command("set_dual_watch"):
             await self._write("set_dual_watch", state="1" if on else "0")
         else:
             logger.warning("set_dual_watch: no CAT command defined for %s", self.model)
 
     # -- Runtime profile introspection -------------------------------------
 
-    def has_command(self, name: str) -> bool:
+    def _has_command(self, name: str) -> bool:
         """Check if a command is defined in the rig profile."""
         spec = self._config.commands.get(name)
         return spec is not None and isinstance(spec, CatCommandSpec)
 
-    def has_write_command(self, name: str) -> bool:
+    def _has_write_command(self, name: str) -> bool:
         """Check if a write command is defined in the rig profile."""
         spec = self._config.commands.get(name)
         return (
@@ -471,7 +471,7 @@ class YaesuCatRadio:
 
     def supports_command(self, command: str) -> bool:
         """Check if a command is defined in the rig profile."""
-        return self.has_command(command)
+        return self._has_command(command)
 
     def _default_nb_level(self) -> int:
         """Default NB level for turning on when current level is 0."""
@@ -681,7 +681,7 @@ class YaesuCatRadio:
         profile to map mode pairs.  For now, log a warning if the
         profile lacks a ``set_data_mode`` CAT command.
         """
-        if self.has_write_command("set_data_mode"):
+        if self._has_write_command("set_data_mode"):
             await self._write("set_data_mode", state="1" if on else "0")
         else:
             logger.warning("set_data_mode: no CAT command defined for %s", self.model)

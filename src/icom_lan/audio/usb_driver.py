@@ -478,7 +478,7 @@ class UsbAudioDriver:
             )
             await self._tx_stream.start()
 
-    async def push_tx_pcm(self, frame: bytes) -> None:
+    async def _push_tx_pcm(self, frame: bytes) -> None:
         """Queue one PCM frame for playback."""
         if not self.tx_running:
             raise AudioDriverLifecycleError("Audio TX stream is not started.")

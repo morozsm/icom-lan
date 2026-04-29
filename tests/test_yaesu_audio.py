@@ -80,7 +80,7 @@ class FakeAudioDriver:
             self._tx_task = None
         self._tx_queue = asyncio.Queue(maxsize=64)
 
-    async def push_tx_pcm(self, frame: bytes) -> None:
+    async def _push_tx_pcm(self, frame: bytes) -> None:
         if not self.tx_running:
             raise RuntimeError("Audio TX stream is not started.")
         await self._tx_queue.put(frame)
@@ -264,7 +264,7 @@ class TestTxAudio:
         await radio.connect()
         await radio.start_audio_tx_pcm()
         frame = b"\x42" * 1920
-        await radio.push_pcm_tx(frame)
+        await radio._push_pcm_tx(frame)
         queued = await asyncio.wait_for(fake_driver._tx_queue.get(), timeout=1)
         assert queued == frame
         await radio.stop_audio_tx_pcm()
@@ -286,19 +286,19 @@ class TestTxAudio:
         await radio.connect()
         assert not fake_driver.tx_running
         with pytest.raises(RuntimeError, match="not started"):
-            await fake_driver.push_tx_pcm(b"\x00" * 960)
+            await fake_driver._push_tx_pcm(b"\x00" * 960)
 
     @pytest.mark.asyncio
     async def test_push_pcm_tx_rejects_non_bytes(self, radio: YaesuCatRadio) -> None:
         await radio.connect()
         with pytest.raises(TypeError, match="bytes"):
-            await radio.push_pcm_tx("not bytes")  # type: ignore[arg-type]
+            await radio._push_pcm_tx("not bytes")  # type: ignore[arg-type]
 
     @pytest.mark.asyncio
     async def test_push_pcm_tx_rejects_empty(self, radio: YaesuCatRadio) -> None:
         await radio.connect()
         with pytest.raises(ValueError, match="empty"):
-            await radio.push_pcm_tx(b"")
+            await radio._push_pcm_tx(b"")
 
 
 # ---------------------------------------------------------------------------

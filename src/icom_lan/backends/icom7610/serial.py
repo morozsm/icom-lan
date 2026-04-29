@@ -49,7 +49,7 @@ class Icom7610SerialRadio(_IcomSerialRadioBase):
                 frame_ms=20,
             )
             payload = transcoder.opus_to_pcm(payload)
-        await self._serial_audio_driver.push_tx_pcm(payload)
+        await self._serial_audio_driver._push_tx_pcm(payload)
 
     async def stop_audio_tx_opus(self) -> None:
         await self._serial_audio_driver.stop_tx()
@@ -110,7 +110,7 @@ class Icom7610SerialRadio(_IcomSerialRadioBase):
                 f"PCM frame size mismatch: expected {expected} bytes "
                 f"({frame_ms}ms at {sample_rate}Hz, {channels}ch s16le), got {len(frame)}."
             )
-        await self._serial_audio_driver.push_tx_pcm(frame)
+        await self._serial_audio_driver._push_tx_pcm(frame)
 
     async def stop_audio_tx_pcm(self) -> None:
         await self.stop_audio_tx_opus()
