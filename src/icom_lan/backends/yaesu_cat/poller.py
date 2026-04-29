@@ -26,7 +26,6 @@ import logging
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
-from ...commands import hz_to_table_index, table_index_to_hz
 from ...exceptions import ConnectionError as RadioConnectionError
 
 if TYPE_CHECKING:
@@ -92,47 +91,6 @@ class YaesuCatPoller:
         # EMA state per receiver (None until first sample).
         self._ema_s_main: float | None = None
         self._ema_s_sub: float | None = None
-
-    # ------------------------------------------------------------------
-    # Filter width table helpers
-
-    def _get_filter_table(self) -> tuple[int, ...] | None:
-        """Return the filter-width table for the current mode, or None."""
-        profile = self._radio.profile
-        if profile.filter_width_encoding != "table_index":
-            return None
-        mode = self._radio.radio_state.main.mode
-        rule = profile.resolve_filter_rule(mode)
-        if rule and rule.table:
-            return rule.table
-        return None
-
-    def _index_to_hz(self, index: int) -> int:
-        """Convert a raw filter index to Hz (pass-through if no table)."""
-        profile = self._radio.profile
-        mode = self._radio.radio_state.main.mode
-        rule = (
-            profile.resolve_filter_rule(mode)
-            if profile.filter_width_encoding == "table_index"
-            else None
-        )
-        if rule and rule.fixed and rule.defaults:
-            return rule.defaults[0]
-        table = self._get_filter_table()
-        if table is None:
-            return index
-        try:
-            return table_index_to_hz(index, table=table)
-        except ValueError:
-            logger.debug("filter index %d outside table, returning raw", index)
-            return index
-
-    def _hz_to_index(self, hz: int) -> int:
-        """Convert Hz to a filter index (pass-through if no table)."""
-        table = self._get_filter_table()
-        if table is None:
-            return hz
-        return hz_to_table_index(hz, table=table)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -424,7 +382,7 @@ class YaesuCatPoller:
                 case SetFilter(filter_num=_num):
                     pass  # FTX-1 uses filter_width, not discrete filter numbers
                 case SetFilterWidth(width=width):
-                    await radio.set_filter_width(self._hz_to_index(width))
+                    await radio.set_filter_width(width)
                 case SetFilterShape(shape=_shape):
                     pass  # Not available on FTX-1
                 case SetPbtInner() | SetPbtOuter():
@@ -556,8 +514,9 @@ class YaesuCatPoller:
 
         # Filter width — in medium poll for responsive knob tracking
         if "filter_width" in self._caps:
-            raw_index = await self._radio.get_filter_width(0)
-            self._radio.radio_state.main.filter_width = self._index_to_hz(raw_index)
+            self._radio.radio_state.main.filter_width = (
+                await self._radio.get_filter_width(0)
+            )
 
         self._callback(self._radio.radio_state)
 
