@@ -147,8 +147,10 @@ class IcomCommander:
         try:
             while True:
                 _, _, item = await self._queue.get()
+                execute_task: asyncio.Future[CivFrame | None] | None = None
                 try:
-                    # Skip abandoned requests (caller cancelled/timed out).
+                    # Skip abandoned requests (caller cancelled/timed out
+                    # before worker even started this item).
                     if item.future.done():
                         continue
 
@@ -161,11 +163,48 @@ class IcomCommander:
                     if item.future.done():
                         continue
 
-                    resp = await self._execute(item.payload, item.wait_response)
+                    # Run execute as an inner task so that a caller-side
+                    # timeout (asyncio.wait_for in `send`) cancels JUST this
+                    # in-flight command and the worker can move on, instead
+                    # of blocking on a dropped reply while the rest of the
+                    # queue piles up with pre-cancelled futures (#1188).
+                    execute_task = asyncio.ensure_future(
+                        self._execute(item.payload, item.wait_response)
+                    )
+                    inflight = execute_task
+
+                    def _propagate_cancel(
+                        f: asyncio.Future[CivFrame | None],
+                        t: asyncio.Future[CivFrame | None] = inflight,
+                    ) -> None:
+                        # Caller's wait_for fired, or caller went away.
+                        # Cancel the in-flight execute so the worker
+                        # unblocks immediately.
+                        if f.cancelled() and not t.done():
+                            t.cancel()
+
+                    item.future.add_done_callback(_propagate_cancel)
+
+                    try:
+                        resp = await execute_task
+                    except asyncio.CancelledError:
+                        # Distinguish caller-driven cancel from worker
+                        # teardown (c.stop()): on caller-cancel, item.future
+                        # is already in cancelled state; on worker stop, the
+                        # outer except below handles it.
+                        if item.future.cancelled():
+                            # Packet was sent on the wire — honor pacing
+                            # for the next item.
+                            self._last_send = asyncio.get_running_loop().time()
+                            continue
+                        raise
+
                     self._last_send = asyncio.get_running_loop().time()
                     if not item.future.done():
                         item.future.set_result(resp)
                 except asyncio.CancelledError:
+                    if execute_task is not None and not execute_task.done():
+                        execute_task.cancel()
                     if not item.future.done():
                         item.future.set_exception(ConnectionError("Commander stopped"))
                     raise

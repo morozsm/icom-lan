@@ -141,6 +141,64 @@ async def test_stop_fails_inflight_command() -> None:
 
 
 @pytest.mark.asyncio
+async def test_caller_timeout_cancels_inflight_and_unblocks_queue() -> None:
+    """A caller-side timeout must cancel the in-flight CI-V command at the
+    worker and let queued items proceed.
+
+    Regression test for #1188: PR #1186 wrapped scope-getter calls with
+    ``asyncio.wait_for(getter(), 0.2)``.  When ``wait_for`` fired, only the
+    caller future was cancelled — the worker was still ``await``-ing the
+    in-flight ``_execute`` for the (dropped) response.  Subsequent items
+    were enqueued while the worker was blocked, and their own ``wait_for``
+    timers expired before they reached the head of the queue, so the worker
+    saw their futures as already cancelled and skipped them.  Effect: a
+    single dropped reply caused the rest of ``_fetch_scope_controls()`` to
+    be silently dropped.
+
+    Fix: worker runs ``_execute`` as an inner task and cancels it when the
+    caller future is cancelled, so the queue keeps draining at full speed.
+    """
+    seen: list[bytes] = []
+    started = asyncio.Event()
+    block = asyncio.Event()
+
+    async def execute(cmd: bytes, wait_response: bool = True) -> CivFrame | None:
+        seen.append(cmd)
+        if cmd == b"slow":
+            started.set()
+            await block.wait()
+        return CivFrame(to_addr=0xE0, from_addr=0x98, command=0xFB, sub=None, data=b"")
+
+    c = IcomCommander(execute, min_interval=0.0)
+    c.start()
+    try:
+        # First command hangs; caller waits with a tight timeout.
+        slow = asyncio.create_task(c.send(b"slow", timeout=0.05))
+        await asyncio.wait_for(started.wait(), timeout=1.0)
+
+        # Enqueue 11 fast followers (no per-call timeout).  Without the
+        # fix, these get pre-cancelled while the worker is stuck on
+        # ``slow`` — only ``b"slow"`` would land in ``seen``.
+        fast = [asyncio.create_task(c.send(f"fast-{i}".encode())) for i in range(11)]
+
+        # Slow command must surface as TimeoutError to the caller.
+        with pytest.raises(asyncio.TimeoutError):
+            await slow
+
+        # All 11 fast followers must complete normally and reach execute().
+        await asyncio.wait_for(asyncio.gather(*fast), timeout=2.0)
+    finally:
+        block.set()  # unblock any leftover slow execute (defensive)
+        await c.stop()
+
+    # Worker dispatched all 12 items: the slow one (cancelled in-flight)
+    # plus all 11 fast followers.
+    assert seen[0] == b"slow"
+    assert sorted(seen[1:]) == sorted(f"fast-{i}".encode() for i in range(11))
+    assert len(seen) == 12
+
+
+@pytest.mark.asyncio
 async def test_cancelled_queued_request_is_not_executed() -> None:
     started = asyncio.Event()
     release = asyncio.Event()
