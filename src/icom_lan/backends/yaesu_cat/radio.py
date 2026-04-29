@@ -1648,18 +1648,18 @@ class YaesuCatRadio:
         (CO03), so this adapter degrades the 3-mode form onto the bool form:
 
         - mode 0 → APF off.
-        - mode 1 → APF on; centre frequency set to 0 (CW-pitch centred,
-          the natural "soft" default).
+        - mode 1 → APF on. The centre frequency is *not* touched here so
+          a previously-tuned APF frequency survives an off/on toggle. Set
+          it explicitly via `set_apf_freq()` if a particular pitch is
+          required.
         - mode 2 → not supported; the hardware has no separate "sharp" mode.
 
-        Delegates to the backend-internal `set_apf` / `set_apf_freq` CAT
-        primitives.
+        Delegates to the backend-internal `set_apf` CAT primitive.
         """
         if mode == 0:
             await self.set_apf(False, receiver=receiver)
         elif mode == 1:
             await self.set_apf(True, receiver=receiver)
-            await self.set_apf_freq(0, receiver=receiver)
         else:
             raise NotImplementedError(
                 f"APF mode {mode} (sharp) not supported on Yaesu — "
