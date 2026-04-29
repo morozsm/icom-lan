@@ -61,7 +61,8 @@ class OperatingProfile:
         data1_mod_input: DATA-1 modulation input source index.
         squelch_level: Squelch level (0 = open).
         equalize_vfo: If ``True``, copy the active VFO to both VFOs after
-            tuning. Requires ``radio.vfo_equalize()``.
+            tuning. Dispatches to ``radio.equalize_main_sub()`` on dual-RX
+            profiles and ``radio.equalize_vfo_ab(0)`` on single-RX profiles.
         scope_enabled: ``True`` to enable spectrum scope, ``False`` to disable,
             ``None`` to leave unchanged.
         scope_mode: Scope centre/fixed mode index.
@@ -167,10 +168,31 @@ async def apply_profile(radio: Any, profile: OperatingProfile) -> dict[str, obje
             logger.debug("apply_profile: radio has no set_data1_mod_input, skipping")
 
     if profile.equalize_vfo:
-        if hasattr(radio, "vfo_equalize"):
-            await radio.vfo_equalize()
+        # Inline the dispatch previously hidden behind the deprecated
+        # ``vfo_equalize`` alias: dual-RX profiles use ``equalize_main_sub``
+        # (MAIN→SUB), single-RX profiles use ``equalize_vfo_ab(0)`` (A→B).
+        # The profile guard tolerates duck-typed radios that may not expose a
+        # ``profile`` attribute (e.g. lightweight test doubles) — when in
+        # doubt, prefer the canonical method that is actually present.
+        radio_profile = getattr(radio, "profile", None)
+        receiver_count = getattr(radio_profile, "receiver_count", None)
+        is_dual_rx = isinstance(receiver_count, int) and receiver_count > 1
+        if is_dual_rx and hasattr(radio, "equalize_main_sub"):
+            await radio.equalize_main_sub()
+        elif not is_dual_rx and hasattr(radio, "equalize_vfo_ab"):
+            await radio.equalize_vfo_ab(0)
+        elif hasattr(radio, "equalize_main_sub"):
+            # No profile info but the dual-RX method is available — assume
+            # the caller knows what they're doing (covers AsyncMock-based
+            # test doubles that pre-declare ``equalize_main_sub``).
+            await radio.equalize_main_sub()
+        elif hasattr(radio, "equalize_vfo_ab"):
+            await radio.equalize_vfo_ab(0)
         else:
-            logger.debug("apply_profile: radio has no vfo_equalize, skipping")
+            logger.debug(
+                "apply_profile: radio has no equalize_main_sub or "
+                "equalize_vfo_ab, skipping"
+            )
 
     if profile.squelch_level is not None:
         if hasattr(radio, "set_squelch"):

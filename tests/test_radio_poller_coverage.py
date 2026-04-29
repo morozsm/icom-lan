@@ -39,6 +39,7 @@ from icom_lan.web.radio_poller import (
     SetScopeRbw,
     SetScopeVbw,
     SwitchScopeReceiver,
+    VfoEqualize,
     VfoSwap,
 )
 
@@ -95,8 +96,9 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_usb_mod_level = AsyncMock()
     radio.set_lan_mod_level = AsyncMock()
     radio.set_compressor = AsyncMock()
-    radio.vfo_exchange = AsyncMock()
-    radio.vfo_equalize = AsyncMock()
+    # Canonical dual-RX VFO methods (radio_poller calls these directly post-#1113)
+    # ``equalize_main_sub`` / ``swap_main_sub`` are already wired above for
+    # QuickDwTrigger / QuickSplitTrigger composites.
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
     radio.on_scope_data = MagicMock()
@@ -255,6 +257,15 @@ async def test_execute_event_emitting_commands_and_vfo_paths() -> None:
 
     await poller._execute(VfoSwap())  # noqa: SLF001
     assert any(name == "vfo_swapped" for name, _ in events)
+    # #1113: poller now calls canonical ``swap_main_sub`` directly; the
+    # deprecated ``vfo_exchange`` alias must no longer be touched here.
+    radio.swap_main_sub.assert_awaited_once_with()
+
+    # #1113: VfoEqualize routes to canonical ``equalize_main_sub``; the
+    # deprecated ``vfo_equalize`` alias must no longer be touched here.
+    eq_before = radio.equalize_main_sub.await_count
+    await poller._execute(VfoEqualize())  # noqa: SLF001
+    assert radio.equalize_main_sub.await_count == eq_before + 1
 
     await poller._execute(EnableScope(policy="fast"))  # noqa: SLF001
     await poller._execute(DisableScope())  # noqa: SLF001

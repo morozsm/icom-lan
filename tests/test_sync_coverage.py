@@ -65,8 +65,8 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.set_rf_power = AsyncMock()
     r._radio.set_ptt = AsyncMock()
     r._radio.set_vfo = AsyncMock()
-    r._radio.vfo_equalize = AsyncMock()
-    r._radio.vfo_exchange = AsyncMock()
+    r._radio.equalize_main_sub = AsyncMock()
+    r._radio.swap_main_sub = AsyncMock()
     r._radio.set_split_mode = AsyncMock()
     r._radio.set_attenuator_level = AsyncMock()
     r._radio.set_attenuator = AsyncMock()
@@ -135,8 +135,9 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.set_rf_power.assert_awaited_once_with(150)
     r._radio.set_ptt.assert_awaited_once_with(True)
     r._radio.set_vfo.assert_awaited_once_with("B")
-    r._radio.vfo_equalize.assert_awaited_once()
-    r._radio.vfo_exchange.assert_awaited_once()
+    # IC-7610 (default profile, receiver_count=2) → canonical dual-RX methods
+    r._radio.equalize_main_sub.assert_awaited_once()
+    r._radio.swap_main_sub.assert_awaited_once()
     r._radio.set_split_mode.assert_awaited_once_with(True)
     r._radio.set_attenuator_level.assert_awaited_once_with(18)
     r._radio.set_attenuator.assert_awaited_once_with(True)
@@ -155,6 +156,35 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     )
     r._radio.set_scope_mode.assert_awaited_once_with(3)
     r._radio.set_scope_span.assert_awaited_once_with(6)
+    r._loop.close()
+
+
+def test_vfo_dispatch_single_rx_uses_ab_methods() -> None:
+    """On single-RX profiles (e.g. IC-7300, addr=0x94), ``vfo_equalize`` /
+    ``vfo_exchange`` route to ``equalize_vfo_ab(0)`` / ``swap_vfo_ab(0)``.
+    """
+    r = IcomRadio("127.0.0.1", radio_addr=0x94)  # IC-7300 → receiver_count=1
+    r._radio.connect = AsyncMock()
+    r._radio.disconnect = AsyncMock()
+    # Make radio appear connected so guards do not raise
+    r._radio._ctrl_transport = MagicMock()
+    r._radio._ctrl_transport._udp_transport = MagicMock()
+    r._radio._civ_transport = MagicMock()
+    r._radio._conn_state = RadioConnectionState.CONNECTED
+    r._radio.equalize_vfo_ab = AsyncMock()
+    r._radio.swap_vfo_ab = AsyncMock()
+    # Canonical dual-RX methods must NOT be touched on a single-RX rig
+    r._radio.equalize_main_sub = AsyncMock()
+    r._radio.swap_main_sub = AsyncMock()
+
+    assert r._radio.profile.receiver_count == 1
+    r.vfo_equalize()
+    r.vfo_exchange()
+
+    r._radio.equalize_vfo_ab.assert_awaited_once_with(0)
+    r._radio.swap_vfo_ab.assert_awaited_once_with(0)
+    r._radio.equalize_main_sub.assert_not_awaited()
+    r._radio.swap_main_sub.assert_not_awaited()
     r._loop.close()
 
 
