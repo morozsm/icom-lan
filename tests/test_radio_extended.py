@@ -163,6 +163,32 @@ class TestSplitMode:
         mock_transport.queue_response(_wrap_civ_in_udp(civ))
         assert await radio.get_split() is False
 
+    @pytest.mark.asyncio
+    async def test_get_split_falls_back_to_cache_on_no_response(
+        self, radio: IcomRadio
+    ) -> None:
+        """Issue #1143: ``get_split`` honors documented cache fallback when
+        ``_send_civ_expect`` raises ``CommandError`` (e.g. no response on
+        transient link issues / unsupported reads).
+        """
+        radio._last_split = True
+        radio._send_civ_expect = AsyncMock(  # type: ignore[method-assign]
+            side_effect=CommandError("No response for get_split")
+        )
+        assert await radio.get_split() is True
+
+    @pytest.mark.asyncio
+    async def test_get_split_no_response_no_cache_returns_false(
+        self, radio: IcomRadio
+    ) -> None:
+        """When there is no cached value and no response, return ``False``
+        instead of propagating ``CommandError``."""
+        radio._last_split = None
+        radio._send_civ_expect = AsyncMock(  # type: ignore[method-assign]
+            side_effect=CommandError("No response for get_split")
+        )
+        assert await radio.get_split() is False
+
 
 # ---------------------------------------------------------------------------
 # Attenuator

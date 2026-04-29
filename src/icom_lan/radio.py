@@ -2897,7 +2897,15 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         """
         self._check_connected()
         civ = get_split(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, label="get_split")
+        try:
+            resp = await self._send_civ_expect(civ, label="get_split")
+        except CommandError:
+            if self._last_split is not None:
+                logger.debug(
+                    "get_split: no response, returning cached %s", self._last_split
+                )
+                return self._last_split
+            return False
         if resp.data:
             on = bool(resp.data[0])
             self._last_split = on
