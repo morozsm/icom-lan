@@ -1787,3 +1787,273 @@ class TestIFBulkQuery:
         await radio.connect()  # should not raise
 
         assert radio.connected
+
+
+# ---------------------------------------------------------------------------
+# ReceiverBankCapable / VfoSlotCapable (#1171)
+# ---------------------------------------------------------------------------
+
+
+from icom_lan.backends.yaesu_cat.parser import CatCommandParser  # noqa: E402
+from icom_lan.command_spec import CatCommandSpec  # noqa: E402
+from icom_lan.radio_protocol import (  # noqa: E402
+    ReceiverBankCapable,
+    VfoSlotCapable,
+)
+
+
+@pytest.fixture()
+def single_rx_radio(config):
+    """YaesuCatRadio mutated to model a single-RX Yaesu CAT rig.
+
+    Lab599 TX-500 (Kenwood CAT) and FT-710 / FT-991A (Yaesu CAT, no
+    in-tree TOML yet) all expose a single receiver with VFO A/B routed
+    via ``FR;`` (``FR0;`` = VFO-A, ``FR1;`` = VFO-B).  We model that by
+    cloning the FTX-1 config and overriding ``receiver_count``,
+    ``vfo_scheme`` and the ``set_vfo_select`` / ``get_vfo_select``
+    command templates to point at ``FR;`` instead of ``VS;``.
+    """
+    cfg = config
+    new_commands = dict(cfg.commands)
+    new_commands["get_vfo_select"] = CatCommandSpec(read="FR;", parse="FR{vfo};")
+    new_commands["set_vfo_select"] = CatCommandSpec(write="FR{vfo};")
+    object.__setattr__(cfg, "commands", new_commands)
+    object.__setattr__(cfg, "receiver_count", 1)
+    object.__setattr__(cfg, "vfo_scheme", "ab")
+    r = YaesuCatRadio("/dev/null", profile=cfg)
+    # Rebuild parser cache so the swapped templates take effect.
+    r._parsers["get_vfo_select"] = CatCommandParser("FR{vfo};")
+    r._transport._connected = True
+    return r
+
+
+def test_receiver_count_ftx1(radio):
+    """FTX-1 profile reports receiver_count == 2 (MAIN + SUB)."""
+    assert radio.receiver_count == 2
+
+
+def test_receiver_count_single_rx(single_rx_radio):
+    """Single-RX synthetic profile reports receiver_count == 1."""
+    assert single_rx_radio.receiver_count == 1
+
+
+def test_protocol_satisfaction_receiver_bank(radio):
+    """YaesuCatRadio satisfies ReceiverBankCapable on FTX-1."""
+    assert isinstance(radio, ReceiverBankCapable)
+
+
+def test_protocol_satisfaction_vfo_slot(radio):
+    """YaesuCatRadio satisfies VfoSlotCapable on FTX-1."""
+    assert isinstance(radio, VfoSlotCapable)
+
+
+def test_protocol_satisfaction_single_rx(single_rx_radio):
+    """Single-RX YaesuCatRadio satisfies both protocols."""
+    assert isinstance(single_rx_radio, ReceiverBankCapable)
+    assert isinstance(single_rx_radio, VfoSlotCapable)
+
+
+# -- ReceiverBankCapable.select_receiver / get_active_receiver -------------
+
+
+@pytest.mark.asyncio
+async def test_select_receiver_main_writes_vs0(connected_radio):
+    """select_receiver(0) on dual-RX FTX-1 emits VS0;."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.select_receiver(0)
+    connected_radio._transport.write.assert_called_once_with("VS0;")
+
+
+@pytest.mark.asyncio
+async def test_select_receiver_sub_writes_vs1(connected_radio):
+    """select_receiver(1) on dual-RX FTX-1 emits VS1;."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.select_receiver(1)
+    connected_radio._transport.write.assert_called_once_with("VS1;")
+
+
+@pytest.mark.asyncio
+async def test_select_receiver_by_name_main(connected_radio):
+    """select_receiver('main') normalizes to index 0 → VS0;."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.select_receiver("main")
+    connected_radio._transport.write.assert_called_once_with("VS0;")
+
+
+@pytest.mark.asyncio
+async def test_select_receiver_by_name_sub_case_insensitive(connected_radio):
+    """select_receiver('SUB') is case-insensitive → VS1;."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.select_receiver("SUB")
+    connected_radio._transport.write.assert_called_once_with("VS1;")
+
+
+@pytest.mark.asyncio
+async def test_select_receiver_unknown_name_raises(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    with pytest.raises(ValueError, match="unknown receiver name"):
+        await connected_radio.select_receiver("tertiary")
+    connected_radio._transport.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_select_receiver_out_of_range_raises(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    with pytest.raises(ValueError, match="out of range"):
+        await connected_radio.select_receiver(2)
+    connected_radio._transport.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_select_receiver_single_rx_zero_is_noop(single_rx_radio):
+    """On single-RX rigs select_receiver(0) is a no-op (no wire traffic)."""
+    single_rx_radio._transport.write = AsyncMock()
+    await single_rx_radio.select_receiver(0)
+    single_rx_radio._transport.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_select_receiver_single_rx_nonzero_raises(single_rx_radio):
+    single_rx_radio._transport.write = AsyncMock()
+    with pytest.raises(ValueError, match="out of range"):
+        await single_rx_radio.select_receiver(1)
+    single_rx_radio._transport.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_active_receiver_dual_rx(connected_radio):
+    """get_active_receiver parses VS1; → 1 on dual-RX FTX-1."""
+    connected_radio._transport.query = AsyncMock(return_value="VS1")
+    assert await connected_radio.get_active_receiver() == 1
+    connected_radio._transport.query.assert_called_once_with("VS;")
+
+
+@pytest.mark.asyncio
+async def test_get_active_receiver_single_rx_returns_zero(single_rx_radio):
+    """Single-RX returns 0 without wire traffic."""
+    single_rx_radio._transport.query = AsyncMock()
+    assert await single_rx_radio.get_active_receiver() == 0
+    single_rx_radio._transport.query.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_select_receiver_roundtrip_dual_rx(connected_radio):
+    """select_receiver(1) → get_active_receiver returns 1 (mocked)."""
+    connected_radio._transport.write = AsyncMock()
+    connected_radio._transport.query = AsyncMock(return_value="VS1")
+    await connected_radio.select_receiver(1)
+    assert await connected_radio.get_active_receiver() == 1
+
+
+# -- VfoSlotCapable on FTX-1 (ab_shared scheme — raises) -------------------
+
+
+@pytest.mark.asyncio
+async def test_get_vfo_slot_raises_on_ftx1(connected_radio):
+    """FTX-1 has no per-receiver A/B; get_vfo_slot raises NotImplementedError."""
+    with pytest.raises(NotImplementedError, match="ab_shared"):
+        await connected_radio.get_vfo_slot()
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_slot_raises_on_ftx1(connected_radio):
+    with pytest.raises(NotImplementedError, match="ab_shared"):
+        await connected_radio.set_vfo_slot("A")
+
+
+@pytest.mark.asyncio
+async def test_swap_vfo_ab_raises_on_ftx1(connected_radio):
+    """FTX-1 AB;/BA; copy MAIN↔SUB, not A↔B; swap_vfo_ab raises."""
+    with pytest.raises(NotImplementedError, match="no symmetric"):
+        await connected_radio.swap_vfo_ab()
+
+
+@pytest.mark.asyncio
+async def test_equalize_vfo_ab_raises_on_ftx1(connected_radio):
+    with pytest.raises(NotImplementedError, match="no per-receiver"):
+        await connected_radio.equalize_vfo_ab()
+
+
+# -- VfoSlotCapable on single-RX (FR; scheme — works) ----------------------
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_slot_a_writes_fr0(single_rx_radio):
+    """set_vfo_slot('A') emits FR0; on a single-RX rig."""
+    single_rx_radio._transport.write = AsyncMock()
+    await single_rx_radio.set_vfo_slot("A")
+    single_rx_radio._transport.write.assert_called_once_with("FR0;")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_slot_b_writes_fr1(single_rx_radio):
+    """set_vfo_slot('B') emits FR1;."""
+    single_rx_radio._transport.write = AsyncMock()
+    await single_rx_radio.set_vfo_slot("B")
+    single_rx_radio._transport.write.assert_called_once_with("FR1;")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_slot_case_insensitive(single_rx_radio):
+    """Lower-case slot names are accepted."""
+    single_rx_radio._transport.write = AsyncMock()
+    await single_rx_radio.set_vfo_slot("b")
+    single_rx_radio._transport.write.assert_called_once_with("FR1;")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_slot_invalid_raises(single_rx_radio):
+    single_rx_radio._transport.write = AsyncMock()
+    with pytest.raises(ValueError, match="slot must be 'A' or 'B'"):
+        await single_rx_radio.set_vfo_slot("C")
+    single_rx_radio._transport.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_vfo_slot_a(single_rx_radio):
+    """get_vfo_slot reads FR; → 'A' when radio reports FR0;."""
+    single_rx_radio._transport.query = AsyncMock(return_value="FR0")
+    assert await single_rx_radio.get_vfo_slot() == "A"
+    single_rx_radio._transport.query.assert_called_once_with("FR;")
+
+
+@pytest.mark.asyncio
+async def test_get_vfo_slot_b(single_rx_radio):
+    single_rx_radio._transport.query = AsyncMock(return_value="FR1")
+    assert await single_rx_radio.get_vfo_slot() == "B"
+
+
+@pytest.mark.asyncio
+async def test_set_get_vfo_slot_roundtrip(single_rx_radio):
+    """set_vfo_slot('B') then get_vfo_slot returns 'B' (mocked)."""
+    single_rx_radio._transport.write = AsyncMock()
+    single_rx_radio._transport.query = AsyncMock(return_value="FR1")
+    await single_rx_radio.set_vfo_slot("B")
+    assert await single_rx_radio.get_vfo_slot() == "B"
+
+
+@pytest.mark.asyncio
+async def test_swap_vfo_ab_raises_on_single_rx(single_rx_radio):
+    """Yaesu CAT has no A↔B swap primitive even on single-RX rigs."""
+    with pytest.raises(NotImplementedError, match="no symmetric"):
+        await single_rx_radio.swap_vfo_ab()
+
+
+@pytest.mark.asyncio
+async def test_equalize_vfo_ab_raises_on_single_rx(single_rx_radio):
+    with pytest.raises(NotImplementedError, match="no per-receiver"):
+        await single_rx_radio.equalize_vfo_ab()
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_slot_rejects_bad_receiver_index(single_rx_radio):
+    single_rx_radio._transport.write = AsyncMock()
+    with pytest.raises(ValueError, match="out of range"):
+        await single_rx_radio.set_vfo_slot("A", receiver=1)
+    single_rx_radio._transport.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_vfo_slot_rejects_bad_receiver_index(single_rx_radio):
+    with pytest.raises(ValueError, match="out of range"):
+        await single_rx_radio.get_vfo_slot(receiver=1)
