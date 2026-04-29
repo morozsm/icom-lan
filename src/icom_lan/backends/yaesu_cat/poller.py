@@ -350,7 +350,12 @@ class YaesuCatPoller:
                     await radio.set_squelch(level)
                 case SetMicGain(level=level):
                     await radio.set_mic_gain(level)
-                case SetPower(level=level):
+                case SetPower(level=level, unit=unit):
+                    if unit != "watts":
+                        raise ValueError(
+                            f"Yaesu backend expects SetPower unit='watts' "
+                            f"(PC command); got unit={unit!r}"
+                        )
                     await radio.set_power(level)
                 case SetDriveGain(level=level):
                     await radio.set_drive_gain(level)

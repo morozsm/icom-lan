@@ -840,7 +840,12 @@ class RadioPoller:
                         logger.info("poller: RX audio stream restarted")
                     except Exception as e:
                         logger.debug("poller: audio stream transition failed: %s", e)
-            case SetPower(level=level):
+            case SetPower(level=level, unit=unit):
+                if unit != "raw_255":
+                    raise ValueError(
+                        f"Icom backend expects SetPower unit='raw_255' "
+                        f"(0-255 CI-V scale); got unit={unit!r}"
+                    )
                 if CAP_POWER_CONTROL in self._caps:
                     await radio.set_rf_power(level)
             case SetRfGain(level=level, receiver=rx):
