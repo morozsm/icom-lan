@@ -1309,6 +1309,35 @@ async def test_get_processor_level_no_last_drive_gain_attribute(connected_radio)
     assert not hasattr(connected_radio, "_last_drive_gain")
 
 
+@pytest.mark.asyncio
+async def test_set_compressor_level_delegates_to_set_processor_level(connected_radio):
+    """set_compressor_level is a thin alias for set_processor_level (issue #1098)."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_compressor_level(75)
+    connected_radio._transport.write.assert_called_once_with("PL075;")
+
+
+@pytest.mark.asyncio
+async def test_get_compressor_level_delegates_to_get_processor_level(connected_radio):
+    """get_compressor_level is a thin alias for get_processor_level (issue #1098)."""
+    connected_radio._transport.query = AsyncMock(return_value="PL045")
+    level = await connected_radio.get_compressor_level()
+    assert level == 45
+    connected_radio._transport.query.assert_called_once_with("PL;")
+
+
+@pytest.mark.asyncio
+async def test_compressor_level_round_trip(connected_radio):
+    """Round-trip set→get reports the value just written (was 0 before #1098)."""
+    connected_radio._transport.write = AsyncMock()
+    connected_radio._transport.query = AsyncMock(return_value="PL060")
+    await connected_radio.set_compressor_level(60)
+    level = await connected_radio.get_compressor_level()
+    assert level == 60
+    connected_radio._transport.write.assert_called_once_with("PL060;")
+    connected_radio._transport.query.assert_called_once_with("PL;")
+
+
 # ---------------------------------------------------------------------------
 # Bug #550: capabilities must not advertise unimplemented features
 # ---------------------------------------------------------------------------
