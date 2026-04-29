@@ -338,7 +338,7 @@ Bidirectional PCM bridge between radio and virtual audio devices:
 - RX: opus → decode → PCM → sounddevice OutputStream → BlackHole/Loopback
 - TX: sounddevice InputStream → noise gate → opus encode → radio
 - Uses AudioBus subscription (shares RX stream with other consumers)
-- Optional dependency: `pip install icom-lan[bridge]` (sounddevice + numpy + opuslib)
+- Dependencies: `sounddevice`, `numpy`, `opuslib` ship with the core install (since v0.19, #1090)
 
 ### `web/` — Built-in Web UI
 
@@ -749,20 +749,30 @@ while separating concerns. `IcomRadio` inherits from `ControlPhaseMixin`,
 ## Dependencies
 
 ```
-icom-lan (runtime)
-└── Python 3.11+ stdlib only
-    ├── asyncio, struct, socket, logging, dataclasses
+icom-lan (runtime, core install — since v0.19)
+├── pyserial, pyserial-asyncio (CI-V serial transport)
+├── sounddevice (PortAudio bindings — virtual-audio bridge, USB audio devices)
+├── numpy (PCM frame processing, DSP)
+└── opuslib (Opus codec for decode/encode)
 
 icom-lan[dev]
-├── pytest, pytest-asyncio
+├── pytest, pytest-asyncio, pytest-cov, pytest-timeout
+├── ruff, mypy
 
 icom-lan[scope]
 └── Pillow (for scope image rendering)
 
-icom-lan[bridge]
-├── sounddevice (PortAudio bindings)
-├── numpy (PCM frame processing)
-└── opuslib (Opus codec for decode/encode)
+icom-lan[dsp]
+└── scipy (advanced DSP — anti-aliasing FIR filter design, etc.)
+
+icom-lan[webrtc]
+└── aiortc (WebRTC audio transport)
+
+icom-lan[tls]
+└── cryptography (auto-generated HTTPS certs)
+
+icom-lan[audio]   # no-op alias preserved for backwards compat (#1090)
+icom-lan[bridge]  # no-op alias preserved for backwards compat (#1090)
 ```
 
 ## High-Level Flows

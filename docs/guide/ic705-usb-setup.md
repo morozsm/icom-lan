@@ -49,17 +49,15 @@ This guide shows how to control the IC-705 via **USB serial CI-V + USB audio dev
 ### 1. Install icom-lan
 
 ```bash
+# Core install — includes serial CI-V (pyserial), USB audio RX/TX,
+# audio-device listing (sounddevice + numpy + opuslib).
 pip install icom-lan
-
-# For serial CI-V control:
-pip install icom-lan
-
-# For USB audio RX/TX and audio-device listing:
-pip install 'icom-lan[serial,bridge]'
-
-# serial: pyserial + pyserial-asyncio
-# bridge: sounddevice + numpy + opuslib
 ```
+
+!!! note
+    Since v0.19 the audio-bridge stack (`sounddevice`, `numpy`, `opuslib`)
+    is part of the core install. The legacy `[bridge]` and `[audio]` extras
+    still resolve but are now no-op aliases.
 
 ### 2. Connect the Radio
 
@@ -97,11 +95,8 @@ IC-705:
 icom-lan --list-audio-devices
 ```
 
-This command requires the optional bridge dependencies:
-
-```bash
-pip install 'icom-lan[bridge]'
-```
+Audio-device listing requires `sounddevice`, which ships with the core
+install since v0.19 (`pip install icom-lan`).
 
 **Example output:**
 
@@ -300,7 +295,7 @@ ls -l /dev/cu.*
 **Symptoms:** CI-V control works but no audio in browser/WSJT-X
 
 **Solutions:**
-- Install bridge dependencies: `pip install 'icom-lan[bridge]'`
+- Make sure you're on icom-lan v0.19+ (audio deps ship with the core install; for older versions run `pip install 'icom-lan[bridge]'`)
 - Verify `USB Audio RX/TX = Enabled` in radio settings
 - Check audio device names with `icom-lan --list-audio-devices`
 - macOS may require microphone/audio permissions for the terminal app

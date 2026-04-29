@@ -745,19 +745,14 @@ name = "icom-lan"
 version = "0.18.0"
 source = { editable = "." }
 dependencies = [
+    { name = "numpy" },
+    { name = "opuslib" },
     { name = "pyserial" },
     { name = "pyserial-asyncio" },
+    { name = "sounddevice" },
 ]
 
 [package.optional-dependencies]
-audio = [
-    { name = "opuslib" },
-]
-bridge = [
-    { name = "numpy" },
-    { name = "opuslib" },
-    { name = "sounddevice" },
-]
 dev = [
     { name = "mypy" },
     { name = "pytest" },
@@ -767,7 +762,6 @@ dev = [
     { name = "ruff" },
 ]
 dsp = [
-    { name = "numpy" },
     { name = "scipy" },
 ]
 scope = [
@@ -799,10 +793,8 @@ requires-dist = [
     { name = "aiortc", marker = "extra == 'webrtc'", specifier = ">=1.9" },
     { name = "cryptography", marker = "extra == 'tls'", specifier = ">=41.0" },
     { name = "mypy", marker = "extra == 'dev'" },
-    { name = "numpy", marker = "extra == 'bridge'" },
-    { name = "numpy", marker = "extra == 'dsp'", specifier = ">=1.24" },
-    { name = "opuslib", marker = "extra == 'audio'" },
-    { name = "opuslib", marker = "extra == 'bridge'" },
+    { name = "numpy" },
+    { name = "opuslib" },
     { name = "pillow", marker = "extra == 'scope'", specifier = ">=10.0" },
     { name = "pyserial", specifier = ">=3.5" },
     { name = "pyserial-asyncio", specifier = ">=0.6" },
@@ -812,7 +804,7 @@ requires-dist = [
     { name = "pytest-timeout", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "scipy", marker = "extra == 'dsp'", specifier = ">=1.11" },
-    { name = "sounddevice", marker = "extra == 'bridge'" },
+    { name = "sounddevice" },
 ]
 provides-extras = ["audio", "bridge", "scope", "dsp", "webrtc", "tls", "dev"]
 
