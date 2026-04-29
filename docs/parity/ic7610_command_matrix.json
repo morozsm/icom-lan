@@ -792,10 +792,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_power",
-        "icom_lan.commands:set_power",
-        "icom_lan.radio:CoreRadio.get_power",
-        "icom_lan.radio:CoreRadio.set_power"
+        "icom_lan.commands:get_rf_power",
+        "icom_lan.commands:set_rf_power",
+        "icom_lan.radio:CoreRadio.get_rf_power",
+        "icom_lan.radio:CoreRadio.set_rf_power"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_power",
