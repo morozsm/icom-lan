@@ -837,11 +837,16 @@ def _build_parser() -> argparse.ArgumentParser:
     web_p.add_argument(
         "--bridge",
         dest="web_bridge",
-        default=None,
+        default="auto",
         nargs="?",
         const="auto",
         metavar="DEVICE",
-        help="Start audio bridge to virtual device (e.g. 'BlackHole 2ch', or omit for auto-detect)",
+        help=(
+            "Start audio bridge to virtual device (e.g. 'BlackHole 2ch'). "
+            "Default: auto-detect; if no loopback is found, the bridge is "
+            "skipped with a warning. Pass an explicit DEVICE to fail hard "
+            "when missing."
+        ),
     )
     web_p.add_argument(
         "--bridge-tx-device",
@@ -2635,11 +2640,18 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     config = WebConfig(**config_kwargs)
     server = WebServer(radio, config)
 
-    # Start audio bridge if requested
+    # Start audio bridge.
+    #
+    # Default behaviour (issue #1088): `--bridge` is auto-enabled. When a
+    # virtual loopback device is auto-detected, the bridge starts; if not,
+    # we log a warning and continue serving the web UI without it. Only an
+    # explicit `--bridge=<DEVICE>` (a concrete device name) preserves the
+    # previous fail-hard behaviour.
     bridge_device = getattr(args, "web_bridge", None)
     bridge_info: str | None = None
     if bridge_device is not None:
-        device_name = None if bridge_device == "auto" else bridge_device
+        is_auto = bridge_device == "auto"
+        device_name = None if is_auto else bridge_device
         tx_device_name = getattr(args, "web_bridge_tx_device", None)
         rx_only = getattr(args, "web_bridge_rx_only", False)
         bridge_label = getattr(args, "web_bridge_label", None)
@@ -2653,17 +2665,25 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
                 retry_base_delay=getattr(args, "web_bridge_retry_delay", 1.0),
             )
             direction = "RX only" if rx_only else "RX+TX"
-            bridge_info = f"active ({direction})"
-        except Exception as exc:
-            print(f"Error: audio bridge failed: {exc}", file=sys.stderr)
-            print(
-                "The --bridge flag was explicitly requested. "
-                "Fix the device configuration or remove --bridge to start without it.",
-                file=sys.stderr,
+            bridge_info = (
+                f"auto-enabled ({direction})" if is_auto else f"active ({direction})"
             )
-            return 1
+        except Exception as exc:
+            if is_auto:
+                # Graceful degrade — keep serving web UI without the bridge.
+                logger.warning("Audio bridge auto-start failed: %s", exc)
+                bridge_info = "loopback not found, bridge disabled"
+            else:
+                print(f"Error: audio bridge failed: {exc}", file=sys.stderr)
+                print(
+                    "The --bridge flag was explicitly requested with a device. "
+                    "Fix the device configuration or remove --bridge to start without it.",
+                    file=sys.stderr,
+                )
+                return 1
 
-    # Detect loopback device availability for hint (only when bridge not requested)
+    # Detect loopback device availability for hint (only when bridge not requested
+    # — i.e. when web_bridge was explicitly set to None, e.g. by tests).
     loopback_hint: str | None = None
     if bridge_device is None:
         loopback_hint = _detect_loopback_hint()

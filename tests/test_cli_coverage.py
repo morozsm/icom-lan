@@ -767,6 +767,79 @@ async def test_cmd_serve_and_cmd_web_paths(
         assert await _cmd_web(radio, args2) == 0
 
 
+def _web_cmd_args(*, web_bridge: str | None) -> argparse.Namespace:
+    """Build a minimal Namespace for _cmd_web with bridge-related fields."""
+    return argparse.Namespace(
+        web_host="127.0.0.1",
+        web_port=9092,
+        web_static_dir=None,
+        web_bridge=web_bridge,
+        web_bridge_tx_device=None,
+        web_bridge_rx_only=False,
+        web_bridge_label=None,
+        web_bridge_max_retries=1,
+        web_bridge_retry_delay=0.1,
+        web_rigctld=False,
+        dx_cluster=None,
+        callsign=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_cli_web_no_loopback_graceful(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Auto bridge with no loopback device: warn and continue (no exit 1)."""
+    radio = AsyncMock()
+
+    class FakeWebServer:
+        def __init__(self, _radio, cfg):
+            self.radio = _radio
+            self.cfg = cfg
+
+        async def start_audio_bridge(self, **_kwargs):
+            raise RuntimeError("no loopback device found")
+
+        async def serve_forever(self):
+            raise asyncio.CancelledError
+
+    args = _web_cmd_args(web_bridge="auto")
+    with patch("icom_lan.web.server.WebServer", FakeWebServer):
+        rc = await _cmd_web(radio, args)
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "loopback not found, bridge disabled" in out
+
+
+@pytest.mark.asyncio
+async def test_cli_web_explicit_bridge_still_fails(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Explicit --bridge=NonExistent must fail fast with clear error."""
+    radio = AsyncMock()
+
+    class FakeWebServer:
+        def __init__(self, _radio, cfg):
+            self.radio = _radio
+            self.cfg = cfg
+
+        async def start_audio_bridge(self, **_kwargs):
+            raise RuntimeError("device 'NonExistent' not found")
+
+        async def serve_forever(self):
+            raise asyncio.CancelledError
+
+    args = _web_cmd_args(web_bridge="NonExistent")
+    with patch("icom_lan.web.server.WebServer", FakeWebServer):
+        rc = await _cmd_web(radio, args)
+
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "audio bridge failed" in captured.err
+    assert "explicitly requested" in captured.err
+
+
 @pytest.mark.asyncio
 async def test_cmd_discover_found_and_not_found(
     capsys: pytest.CaptureFixture[str],
