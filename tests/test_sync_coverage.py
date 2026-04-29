@@ -247,3 +247,41 @@ def test_removed_audio_aliases_raise_attribute_error(name: str) -> None:
         assert not hasattr(r, name)
     finally:
         r._loop.close()
+
+
+def test_sync_get_swr_meter_returns_int() -> None:
+    """``sync.IcomRadio.get_swr_meter`` returns the raw 0-255 BCD value
+    from the async ``MetersCapable.get_swr_meter`` (refs #1183)."""
+    r = _radio()
+    r._radio._ctrl_transport = MagicMock()
+    r._radio._ctrl_transport._udp_transport = MagicMock()
+    r._radio._civ_transport = MagicMock()
+    r._radio._conn_state = RadioConnectionState.CONNECTED
+    r._radio.get_swr_meter = AsyncMock(return_value=120)
+
+    try:
+        result = r.get_swr_meter()
+        assert result == 120
+        assert isinstance(result, int)
+        r._radio.get_swr_meter.assert_awaited_once()
+    finally:
+        r._loop.close()
+
+
+def test_sync_get_swr_returns_float() -> None:
+    """Regression guard for #1177: ``sync.IcomRadio.get_swr`` returns a
+    calibrated float (>= 1.0), not the raw 0-255 BCD reading."""
+    r = _radio()
+    r._radio._ctrl_transport = MagicMock()
+    r._radio._ctrl_transport._udp_transport = MagicMock()
+    r._radio._civ_transport = MagicMock()
+    r._radio._conn_state = RadioConnectionState.CONNECTED
+    r._radio.get_swr = AsyncMock(return_value=1.7)
+
+    try:
+        result = r.get_swr()
+        assert result == 1.7
+        assert isinstance(result, float)
+        r._radio.get_swr.assert_awaited_once()
+    finally:
+        r._loop.close()

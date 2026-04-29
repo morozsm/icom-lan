@@ -189,13 +189,26 @@ class IcomRadio:
 
         Returns the calibrated float per
         :meth:`MetersCapable.get_swr`. For the raw 0–255 BCD reading
-        program against ``MetersCapable.get_swr_meter`` instead.
+        program against :meth:`get_swr_meter` instead.
         """
         if CAP_METERS not in self._radio.capabilities:
             raise AttributeError(
                 "get_swr requires a radio that implements MetersCapable"
             )
         return float(self._run(self._radio.get_swr()))
+
+    def get_swr_meter(self) -> int:
+        """Read the SWR meter (raw 0-255).
+
+        Returns the unscaled meter value mirroring
+        :meth:`MetersCapable.get_swr_meter`. For a calibrated SWR ratio
+        (>= 1.0) use :meth:`get_swr` instead.
+        """
+        if CAP_METERS not in self._radio.capabilities:
+            raise AttributeError(
+                "get_swr_meter requires a radio that implements MetersCapable"
+            )
+        return self._run(self._radio.get_swr_meter())
 
     def get_alc(self) -> int:
         """Read the ALC meter (0-255)."""
