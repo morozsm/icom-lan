@@ -2783,11 +2783,11 @@ class TestSwitchScopeReceiver:
         assert len(select_calls) == 0, "Should NOT emit 0x07 select when already MAIN"
 
     async def test_set_split_updates_radio_and_state(self) -> None:
-        """SetSplit(on) calls radio.set_split_mode and updates RadioState.split."""
+        """SetSplit(on) calls radio.set_split and updates RadioState.split."""
         from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetSplit
 
         radio = self._make_radio()
-        radio.set_split_mode = AsyncMock()
+        radio.set_split = AsyncMock()
         queue = CommandQueue()
         poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
 
@@ -2796,7 +2796,7 @@ class TestSwitchScopeReceiver:
         await asyncio.sleep(0.03)
         poller.stop()
 
-        radio.set_split_mode.assert_awaited_once_with(True)
+        radio.set_split.assert_awaited_once_with(True)
         assert poller._radio_state is not None
         assert poller._radio_state.split is True
         assert poller.revision > 0

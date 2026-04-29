@@ -122,6 +122,19 @@ def set_split(
     )
 
 
+def get_split(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build CI-V command to read split state (0x0F)."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_split", to_addr=to_addr, from_addr=from_addr
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_SPLIT)
+
+
 def get_tuning_step(
     to_addr: int,
     from_addr: int = CONTROLLER_ADDR,

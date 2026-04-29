@@ -136,7 +136,7 @@ class TestApplyProfileFull:
     @pytest.mark.asyncio()
     async def test_applies_split(self, radio: AsyncMock) -> None:
         await apply_profile(radio, OperatingProfile(split=True))
-        radio.set_split_mode.assert_awaited_with(True)
+        radio.set_split.assert_awaited_with(True)
 
     @pytest.mark.asyncio()
     async def test_applies_vfo(self, radio: AsyncMock) -> None:
@@ -205,7 +205,7 @@ class TestApplyProfileFull:
         radio.set_freq.assert_not_awaited()
         radio.set_mode.assert_not_awaited()
         radio.set_vox.assert_not_awaited()
-        radio.set_split_mode.assert_not_awaited()
+        radio.set_split.assert_not_awaited()
         radio.set_vfo.assert_not_awaited()
         radio.set_data_mode.assert_not_awaited()
         radio.set_squelch.assert_not_awaited()
@@ -236,7 +236,7 @@ class TestApplyProfileFull:
         await apply_profile(radio, profile)
         radio.set_vox.assert_awaited()
         radio.set_vfo.assert_awaited()
-        radio.set_split_mode.assert_awaited()
+        radio.set_split.assert_awaited()
         radio.set_freq.assert_awaited()
         radio.set_mode.assert_awaited()
         radio.set_data_mode.assert_awaited()

@@ -86,7 +86,7 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_system_time = AsyncMock()
     radio.get_system_time = AsyncMock(return_value=(0, 0))
     radio.set_dual_watch = AsyncMock()
-    radio.set_split_mode = AsyncMock()
+    radio.set_split = AsyncMock()
     radio.equalize_main_sub = AsyncMock()
     radio.swap_main_sub = AsyncMock()
     radio.get_dual_watch = AsyncMock(return_value=False)
@@ -593,7 +593,7 @@ async def test_execute_quick_dw_trigger_equalizes_then_enables_dw() -> None:
 
 @pytest.mark.asyncio
 async def test_execute_quick_split_trigger_equalizes_then_enables_split() -> None:
-    """QuickSplitTrigger: composite equalize_main_sub() then set_split_mode(True).
+    """QuickSplitTrigger: composite equalize_main_sub() then set_split(True).
 
     Also flips RadioState.split so the UI reflects the change immediately.
     """
@@ -612,7 +612,7 @@ async def test_execute_quick_split_trigger_equalizes_then_enables_split() -> Non
     await poller._execute(QuickSplitTrigger())  # noqa: SLF001
 
     radio.equalize_main_sub.assert_awaited_once_with()
-    radio.set_split_mode.assert_awaited_once_with(True)
+    radio.set_split.assert_awaited_once_with(True)
     assert state.split is True
     assert ("split_changed", {"on": True}) in events
 

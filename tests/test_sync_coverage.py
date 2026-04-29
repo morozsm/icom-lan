@@ -67,7 +67,7 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.set_vfo = AsyncMock()
     r._radio.equalize_main_sub = AsyncMock()
     r._radio.swap_main_sub = AsyncMock()
-    r._radio.set_split_mode = AsyncMock()
+    r._radio.set_split = AsyncMock()
     r._radio.set_attenuator_level = AsyncMock()
     r._radio.set_attenuator = AsyncMock()
     r._radio.set_preamp = AsyncMock()
@@ -111,7 +111,7 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r.set_vfo("B")
     r.vfo_equalize()
     r.vfo_exchange()
-    r.set_split_mode(True)
+    r.set_split(True)
     r.set_attenuator_level(18)
     r.set_attenuator(True)
     r.set_preamp(2)
@@ -138,7 +138,7 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     # IC-7610 (default profile, receiver_count=2) → canonical dual-RX methods
     r._radio.equalize_main_sub.assert_awaited_once()
     r._radio.swap_main_sub.assert_awaited_once()
-    r._radio.set_split_mode.assert_awaited_once_with(True)
+    r._radio.set_split.assert_awaited_once_with(True)
     r._radio.set_attenuator_level.assert_awaited_once_with(18)
     r._radio.set_attenuator.assert_awaited_once_with(True)
     r._radio.set_preamp.assert_awaited_once_with(2)
@@ -222,4 +222,20 @@ def test_audio_wrappers_and_deprecated_aliases() -> None:
         r.push_audio_tx(b"\x01")
     with pytest.warns(DeprecationWarning):
         r.stop_audio_tx()
+    r._loop.close()
+
+
+def test_sync_set_split_mode_emits_deprecation_warning() -> None:
+    """``sync.IcomRadio.set_split_mode`` is a deprecated alias for ``set_split``."""
+    r = _radio()
+    r._radio._ctrl_transport = MagicMock()
+    r._radio._ctrl_transport._udp_transport = MagicMock()
+    r._radio._civ_transport = MagicMock()
+    r._radio._conn_state = RadioConnectionState.CONNECTED
+    r._radio.set_split = AsyncMock()
+
+    with pytest.warns(DeprecationWarning, match="set_split_mode"):
+        r.set_split_mode(True)
+
+    r._radio.set_split.assert_awaited_once_with(True)
     r._loop.close()

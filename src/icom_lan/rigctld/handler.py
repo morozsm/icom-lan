@@ -869,9 +869,9 @@ class RigctldHandler:
             return _err(HamlibError.EINVAL)
         tx_vfo = cmd.args[1].upper()
         info = self._profile_vfo_info()
-        set_split_mode = getattr(self._radio, "set_split_mode", None)
-        if set_split_mode is not None:
-            await set_split_mode(on)
+        set_split = getattr(self._radio, "set_split", None)
+        if set_split is not None:
+            await set_split(on)
         # Dual-RX: when enabling split, ensure TX is routed to the requested
         # receiver (WSJT-X sends VFOB as the split-TX source).  If the
         # receiver-select call fails we must roll back the split-enable —
@@ -891,7 +891,7 @@ class RigctldHandler:
                         target,
                         exc,
                     )
-                    await self._rollback_split(set_split_mode)
+                    await self._rollback_split(set_split)
                     return _err(HamlibError.EIO)
                 except TimeoutError as exc:
                     logger.warning(
@@ -899,7 +899,7 @@ class RigctldHandler:
                         target,
                         exc,
                     )
-                    await self._rollback_split(set_split_mode)
+                    await self._rollback_split(set_split)
                     return _err(HamlibError.ETIMEOUT)
                 except Exception:
                     logger.exception(
@@ -907,11 +907,11 @@ class RigctldHandler:
                         "rolling back split",
                         target,
                     )
-                    await self._rollback_split(set_split_mode)
+                    await self._rollback_split(set_split)
                     return _err(HamlibError.EINTERNAL)
         return _ok()
 
-    async def _rollback_split(self, set_split_mode: Any) -> None:
+    async def _rollback_split(self, set_split: Any) -> None:
         """Best-effort rollback: disable split that was just enabled.
 
         Called when the follow-up ``set_vfo`` in ``set_split_vfo`` fails,
@@ -919,14 +919,14 @@ class RigctldHandler:
         routed to SUB.  Rollback errors are logged and swallowed — the
         original failure takes precedence in the response.
         """
-        if set_split_mode is None:
+        if set_split is None:
             return
         try:
-            await set_split_mode(False)
+            await set_split(False)
             logger.info("set_split_vfo: rollback disabled split successfully")
         except Exception:
             logger.exception(
-                "set_split_vfo: rollback set_split_mode(False) also failed; "
+                "set_split_vfo: rollback set_split(False) also failed; "
                 "radio may be in inconsistent state"
             )
 

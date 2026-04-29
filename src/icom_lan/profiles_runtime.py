@@ -129,10 +129,10 @@ async def apply_profile(radio: Any, profile: OperatingProfile) -> dict[str, obje
             logger.debug("apply_profile: radio has no set_vfo, skipping")
 
     if profile.split is not None:
-        if hasattr(radio, "set_split_mode"):
-            await radio.set_split_mode(profile.split)
+        if hasattr(radio, "set_split"):
+            await radio.set_split(profile.split)
         else:
-            logger.debug("apply_profile: radio has no set_split_mode, skipping")
+            logger.debug("apply_profile: radio has no set_split, skipping")
 
     if profile.frequency_hz is not None:
         if hasattr(radio, "set_freq"):

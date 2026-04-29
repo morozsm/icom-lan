@@ -142,7 +142,7 @@ async def radio(radio_config: dict) -> AsyncGenerator[IcomRadio, None]:
     finally:
         # Guardrails: restore safe/common state after each test.
         try:
-            await r.set_split_mode(False)
+            await r.set_split(False)
         except Exception:
             pass
         try:

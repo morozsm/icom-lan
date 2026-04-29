@@ -119,6 +119,7 @@ from .commands import (
     get_s_meter,
     get_s_meter_sql_status,
     get_speech,
+    get_split,
     get_ssb_tx_bandwidth,
     get_swr,
     get_system_date,
@@ -497,7 +498,8 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
             "set_vfo",
             "vfo_equalize",
             "vfo_exchange",
-            "set_split_mode",
+            "get_split",
+            "set_split",
             "get_tuning_step",
             "set_tuning_step",
             "scan_start",
@@ -2787,15 +2789,50 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         else:
             await self.swap_vfo_ab(0)
 
-    async def set_split_mode(self, on: bool) -> None:
-        """Enable or disable split mode."""
+    async def set_split(self, on: bool) -> None:
+        """Enable or disable split mode (CI-V ``0x0F``)."""
         self._check_connected()
         civ = set_split(on, to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, label="set_split_mode")
+        resp = await self._send_civ_expect(civ, label="set_split")
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected split {'on' if on else 'off'}")
         self._last_split = on
+
+    async def set_split_mode(self, on: bool) -> None:
+        """Deprecated alias for :meth:`set_split`.
+
+        .. deprecated:: 0.19
+            Use :meth:`set_split` instead.  ``set_split_mode`` will be removed
+            in v0.20.
+        """
+        import warnings
+
+        warnings.warn(
+            "IcomRadio.set_split_mode() is deprecated; use set_split() "
+            "instead. Removal scheduled for v0.20.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        await self.set_split(on)
+
+    async def get_split(self) -> bool:
+        """Read split mode state (CI-V ``0x0F``).
+
+        Returns ``True`` when split is enabled, ``False`` otherwise.  On a
+        radio that does not respond, returns the cached last-known value
+        (defaulting to ``False``).
+        """
+        self._check_connected()
+        civ = get_split(to_addr=self._radio_addr)
+        resp = await self._send_civ_expect(civ, label="get_split")
+        if resp.data:
+            on = bool(resp.data[0])
+            self._last_split = on
+            return on
+        if self._last_split is not None:
+            return self._last_split
+        return False
 
     async def get_tuning_step(self) -> int:
         """Read the tuning step index (0-8, BCD-encoded per IC-7610, CI-V 0x10)."""
@@ -3521,9 +3558,9 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
 
         if "split" in state:
             try:
-                await self.set_split_mode(bool(state["split"]))
+                await self.set_split(bool(state["split"]))
             except Exception:
-                logger.debug("restore_state: set_split_mode failed", exc_info=True)
+                logger.debug("restore_state: set_split failed", exc_info=True)
         if "vfo" in state:
             try:
                 await self.set_vfo(str(state["vfo"]))

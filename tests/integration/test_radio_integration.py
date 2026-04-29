@@ -348,10 +348,10 @@ class TestSplit:
         """Enable/disable split mode."""
         # Try enabling split
         try:
-            await radio.set_split_mode(True)
+            await radio.set_split(True)
             print("Split ON ✓")
 
-            await radio.set_split_mode(False)
+            await radio.set_split(False)
             print("Split OFF ✓")
         except Exception as e:
             # Split might not be supported on all radios
@@ -368,7 +368,7 @@ class TestFrontEnd:
     @staticmethod
     async def _prepare_strict_frontend_state(radio: IcomRadio) -> None:
         """Apply deterministic preconditions for strict ATT/PREAMP validation."""
-        await radio.set_split_mode(False)
+        await radio.set_split(False)
         await radio.select_vfo("MAIN")
         await radio.set_mode(Mode.USB)
         # On IC-7610 PREAMP and DIGI-SEL are mutually exclusive.
@@ -477,7 +477,7 @@ class TestCW:
         original_power = await radio.get_power()
 
         try:
-            await radio.set_split_mode(False)
+            await radio.set_split(False)
             await radio.select_vfo("MAIN")
             await radio.set_frequency(14_050_000)
             await radio.set_mode(Mode.CW)
@@ -517,7 +517,7 @@ class TestCW:
         cw_power = max(1, round(255 * 0.05))  # ~5%
 
         try:
-            await radio.set_split_mode(False)
+            await radio.set_split(False)
             await radio.select_vfo("MAIN")
             await radio.set_frequency(cw_freq)
             await radio.set_mode(Mode.CW)

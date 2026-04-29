@@ -182,6 +182,7 @@ from .vfo import (
     get_main_sub_band,
     get_quick_dual_watch,
     get_quick_split,
+    get_split,
     get_tuning_step,
     get_vfo,
     quick_dual_watch,
@@ -757,6 +758,7 @@ __all__ = [
     # VFO extras
     "vfo_a_equals_b",
     "vfo_swap",
+    "get_split",
     "set_split",
     # Memory
     "build_memory_clear",

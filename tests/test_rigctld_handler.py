@@ -2437,7 +2437,7 @@ async def test_set_split_vfo_dual_rx_enables_and_routes_to_sub(
 ) -> None:
     resp = await dual_rx_handler.execute(set_cmd("set_split_vfo", "1", "VFOB"))
     assert resp.ok
-    dual_rx_radio.set_split_mode.assert_awaited_once_with(True)
+    dual_rx_radio.set_split.assert_awaited_once_with(True)
     dual_rx_radio.set_vfo.assert_awaited_once_with("SUB")
 
 
@@ -2447,7 +2447,7 @@ async def test_set_split_vfo_dual_rx_disables_does_not_switch_receiver(
 ) -> None:
     resp = await dual_rx_handler.execute(set_cmd("set_split_vfo", "0", "VFOA"))
     assert resp.ok
-    dual_rx_radio.set_split_mode.assert_awaited_once_with(False)
+    dual_rx_radio.set_split.assert_awaited_once_with(False)
     dual_rx_radio.set_vfo.assert_not_awaited()
 
 
@@ -2455,8 +2455,8 @@ async def test_set_split_vfo_dual_rx_disables_does_not_switch_receiver(
 async def test_set_split_vfo_rolls_back_split_on_set_vfo_connection_error(
     dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
 ) -> None:
-    """If set_vfo fails with ConnectionError after set_split_mode(True),
-    the handler must roll back by calling set_split_mode(False) and
+    """If set_vfo fails with ConnectionError after set_split(True),
+    the handler must roll back by calling set_split(False) and
     return EIO — never leaving the radio in split-on / TX-not-routed."""
     dual_rx_radio.set_vfo.side_effect = IcomConnectionError("lost")
 
@@ -2464,7 +2464,7 @@ async def test_set_split_vfo_rolls_back_split_on_set_vfo_connection_error(
 
     assert resp.error == HamlibError.EIO
     # Two calls: first to enable split, then rollback to disable.
-    assert dual_rx_radio.set_split_mode.await_args_list == [
+    assert dual_rx_radio.set_split.await_args_list == [
         ((True,), {}),
         ((False,), {}),
     ]
@@ -2481,7 +2481,7 @@ async def test_set_split_vfo_rolls_back_split_on_set_vfo_timeout(
     resp = await dual_rx_handler.execute(set_cmd("set_split_vfo", "1", "VFOB"))
 
     assert resp.error == HamlibError.ETIMEOUT
-    assert dual_rx_radio.set_split_mode.await_args_list == [
+    assert dual_rx_radio.set_split.await_args_list == [
         ((True,), {}),
         ((False,), {}),
     ]
@@ -2497,7 +2497,7 @@ async def test_set_split_vfo_rolls_back_split_on_unexpected_error(
     resp = await dual_rx_handler.execute(set_cmd("set_split_vfo", "1", "VFOB"))
 
     assert resp.error == HamlibError.EINTERNAL
-    assert dual_rx_radio.set_split_mode.await_args_list == [
+    assert dual_rx_radio.set_split.await_args_list == [
         ((True,), {}),
         ((False,), {}),
     ]
@@ -2507,11 +2507,11 @@ async def test_set_split_vfo_rolls_back_split_on_unexpected_error(
 async def test_set_split_vfo_rollback_swallows_rollback_failure(
     dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
 ) -> None:
-    """If the rollback set_split_mode(False) itself fails, the handler
+    """If the rollback set_split(False) itself fails, the handler
     must still return the ORIGINAL failure code — not raise."""
     dual_rx_radio.set_vfo.side_effect = IcomConnectionError("lost")
-    # set_split_mode succeeds on True, fails on False (the rollback).
-    dual_rx_radio.set_split_mode.side_effect = [
+    # set_split succeeds on True, fails on False (the rollback).
+    dual_rx_radio.set_split.side_effect = [
         None,
         IcomConnectionError("rollback failed too"),
     ]
@@ -2521,7 +2521,7 @@ async def test_set_split_vfo_rollback_swallows_rollback_failure(
     assert resp.error == HamlibError.EIO
     # Both calls were attempted — the rollback failure is swallowed
     # (logged only); the original error code wins.
-    assert dual_rx_radio.set_split_mode.await_count == 2
+    assert dual_rx_radio.set_split.await_count == 2
 
 
 @pytest.mark.asyncio

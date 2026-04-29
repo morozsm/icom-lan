@@ -75,6 +75,7 @@ __all__ = [
     "LevelsCapable",
     "MetersCapable",
     "PowerControlCapable",
+    "SplitCapable",
     "StateNotifyCapable",
     "TransceiverStatusCapable",
     "MemoryCapable",
@@ -429,6 +430,26 @@ class PowerControlCapable(Protocol):
         Args:
             level: Power level in 0-255 scale.
         """
+        ...
+
+
+@runtime_checkable
+class SplitCapable(Protocol):
+    """Radio supports split-frequency operation (RX on one VFO, TX on the other).
+
+    Universal across the supported HF/VHF matrix: Icom rigs use CI-V ``0x0F``
+    (read with no payload, set with ``0x00``/``0x01``), Yaesu CAT uses ``ST;``.
+    Split is rig-global on every supported model — there is intentionally no
+    ``receiver`` parameter; split applies to the whole transceiver, not a
+    per-receiver toggle.
+    """
+
+    async def get_split(self) -> bool:
+        """Return ``True`` if split mode is enabled."""
+        ...
+
+    async def set_split(self, on: bool) -> None:
+        """Enable (``True``) or disable (``False``) split mode."""
         ...
 
 

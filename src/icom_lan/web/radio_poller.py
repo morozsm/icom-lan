@@ -1200,7 +1200,7 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("rit_freq_changed", {"hz": freq})
             case SetSplit(on=on):
-                await _r.set_split_mode(on)
+                await _r.set_split(on)
                 if self._radio_state:
                     self._radio_state.split = on
                     self.bump_revision()
@@ -1726,7 +1726,7 @@ class RadioPoller:
                 self._last_user_write_ts = time.monotonic()
                 if CAP_DUAL_RX in self._caps:
                     await _r.equalize_main_sub()
-                    await _r.set_split_mode(True)
+                    await _r.set_split(True)
                     logger.info("radio-poller: quick SPLIT (equalize + SPLIT ON)")
                     if self._radio_state:
                         self._radio_state.split = True

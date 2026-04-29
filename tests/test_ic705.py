@@ -27,7 +27,7 @@ async def test_prepare_ic705_data_profile_applies_expected_sequence() -> None:
     radio.snapshot_state.assert_awaited_once()
     radio.set_vox.assert_awaited_once_with(False)
     radio.set_vfo.assert_any_await("A")
-    radio.set_split_mode.assert_awaited_once_with(False)
+    radio.set_split.assert_awaited_once_with(False)
     radio.set_freq.assert_awaited_once_with(145_825_000)
     radio.set_mode.assert_awaited_once_with("FM")
     radio.set_data_mode.assert_awaited_once_with(True)

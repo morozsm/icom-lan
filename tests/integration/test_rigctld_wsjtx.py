@@ -6,7 +6,7 @@ sequence of Radio-level calls the server issues as a result.
 
 Why not raw CI-V bytes?
     The handler's job is to translate rigctld commands to Radio protocol
-    calls (``set_freq``, ``set_mode``, ``set_split_mode``, ``set_vfo``,
+    calls (``set_freq``, ``set_mode``, ``set_split``, ``set_vfo``,
     ``set_ptt``). CI-V wire encoding of those calls is already covered by
     ``tests/test_commands.py`` and contract tests. Duplicating the full
     LAN UDP stack here would add auth/keep-alive timing noise without
@@ -49,8 +49,8 @@ class RecordingMockRadio(SerialMockRadio):
     Each recorded entry is ``(method_name, args_tuple)``. The tests assert
     the exact sequence of calls emitted by the rigctld handler.
 
-    Adds ``set_split_mode`` which ``SerialMockRadio`` does not implement;
-    the rigctld handler calls it via ``getattr(radio, 'set_split_mode', None)``
+    Adds ``set_split`` which ``SerialMockRadio`` does not implement;
+    the rigctld handler calls it via ``getattr(radio, 'set_split', None)``
     so without this override the split-VFO paths would silently no-op.
     """
 
@@ -89,9 +89,9 @@ class RecordingMockRadio(SerialMockRadio):
 
     # ---- Split / VFO -----------------------------------------------------
 
-    async def set_split_mode(self, on: bool) -> None:
+    async def set_split(self, on: bool) -> None:
         """Handler uses getattr fallback — must exist here to be observable."""
-        self.calls.append(("set_split_mode", (bool(on),)))
+        self.calls.append(("set_split", (bool(on),)))
         self._split_on = bool(on)
 
     async def set_vfo(self, vfo: str) -> None:
@@ -207,7 +207,7 @@ class TestWsjtxSplitOnIc7610:
         """``set_split_vfo 1 VFOB`` must enable split and route TX to SUB.
 
         Expected Radio-level call order (IC-7610, receiver_count=2):
-            1. set_split_mode(True)
+            1. set_split(True)
             2. set_vfo("SUB")   # VFOB → SUB on main_sub scheme
         """
         radio, server = ic7610_setup
@@ -229,7 +229,7 @@ class TestWsjtxSplitOnIc7610:
             assert resp == "RPRT 0"
 
             assert radio.calls == [
-                ("set_split_mode", (True,)),
+                ("set_split", (True,)),
                 ("set_vfo", ("SUB",)),
                 ("set_ptt", (True,)),
                 ("set_ptt", (False,)),
@@ -251,7 +251,7 @@ class TestWsjtxSplitOnIc7610:
             resp = await client.send("S 0 VFOA")
             assert resp == "RPRT 0"
 
-            assert radio.calls == [("set_split_mode", (False,))]
+            assert radio.calls == [("set_split", (False,))]
         finally:
             await client.close()
 

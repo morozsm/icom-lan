@@ -127,14 +127,14 @@ class TestSplitMode:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        await radio.set_split_mode(True)
+        await radio.set_split(True)
 
     @pytest.mark.asyncio
     async def test_split_off(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        await radio.set_split_mode(False)
+        await radio.set_split(False)
 
     @pytest.mark.asyncio
     async def test_split_nak(
@@ -142,13 +142,44 @@ class TestSplitMode:
     ) -> None:
         mock_transport.queue_response(_nak_response())
         with pytest.raises(CommandError):
-            await radio.set_split_mode(True)
+            await radio.set_split(True)
 
     @pytest.mark.asyncio
     async def test_split_disconnected(self) -> None:
         r = IcomRadio("192.168.1.100")
         with pytest.raises(ConnectionError):
-            await r.set_split_mode(True)
+            await r.set_split(True)
+
+    @pytest.mark.asyncio
+    async def test_set_split_mode_deprecation(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """``set_split_mode`` still works but emits a DeprecationWarning."""
+        mock_transport.queue_response(_ack_response())
+        with pytest.warns(DeprecationWarning, match="set_split_mode"):
+            await radio.set_split_mode(True)
+        assert radio._last_split is True
+
+    @pytest.mark.asyncio
+    async def test_get_split_round_trip(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """``set_split(True)`` followed by ``get_split()`` returns True."""
+        # Set: ACK
+        mock_transport.queue_response(_ack_response())
+        await radio.set_split(True)
+        # Get: radio responds with cmd 0x0F + data byte 0x01
+        civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x0F, data=b"\x01")
+        mock_transport.queue_response(_wrap_civ_in_udp(civ))
+        assert await radio.get_split() is True
+
+    @pytest.mark.asyncio
+    async def test_get_split_off(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x0F, data=b"\x00")
+        mock_transport.queue_response(_wrap_civ_in_udp(civ))
+        assert await radio.get_split() is False
 
 
 # ---------------------------------------------------------------------------
