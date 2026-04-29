@@ -492,6 +492,26 @@ class TestRfGainAfLevel:
             await radio.set_af_level(-1)
 
 
+class TestSquelch:
+    """Test get_squelch — verifies cmd29 path and frame parsing (issue #1093)."""
+
+    @pytest.mark.asyncio
+    async def test_levels_get_squelch_icom(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """get_squelch on MAIN parses a non-cmd29 0x14 0x03 BCD response."""
+        mock_transport.queue_response(_level_response(0x03, 200))
+        assert await radio.get_squelch() == 200
+
+    @pytest.mark.asyncio
+    async def test_levels_get_squelch_icom_sub(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """get_squelch on SUB parses a cmd29-wrapped 0x14 0x03 BCD response."""
+        mock_transport.queue_response(_level_response(0x03, 128, receiver=1))
+        assert await radio.get_squelch(receiver=1) == 128
+
+
 class TestPtt:
     """Test PTT toggle."""
 

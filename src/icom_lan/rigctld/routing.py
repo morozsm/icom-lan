@@ -129,8 +129,10 @@ class YaesuRouting:
             return RigctldResponse(values=[f"{swr:.6f}"])
 
         # 0–255 → 0.0–1.0
-        if level in ("AF", "RF", "SQL"):
-            m = {"AF": "get_af_level", "RF": "get_rf_gain", "SQL": "get_squelch"}[level]
+        if level == "SQL":
+            return RigctldResponse(values=[f"{await radio.get_squelch() / 255.0:.6f}"])
+        if level in ("AF", "RF"):
+            m = {"AF": "get_af_level", "RF": "get_rf_gain"}[level]
             return RigctldResponse(values=[f"{await getattr(radio, m)() / 255.0:.6f}"])
 
         # 0–100 → 0.0–1.0

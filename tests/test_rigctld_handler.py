@@ -978,6 +978,18 @@ async def test_get_level_rf_gain(
 
 
 @pytest.mark.asyncio
+async def test_rigctld_get_level_sql_icom(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """get_level SQL on Icom uses LevelsCapable.get_squelch — no AttributeError (issue #1093)."""
+    mock_radio.get_squelch = AsyncMock(return_value=128)
+    resp = await handler.execute(get_cmd("get_level", "SQL"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(128 / 255.0, rel=1e-6)
+    mock_radio.get_squelch.assert_awaited_once_with()
+
+
+@pytest.mark.asyncio
 async def test_get_level_nr(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
     mock_radio.get_nr_level = AsyncMock(return_value=0)
     resp = await handler.execute(get_cmd("get_level", "NR"))
