@@ -177,9 +177,9 @@
   },
   {
     "id": "get_level_swr",
-    "description": "Get SWR level — raw 0 → 1.000000 (perfect match)",
+    "description": "Get SWR level — calibrated ratio 1.0 (perfect match) passes through",
     "input": "l SWR",
-    "mock": {"get_swr": 0},
+    "mock": {"get_swr": 1.0},
     "expected_output": "1.000000\n",
     "extended_output": "get_level:\n1.000000\nRPRT 0\n"
   },

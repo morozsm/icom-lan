@@ -849,3 +849,35 @@ raw_center = 0
 display_min = -999
 display_max = 999
 display_unit = "Hz"
+
+# SWR meter calibration — piecewise-linear lookup from raw 0–255 to SWR ratio.
+# First four points (0=1.0, 48=1.5, 80=2.0, 120=3.0) match the firmware-anchored
+# Icom curve documented for sibling models. Fifth point (240, 6.0) follows
+# wfview IC-9700.rig. See P3-01 (issue #1173) and the R1 research note.
+[meters.swr]
+redline_raw = 120
+
+[[meters.swr.calibration]]
+raw = 0
+actual = 1.0
+label = "1.0"
+
+[[meters.swr.calibration]]
+raw = 48
+actual = 1.5
+label = "1.5"
+
+[[meters.swr.calibration]]
+raw = 80
+actual = 2.0
+label = "2.0"
+
+[[meters.swr.calibration]]
+raw = 120
+actual = 3.0
+label = "3.0"
+
+[[meters.swr.calibration]]
+raw = 240
+actual = 6.0
+label = "6.0+"

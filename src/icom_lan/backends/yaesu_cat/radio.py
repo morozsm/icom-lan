@@ -47,44 +47,11 @@ def _load_config(profile: Any) -> Any:
     raise TypeError(f"profile must be str or RigConfig, got {type(profile).__name__}")
 
 
-def _interpolate_swr(
-    raw: int, meter_calibrations: dict[str, list[Any]] | None
-) -> float:
-    """Convert raw SWR meter value (0-255) to an SWR ratio.
-
-    Uses the ``swr`` calibration table from TOML when available,
-    interpolating piecewise-linearly between points. Returns the
-    legacy linear approximation when no table is configured
-    (preserves backward compat for rigs that don't define
-    ``[meters.swr.calibration]``).
-
-    When a calibration table exists, the table is the source of truth
-    for the full raw range — including ``raw <= 0`` (codex P2 on
-    PR #924). Profiles can define a non-1.0 first point if their
-    meter produces such values.
-    """
-    points = (meter_calibrations or {}).get("swr")
-    if points:
-        # Points are already sorted by raw in typical TOMLs, but sort defensively.
-        sorted_pts = sorted(points, key=lambda p: p["raw"])
-        if raw <= sorted_pts[0]["raw"]:
-            return float(sorted_pts[0]["actual"])
-        if raw >= sorted_pts[-1]["raw"]:
-            return float(sorted_pts[-1]["actual"])
-        for lo, hi in zip(sorted_pts, sorted_pts[1:]):
-            if lo["raw"] <= raw <= hi["raw"]:
-                span = hi["raw"] - lo["raw"]
-                if span == 0:
-                    return float(lo["actual"])
-                t = (raw - lo["raw"]) / span
-                return float(
-                    float(lo["actual"])
-                    + t * (float(hi["actual"]) - float(lo["actual"]))
-                )
-    # No table: legacy linear fallback (pre-#440 behavior).
-    if raw <= 0:
-        return 1.0
-    return 1.0 + (raw / 255.0) * 8.9
+# Backwards-compat alias — historical name kept for the FTX-1 backend.
+# The shared implementation now lives in ``icom_lan.meter_cal`` so that
+# both the Yaesu and Icom backends apply the same piecewise-linear curve
+# to ``[[meters.swr.calibration]]`` tables (issue #1173).
+from ...meter_cal import interpolate_swr as _interpolate_swr  # noqa: E402
 
 
 class YaesuCatRadio:

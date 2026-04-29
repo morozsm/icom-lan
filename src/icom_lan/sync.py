@@ -184,14 +184,18 @@ class IcomRadio:
             )
         return self._run(self._radio.get_s_meter())
 
-    def get_swr(self) -> int:
-        """Read the SWR meter (0-255)."""
+    def get_swr(self) -> float:
+        """Read the SWR as a calibrated ratio (>= 1.0).
+
+        Returns the calibrated float per
+        :meth:`MetersCapable.get_swr`. For the raw 0–255 BCD reading
+        program against ``MetersCapable.get_swr_meter`` instead.
+        """
         if CAP_METERS not in self._radio.capabilities:
             raise AttributeError(
                 "get_swr requires a radio that implements MetersCapable"
             )
-        raw = self._run(self._radio.get_swr())
-        return int(raw) if isinstance(raw, float) else raw
+        return float(self._run(self._radio.get_swr()))
 
     def get_alc(self) -> int:
         """Read the ALC meter (0-255)."""

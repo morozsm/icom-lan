@@ -411,8 +411,18 @@ class TestMeters:
     async def test_get_swr(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
+        # IC-7610 profile interpolates raw=50 between (48, 1.5) and
+        # (80, 2.0): 1.5 + (50-48)/(80-48) * (2.0-1.5) = 1.53125.
         mock_transport.queue_response(_meter_response(_SUB_SWR_METER, 50))
         val = await radio.get_swr()
+        assert val == pytest.approx(1.53125)
+
+    @pytest.mark.asyncio
+    async def test_get_swr_meter_raw(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_meter_response(_SUB_SWR_METER, 50))
+        val = await radio.get_swr_meter()
         assert val == 50
 
     @pytest.mark.asyncio

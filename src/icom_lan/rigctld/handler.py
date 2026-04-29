@@ -727,16 +727,15 @@ class RigctldHandler:
             self._cache.update_rf_power(normalized)
             return RigctldResponse(values=[f"{normalized:.6f}"])
 
-        # SWR — meter call
+        # SWR — meter call. ``get_swr`` already returns a calibrated
+        # ratio (>= 1.0) per ``MetersCapable``; pass the float through
+        # without re-mapping (issue #1173).
         if level == "SWR":
             if CAP_METERS not in self._radio.capabilities:
                 if self._cache.swr is not None:
                     return RigctldResponse(values=[f"{self._cache.swr:.6f}"])
                 return _err(HamlibError.ENIMPL)
-            raw_val = await self._radio.get_swr()
-            raw_swr = float(raw_val)
-            # Map 0-255 to 1.0-5.0
-            swr = 1.0 + (raw_swr / 255.0) * 4.0
+            swr = float(await self._radio.get_swr())
             self._cache.update_swr(swr)
             return RigctldResponse(values=[f"{swr:.6f}"])
 

@@ -94,7 +94,7 @@ class StateCache:
     powerstat: bool = True
     powerstat_ts: float = 0.0
 
-    # SWR (raw 0–255)
+    # SWR (calibrated ratio, >= 1.0; populated from MetersCapable.get_swr)
     swr: float | None = None
     swr_ts: float = 0.0
 

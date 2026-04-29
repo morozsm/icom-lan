@@ -565,7 +565,9 @@ async def test_get_level_rfpower_zero(
 
 @pytest.mark.asyncio
 async def test_get_level_swr(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
-    mock_radio.get_swr.return_value = 0
+    # ``get_swr`` is contracted as a calibrated ratio (>= 1.0) — the
+    # rigctld handler now passes the float through without remapping.
+    mock_radio.get_swr.return_value = 1.0
     resp = await handler.execute(get_cmd("get_level", "SWR"))
     assert resp.ok
     assert float(resp.values[0]) == pytest.approx(1.0)
@@ -575,10 +577,10 @@ async def test_get_level_swr(handler: RigctldHandler, mock_radio: AsyncMock) -> 
 async def test_get_level_swr_max(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_swr.return_value = 255
+    mock_radio.get_swr.return_value = 6.0
     resp = await handler.execute(get_cmd("get_level", "SWR"))
     assert resp.ok
-    assert float(resp.values[0]) == pytest.approx(5.0)
+    assert float(resp.values[0]) == pytest.approx(6.0)
 
 
 @pytest.mark.asyncio

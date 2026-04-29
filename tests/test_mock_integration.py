@@ -182,8 +182,17 @@ class TestMeters:
     async def test_get_swr(
         self, connected_radio: IcomRadio, mock_radio: MockIcomRadio
     ) -> None:
+        # IC-7610 profile interpolates raw=42 between (0, 1.0) and
+        # (48, 1.5): 1.0 + 42/48 * 0.5 = 1.4375.
         mock_radio.set_swr(42)
         value = await connected_radio.get_swr()
+        assert value == pytest.approx(1.4375)
+
+    async def test_get_swr_meter_raw(
+        self, connected_radio: IcomRadio, mock_radio: MockIcomRadio
+    ) -> None:
+        mock_radio.set_swr(42)
+        value = await connected_radio.get_swr_meter()
         assert value == 42
 
     async def test_s_meter_zero(

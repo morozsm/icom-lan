@@ -129,9 +129,10 @@ async def test_golden_protocol(fixture: dict) -> None:
     if "get_power" in mock_spec:
         cache.update_rf_power(float(mock_spec["get_power"]) / 255.0)
     if "get_swr" in mock_spec:
-        raw = mock_spec["get_swr"]
-        swr_display = 1.0 + (float(raw) / 255.0) * 4.0
-        cache.update_swr(swr_display)
+        # ``get_swr`` is contracted as a calibrated ratio (>= 1.0); the
+        # rigctld handler now passes the value through. The fixture's
+        # mock value is the calibrated ratio directly (issue #1173).
+        cache.update_swr(float(mock_spec["get_swr"]))
     handler = RigctldHandler(radio, config)
 
     normal_session = ClientSession()

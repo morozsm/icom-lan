@@ -261,6 +261,7 @@ from .commands import set_tone_freq as _set_tone_freq_cmd
 from .commands import set_tsql_freq as _set_tsql_freq_cmd
 from .commands import set_vfo as _select_vfo_cmd
 from .exceptions import AuthenticationError, CommandError, TimeoutError
+from .meter_cal import interpolate_swr
 from .profiles import RadioProfile, resolve_radio_profile
 from .radio_state import RadioState
 from ._state_cache import StateCache
@@ -2631,20 +2632,28 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         resp = await self._send_civ_expect(civ, label="get_s_meter")
         return parse_meter_response(resp)
 
-    async def get_swr(self) -> int:
-        """Read the SWR meter value (0-255)."""
+    async def get_swr(self) -> float:
+        """Read the SWR as a calibrated ratio (>= 1.0).
+
+        Uses the piecewise-linear table defined in
+        ``[[meters.swr.calibration]]`` of the active rig profile. Falls
+        back to a legacy linear approximation when no calibration table
+        is configured.
+
+        For the raw 0–255 BCD reading (e.g. for charts that need the
+        unscaled value) use :meth:`get_swr_meter`.
+        """
         self._check_connected()
         civ = get_swr(to_addr=self._radio_addr)
         resp = await self._send_civ_expect(civ, label="get_swr")
-        return parse_meter_response(resp)
+        raw = parse_meter_response(resp)
+        return interpolate_swr(raw, self._profile.meter_calibrations)
 
     async def get_swr_meter(self) -> int:
         """Read the raw SWR meter value (0-255).
 
-        Mirrors the Yaesu ``*_meter`` naming on ``MetersCapable``. Unlike
-        :meth:`get_swr` (which is documented to return a calibrated float
-        ratio but currently returns the raw int on Icom — see issue
-        #1104), this method is contractually a raw 0-255 integer.
+        Mirrors the Yaesu ``*_meter`` naming on ``MetersCapable``. For a
+        calibrated SWR ratio (>= 1.0) use :meth:`get_swr`.
         """
         self._check_connected()
         civ = get_swr(to_addr=self._radio_addr)

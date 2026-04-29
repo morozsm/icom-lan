@@ -887,6 +887,11 @@ raw = 120
 actual = 3.0
 label = "3.0"
 
+[[meters.swr.calibration]]
+raw = 255
+actual = 6.0
+label = "6.0+"
+
 [meters.alc]
 redline_raw = 120
 

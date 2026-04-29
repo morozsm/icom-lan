@@ -327,7 +327,7 @@ class TestMeterCalibrations:
         assert len(rig.meter_calibrations["power"]) == 3
 
     def test_swr_calibration_count(self, rig):
-        assert len(rig.meter_calibrations["swr"]) == 4
+        assert len(rig.meter_calibrations["swr"]) == 5
 
     def test_alc_calibration_count(self, rig):
         assert len(rig.meter_calibrations["alc"]) == 2
@@ -352,7 +352,8 @@ class TestMeterCalibrations:
     def test_swr_endpoints(self, rig):
         pts = rig.meter_calibrations["swr"]
         assert pts[0]["raw"] == 0 and pts[0]["actual"] == 1.0
-        assert pts[-1]["raw"] == 120 and pts[-1]["actual"] == 3.0
+        # 5th point added in P3-01 (issue #1173) — wfview IC-7610.rig.
+        assert pts[-1]["raw"] == 255 and pts[-1]["actual"] == 6.0
 
     def test_alc_endpoints(self, rig):
         pts = rig.meter_calibrations["alc"]

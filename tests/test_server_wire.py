@@ -90,7 +90,9 @@ def _make_mock_radio() -> _MockRadio:
     radio.get_data_mode = AsyncMock(return_value=False)
     radio.get_s_meter = AsyncMock(return_value=120)
     radio.get_rf_power = AsyncMock(return_value=255)
-    radio.get_swr = AsyncMock(return_value=0)
+    # ``get_swr`` is contracted as a calibrated ratio (>= 1.0); the
+    # rigctld handler now passes the float through unchanged (#1173).
+    radio.get_swr = AsyncMock(return_value=1.0)
     radio.set_freq = AsyncMock(return_value=None)
     radio.set_mode = AsyncMock(return_value=None)
     radio.set_data_mode = AsyncMock(return_value=None)
@@ -617,7 +619,7 @@ class TestLevelWire:
         await _close(w)
 
     async def test_get_level_swr_wire(self, wire_server: RigctldServer) -> None:
-        """'l SWR' with raw=0 → '1.000000\\n'."""
+        """'l SWR' with calibrated ratio 1.0 → '1.000000\\n'."""
         r, w = await _connect(wire_server)
         w.write(b"l SWR\n")
         await w.drain()

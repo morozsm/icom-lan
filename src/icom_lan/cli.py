@@ -1993,7 +1993,7 @@ async def _cmd_meter(radio: Radio, args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    results: dict[str, int | str] = {}
+    results: dict[str, int | float | str] = {}
     meter_getters: list[tuple[str, Any]] = [
         ("s_meter", radio.get_s_meter),
         ("power", radio.get_rf_power),
