@@ -542,30 +542,46 @@ class RadioPoller:
         Called after scope is enabled — IC-7610 ignores scope control
         queries when scope data output is off.
 
-        Note: commands 0x14, 0x15, 0x17, 0x19, 0x1A require a receiver
-        prefix byte (00=MAIN, 01=SUB) in the READ query — without it
-        the IC-7610 silently ignores the query.
+        Note: commands 0x14, 0x15, 0x16, 0x17, 0x19, 0x1A, 0x1D, 0x1F
+        require a receiver prefix byte (00=MAIN, 01=SUB) in the READ
+        query — without it the IC-7610 silently ignores the query.
+        The public ``get_scope_*`` methods on ``ScopeRuntimeMixin`` add
+        the prefix from ``radio_state.scope_controls.receiver`` for
+        each affected sub-command.
         """
-        # Determine active scope receiver (0=MAIN, 1=SUB)
+        from ..radio_protocol import ScopeCapable
+
+        radio = self._radio
+        if not isinstance(radio, ScopeCapable):
+            return
+
         scope_rx = 0
         if self._radio_state:
             scope_rx = self._radio_state.scope_controls.receiver
 
-        # Queries without receiver prefix
-        for sub in (0x12, 0x13, 0x1B, 0x1C):
+        # Iterate through all scope-control getters in the same order as
+        # the previous raw 0x27 sub-command sequence so cadence/queue
+        # behavior is preserved. Each call sleeps `_adaptive_gap()` to
+        # keep the existing throttle.
+        scope_getters: tuple[tuple[str, Any], ...] = (
+            ("get_scope_receiver", radio.get_scope_receiver),
+            ("get_scope_dual", radio.get_scope_dual),
+            ("get_scope_during_tx", radio.get_scope_during_tx),
+            ("get_scope_center_type", radio.get_scope_center_type),
+            ("get_scope_mode", radio.get_scope_mode),
+            ("get_scope_span", radio.get_scope_span),
+            ("get_scope_edge", radio.get_scope_edge),
+            ("get_scope_hold", radio.get_scope_hold),
+            ("get_scope_ref", radio.get_scope_ref),
+            ("get_scope_speed", radio.get_scope_speed),
+            ("get_scope_vbw", radio.get_scope_vbw),
+            ("get_scope_rbw", radio.get_scope_rbw),
+        )
+        for label, getter in scope_getters:
             try:
-                await self._civ(0x27, sub=sub, data=b"")
+                await getter()
             except Exception:
-                pass
-            await asyncio.sleep(self._adaptive_gap())
-
-        # Queries that require receiver prefix byte
-        rx_byte = bytes([scope_rx])
-        for sub in (0x14, 0x15, 0x16, 0x17, 0x19, 0x1A, 0x1D, 0x1F):
-            try:
-                await self._civ(0x27, sub=sub, data=rx_byte)
-            except Exception:
-                pass
+                logger.debug("radio-poller: %s failed", label, exc_info=True)
             await asyncio.sleep(self._adaptive_gap())
         logger.info("radio-poller: scope controls fetched (receiver=%d)", scope_rx)
 

@@ -231,11 +231,13 @@ class ScopeRuntimeMixin(_MixinBase):  # type: ignore[misc]
     async def get_scope_mode(self) -> int:
         """Read the current scope mode (0=center, 1=fixed, 2=scroll-C, 3=scroll-F)."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         resp = await self._send_civ_expect(
-            _get_scope_mode_cmd(to_addr=self._radio_addr), label="get_scope_mode"
+            _get_scope_mode_cmd(to_addr=self._radio_addr, receiver=receiver),
+            label="get_scope_mode",
         )
-        receiver, mode = parse_scope_mode_response(resp)
-        self._apply_scope_receiver_hint(receiver)
+        rx_hint, mode = parse_scope_mode_response(resp)
+        self._apply_scope_receiver_hint(rx_hint)
         self._scope_controls().mode = mode
         return mode
 
@@ -252,11 +254,13 @@ class ScopeRuntimeMixin(_MixinBase):  # type: ignore[misc]
     async def get_scope_span(self) -> int:
         """Read the scope span preset index (0..7)."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         resp = await self._send_civ_expect(
-            _get_scope_span_cmd(to_addr=self._radio_addr), label="get_scope_span"
+            _get_scope_span_cmd(to_addr=self._radio_addr, receiver=receiver),
+            label="get_scope_span",
         )
-        receiver, span = parse_scope_span_response(resp)
-        self._apply_scope_receiver_hint(receiver)
+        rx_hint, span = parse_scope_span_response(resp)
+        self._apply_scope_receiver_hint(rx_hint)
         self._scope_controls().span = span
         return span
 
@@ -273,11 +277,13 @@ class ScopeRuntimeMixin(_MixinBase):  # type: ignore[misc]
     async def get_scope_edge(self) -> int:
         """Read the fixed-edge selection (1..4)."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         resp = await self._send_civ_expect(
-            _get_scope_edge_cmd(to_addr=self._radio_addr), label="get_scope_edge"
+            _get_scope_edge_cmd(to_addr=self._radio_addr, receiver=receiver),
+            label="get_scope_edge",
         )
-        receiver, edge = parse_scope_edge_response(resp)
-        self._apply_scope_receiver_hint(receiver)
+        rx_hint, edge = parse_scope_edge_response(resp)
+        self._apply_scope_receiver_hint(rx_hint)
         self._scope_controls().edge = edge
         return edge
 
@@ -294,11 +300,13 @@ class ScopeRuntimeMixin(_MixinBase):  # type: ignore[misc]
     async def get_scope_hold(self) -> bool:
         """Read whether scope hold is enabled."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         resp = await self._send_civ_expect(
-            _get_scope_hold_cmd(to_addr=self._radio_addr), label="get_scope_hold"
+            _get_scope_hold_cmd(to_addr=self._radio_addr, receiver=receiver),
+            label="get_scope_hold",
         )
-        receiver, hold = parse_scope_hold_response(resp)
-        self._apply_scope_receiver_hint(receiver)
+        rx_hint, hold = parse_scope_hold_response(resp)
+        self._apply_scope_receiver_hint(rx_hint)
         self._scope_controls().hold = hold
         return hold
 
@@ -315,11 +323,13 @@ class ScopeRuntimeMixin(_MixinBase):  # type: ignore[misc]
     async def get_scope_ref(self) -> float:
         """Read the scope reference level in dB."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         resp = await self._send_civ_expect(
-            _get_scope_ref_cmd(to_addr=self._radio_addr), label="get_scope_ref"
+            _get_scope_ref_cmd(to_addr=self._radio_addr, receiver=receiver),
+            label="get_scope_ref",
         )
-        receiver, ref_db = parse_scope_ref_response(resp)
-        self._apply_scope_receiver_hint(receiver)
+        rx_hint, ref_db = parse_scope_ref_response(resp)
+        self._apply_scope_receiver_hint(rx_hint)
         self._scope_controls().ref_db = ref_db
         return ref_db
 
@@ -336,11 +346,13 @@ class ScopeRuntimeMixin(_MixinBase):  # type: ignore[misc]
     async def get_scope_speed(self) -> int:
         """Read the scope speed preset (0=fast, 1=mid, 2=slow)."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         resp = await self._send_civ_expect(
-            _get_scope_speed_cmd(to_addr=self._radio_addr), label="get_scope_speed"
+            _get_scope_speed_cmd(to_addr=self._radio_addr, receiver=receiver),
+            label="get_scope_speed",
         )
-        receiver, speed = parse_scope_speed_response(resp)
-        self._apply_scope_receiver_hint(receiver)
+        rx_hint, speed = parse_scope_speed_response(resp)
+        self._apply_scope_receiver_hint(rx_hint)
         self._scope_controls().speed = speed
         return speed
 
@@ -398,11 +410,13 @@ class ScopeRuntimeMixin(_MixinBase):  # type: ignore[misc]
     async def get_scope_vbw(self) -> bool:
         """Read whether narrow scope VBW is enabled."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         resp = await self._send_civ_expect(
-            _get_scope_vbw_cmd(to_addr=self._radio_addr), label="get_scope_vbw"
+            _get_scope_vbw_cmd(to_addr=self._radio_addr, receiver=receiver),
+            label="get_scope_vbw",
         )
-        receiver, narrow = parse_scope_vbw_response(resp)
-        self._apply_scope_receiver_hint(receiver)
+        rx_hint, narrow = parse_scope_vbw_response(resp)
+        self._apply_scope_receiver_hint(rx_hint)
         self._scope_controls().vbw_narrow = narrow
         return narrow
 
@@ -457,11 +471,13 @@ class ScopeRuntimeMixin(_MixinBase):  # type: ignore[misc]
     async def get_scope_rbw(self) -> int:
         """Read the scope RBW preset (0=wide, 1=mid, 2=narrow)."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         resp = await self._send_civ_expect(
-            _get_scope_rbw_cmd(to_addr=self._radio_addr), label="get_scope_rbw"
+            _get_scope_rbw_cmd(to_addr=self._radio_addr, receiver=receiver),
+            label="get_scope_rbw",
         )
-        receiver, rbw = parse_scope_rbw_response(resp)
-        self._apply_scope_receiver_hint(receiver)
+        rx_hint, rbw = parse_scope_rbw_response(resp)
+        self._apply_scope_receiver_hint(rx_hint)
         self._scope_controls().rbw = rbw
         return rbw
 
