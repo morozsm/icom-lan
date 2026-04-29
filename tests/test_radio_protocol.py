@@ -280,3 +280,49 @@ def test_yaesu_cat_radio_satisfies_ritxit_capable() -> None:
         "set_rit_tx_status",
     ):
         assert hasattr(YaesuCatRadio, name), f"YaesuCatRadio missing {name}"
+
+
+def test_icom_radio_satisfies_scope_capable_with_extended_surface() -> None:
+    """IcomRadio still satisfies ScopeCapable after #1107 protocol extension.
+
+    Verifies the new getters/setters and ``scope_stream`` declared on the
+    protocol are reachable on the concrete backend (existence-only check —
+    ``@runtime_checkable`` does not validate signatures, so we explicitly
+    assert each new attribute is present and callable).
+    """
+    from icom_lan.radio import IcomRadio
+    from icom_lan.radio_protocol import ScopeCapable
+
+    radio = IcomRadio(host="")
+    assert isinstance(radio, ScopeCapable)
+
+    expected_methods = (
+        # New getters from #1107
+        "get_scope_during_tx",
+        "get_scope_center_type",
+        "get_scope_fixed_edge",
+        "get_scope_edge",
+        "get_scope_rbw",
+        "get_scope_vbw",
+        # New setters from #1107
+        "set_scope_edge",
+        "set_scope_rbw",
+        "set_scope_vbw",
+        # Async iterator
+        "scope_stream",
+    )
+    for name in expected_methods:
+        assert hasattr(radio, name), f"IcomRadio missing {name}"
+        assert callable(getattr(radio, name)), f"{name} is not callable"
+
+
+def test_scope_capable_get_scope_ref_is_float() -> None:
+    """P3-10: get_scope_ref protocol declaration must match impl (-> float)."""
+    import typing
+
+    from icom_lan.radio_protocol import ScopeCapable
+
+    hints = typing.get_type_hints(ScopeCapable.get_scope_ref)
+    assert hints.get("return") is float, (
+        f"ScopeCapable.get_scope_ref must return float, got {hints.get('return')!r}"
+    )
