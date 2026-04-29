@@ -154,10 +154,9 @@ class YaesuRouting:
         if level == "IFSHIFT":
             return RigctldResponse(values=[str(await radio.get_if_shift())])
         if level == "CWPITCH":
-            idx = await radio.get_cw_pitch()
-            return RigctldResponse(
-                values=[str(self._CW_PITCH_BASE + idx * self._CW_PITCH_STEP)]
-            )
+            # radio.get_cw_pitch returns Hz directly (Yaesu backend converts
+            # idx → Hz internally per CwControlCapable contract).
+            return RigctldResponse(values=[str(await radio.get_cw_pitch())])
         if level == "KEYSPD":
             return RigctldResponse(values=[str(await radio.get_key_speed())])
 
@@ -211,10 +210,17 @@ class YaesuRouting:
             await radio.set_if_shift(round(value))
             return _ok()
         if level == "CWPITCH":
-            idx = max(
-                0, min(75, round((value - self._CW_PITCH_BASE) / self._CW_PITCH_STEP))
+            # radio.set_cw_pitch accepts Hz directly and clamps to FTX-1 range
+            # (300-1050) internally. Clamp here too for hamlib compatibility
+            # so an out-of-range hamlib value never bubbles a ValueError.
+            hz = max(
+                self._CW_PITCH_BASE,
+                min(
+                    self._CW_PITCH_BASE + 75 * self._CW_PITCH_STEP,
+                    round(value),
+                ),
             )
-            await radio.set_cw_pitch(idx)
+            await radio.set_cw_pitch(hz)
             return _ok()
         if level == "KEYSPD":
             await radio.set_key_speed(round(value))

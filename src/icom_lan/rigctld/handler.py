@@ -131,6 +131,7 @@ _GET_LEVEL_INT: dict[str, str] = {
 _SET_LEVEL_FLOAT: dict[str, str] = {
     "AF": "set_af_level",
     "RF": "set_rf_gain",
+    "SQL": "set_squelch",
     "NR": "set_nr_level",
     "NB": "set_nb_level",
     "COMP": "set_compressor_level",

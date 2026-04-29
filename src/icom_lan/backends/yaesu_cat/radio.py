@@ -1478,12 +1478,26 @@ class YaesuCatRadio:
     # -- AdvancedControlCapable aliases ----------------------------------------
 
     async def get_cw_pitch(self) -> int:
-        """Alias for AdvancedControlCapable compatibility."""
-        return await self.get_key_pitch()
+        """CW pitch in Hz (300-1050).
+
+        ``get_key_pitch`` is the Yaesu-internal helper and returns the FTX-1
+        idx (0-75). The Icom-spelled ``CwControlCapable`` contract is Hz, so
+        we map ``idx → 300 + idx * 10`` (FTX-1 documented mapping: 0=300 Hz,
+        75=1050 Hz, 10 Hz step).
+        """
+        idx = await self.get_key_pitch()
+        return 300 + idx * 10
 
     async def set_cw_pitch(self, freq: int) -> None:
-        """Alias for AdvancedControlCapable compatibility."""
-        await self.set_key_pitch(freq)
+        """Set CW pitch in Hz (300-1050).
+
+        Maps Hz to FTX-1's 0-75 idx (10 Hz step). Raises ``ValueError`` on
+        out-of-range input.
+        """
+        if not 300 <= freq <= 1050:
+            raise ValueError(f"CW pitch must be 300-1050 Hz, got {freq}")
+        idx = (freq - 300) // 10
+        await self.set_key_pitch(idx)
 
     async def get_dial_lock(self) -> bool:
         """Alias for AdvancedControlCapable compatibility."""

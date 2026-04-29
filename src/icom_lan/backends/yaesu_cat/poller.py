@@ -756,11 +756,12 @@ class YaesuCatPoller:
             except Exception:
                 logger.debug("YaesuCatPoller: get_keyer_speed failed", exc_info=True)
             try:
-                state.cw_pitch = await radio.get_key_pitch()
+                # state.cw_pitch is Hz; get_cw_pitch returns Hz (300-1050)
+                state.cw_pitch = await radio.get_cw_pitch()
             except NotImplementedError:
                 pass
             except Exception:
-                logger.debug("YaesuCatPoller: get_key_pitch failed", exc_info=True)
+                logger.debug("YaesuCatPoller: get_cw_pitch failed", exc_info=True)
             try:
                 # FTX-1 CAT only has binary on/off — no semi/full distinction
                 state.break_in = 1 if await radio.get_break_in() else 0
