@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 from ...audio import AudioPacket
-from ...audio.usb_driver import UsbAudioDriver
 from ...command_spec import CatCommandSpec
 from ...commands import hz_to_table_index, table_index_to_hz
 from ...types import AudioCodec, BreakInMode
@@ -23,6 +22,7 @@ from .parser import CatCommandParser, format_command
 from .transport import YaesuCatTransport
 
 if TYPE_CHECKING:
+    from ...audio.usb_driver import UsbAudioDriver
     from ...audio_bus import AudioBus
     from ...profiles import RadioProfile
     from ...types import BandStackRegister, MemoryChannel
@@ -101,14 +101,21 @@ class YaesuCatRadio:
         self._opus_rx_user_callback: Callable[[AudioPacket | None], None] | None = None
         self._pcm_rx_user_callback: Callable[[bytes | None], None] | None = None
         self._audio_sample_rate = audio_sample_rate
-        self._audio_driver: UsbAudioDriver = audio_driver or UsbAudioDriver(
-            serial_port=device,
-            rx_device=rx_device,
-            tx_device=tx_device,
-            sample_rate=audio_sample_rate,
-            channels=1,
-            backend=None,  # default PortAudioBackend
-        )
+        if audio_driver is None:
+            # Lazy import: avoids pulling icom_lan.audio.backend (PortAudio,
+            # numpy DSP) into top-level package import. PR #1200 / #1194.
+            from ...audio.usb_driver import UsbAudioDriver as _UsbAudioDriver
+
+            self._audio_driver: UsbAudioDriver = _UsbAudioDriver(
+                serial_port=device,
+                rx_device=rx_device,
+                tx_device=tx_device,
+                sample_rate=audio_sample_rate,
+                channels=1,
+                backend=None,  # default PortAudioBackend
+            )
+        else:
+            self._audio_driver = audio_driver
 
         # Build bidirectional mode code ↔ name maps.
         # FTX-1 CAT codes are 1-based: index 0 in modes list → code "1".

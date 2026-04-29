@@ -55,10 +55,15 @@ def test_audio_seq_starts_at_zero(radio):
 
 
 def test_audio_driver_default_construction():
-    """UsbAudioDriver is created with correct args when not injected."""
+    """UsbAudioDriver is created with correct args when not injected.
+
+    The driver is imported lazily inside ``__init__`` (so the top-level
+    ``icom_lan`` import doesn't pull ``audio.backend``), so we patch the
+    canonical module path rather than a re-export.
+    """
     with (
         patch("icom_lan.backends.yaesu_cat.radio.YaesuCatTransport"),
-        patch("icom_lan.backends.yaesu_cat.radio.UsbAudioDriver") as MockDriver,
+        patch("icom_lan.audio.usb_driver.UsbAudioDriver") as MockDriver,
     ):
         MockDriver.return_value = MagicMock()
         YaesuCatRadio(

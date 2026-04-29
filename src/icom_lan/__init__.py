@@ -14,6 +14,7 @@ may change without warning.
 """
 
 from importlib.metadata import version as _pkg_version
+from typing import Any
 
 __version__ = _pkg_version("icom-lan")
 
@@ -221,11 +222,13 @@ _LAZY_MAP: dict[str, tuple[str, str]] = {
 }
 
 
-def __getattr__(name: str) -> object:
+def __getattr__(name: str) -> Any:
     """:pep:`562` lazy attribute hook for tier-2 names.
 
     Resolves tier-2 names on first access, caches them in ``globals()``
-    so subsequent lookups skip this hook entirely.
+    so subsequent lookups skip this hook entirely. Returns :class:`~typing.Any`
+    so downstream typecheckers (mypy, pyright) keep the original symbol
+    types when a consumer does ``from icom_lan import IcomRadio``.
     """
     target = _LAZY_MAP.get(name)
     if target is None:
