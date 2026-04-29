@@ -1841,6 +1841,61 @@ class TestTransceiverStatusParity:
         assert mock_transport.sent_packets[-1].endswith(expected_tail)
 
 
+class TestBreakInModeRoundTrip:
+    """Issue #1100 — CwControlCapable.get_break_in/set_break_in type contract.
+
+    Both Icom and Yaesu backends must agree on the :class:`BreakInMode`
+    enum return type. Icom exposes the full 3-state enum; Yaesu maps
+    ``False`` ↔ ``OFF`` and ``True`` ↔ ``SEMI`` while keeping
+    bool-compatibility at runtime (``IntEnum``).
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("payload", "expected"),
+        [
+            (b"\x00", BreakInMode.OFF),
+            (b"\x01", BreakInMode.SEMI),
+            (b"\x02", BreakInMode.FULL),
+        ],
+    )
+    async def test_icom_get_break_in_returns_enum(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        payload: bytes,
+        expected: BreakInMode,
+    ) -> None:
+        mock_transport.queue_response(_function_response(0x47, payload))
+        result = await radio.get_break_in()
+        assert result == expected
+        assert isinstance(result, BreakInMode)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("value", "expected_byte"),
+        [
+            (BreakInMode.OFF, 0x00),
+            (BreakInMode.SEMI, 0x01),
+            (BreakInMode.FULL, 0x02),
+            (0, 0x00),
+            (1, 0x01),
+            (2, 0x02),
+        ],
+    )
+    async def test_icom_set_break_in_accepts_int_or_enum(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        value: BreakInMode | int,
+        expected_byte: int,
+    ) -> None:
+        await radio.set_break_in(value)
+        assert mock_transport.sent_packets[-1].endswith(
+            bytes([0x16, 0x47, expected_byte, 0xFD])
+        )
+
+
 class TestToneTsqlParity:
     """Test high-level tone/TSQL parity methods (#134)."""
 

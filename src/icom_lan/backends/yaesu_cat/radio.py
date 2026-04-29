@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from ...audio import AudioPacket
 from ...audio.usb_driver import UsbAudioDriver
 from ...command_spec import CatCommandSpec
-from ...types import AudioCodec
+from ...types import AudioCodec, BreakInMode
 from ...exceptions import AudioFormatError, CommandError
 from ...exceptions import ConnectionError as RadioConnectionError
 from ...radio_state import RadioState
@@ -1151,14 +1151,27 @@ class YaesuCatRadio:
         """Set CW pitch index (0–75)."""
         await self._write("set_key_pitch", idx=idx)
 
-    async def get_break_in(self) -> bool:
-        """Get CW break-in state."""
-        result = await self._query("get_break_in")
-        return bool(result["state"] == "1")
+    async def get_break_in(self) -> BreakInMode:
+        """Get CW break-in mode.
 
-    async def set_break_in(self, state: bool) -> None:
-        """Set CW break-in state."""
-        await self._write("set_break_in", state="1" if state else "0")
+        FTX-1 CAT exposes only binary on/off; map ``"1"`` to
+        :attr:`BreakInMode.SEMI` and ``"0"`` to :attr:`BreakInMode.OFF`.
+        :class:`BreakInMode` is an :class:`IntEnum` and remains
+        bool-compatible at runtime.
+        """
+        result = await self._query("get_break_in")
+        return BreakInMode.SEMI if result["state"] == "1" else BreakInMode.OFF
+
+    async def set_break_in(self, mode: BreakInMode | int | bool) -> None:
+        """Set CW break-in mode.
+
+        FTX-1 CAT supports binary on/off only — :attr:`BreakInMode.OFF`
+        maps to ``"0"`` and any non-OFF value (``SEMI``/``FULL``) maps
+        to ``"1"``. ``bool`` values remain accepted for backward
+        compatibility (``False``/``True`` → ``OFF``/``SEMI``).
+        """
+        on = BreakInMode(int(mode)) != BreakInMode.OFF
+        await self._write("set_break_in", state="1" if on else "0")
 
     async def get_cw_spot(self) -> bool:
         """Get CW spot tone state."""

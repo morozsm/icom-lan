@@ -38,6 +38,7 @@ features = [
     "compressor",
     # "monitor",  # ML; rejected by FTX-1 (not supported via CAT)
     "cw",
+    "break_in",
     "rit",
     "tuner",
     "meters",

@@ -768,8 +768,60 @@ async def test_set_break_in_delay(connected_radio):
 
 @pytest.mark.asyncio
 async def test_get_break_in(connected_radio):
+    from icom_lan.types import BreakInMode
+
     connected_radio._transport.query = AsyncMock(return_value="BI1")
-    assert await connected_radio.get_break_in() is True
+    result = await connected_radio.get_break_in()
+    assert result == BreakInMode.SEMI
+    # IntEnum stays bool-compatible at runtime.
+    assert bool(result) is True
+
+
+@pytest.mark.asyncio
+async def test_get_break_in_off_maps_to_off(connected_radio):
+    from icom_lan.types import BreakInMode
+
+    connected_radio._transport.query = AsyncMock(return_value="BI0")
+    result = await connected_radio.get_break_in()
+    assert result == BreakInMode.OFF
+    assert bool(result) is False
+
+
+@pytest.mark.asyncio
+async def test_set_break_in_accepts_break_in_mode(connected_radio):
+    from icom_lan.types import BreakInMode
+
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_break_in(BreakInMode.SEMI)
+    connected_radio._transport.write.assert_called_once_with("BI1;")
+
+
+@pytest.mark.asyncio
+async def test_set_break_in_full_maps_to_on(connected_radio):
+    from icom_lan.types import BreakInMode
+
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_break_in(BreakInMode.FULL)
+    connected_radio._transport.write.assert_called_once_with("BI1;")
+
+
+@pytest.mark.asyncio
+async def test_set_break_in_off_maps_to_off(connected_radio):
+    from icom_lan.types import BreakInMode
+
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_break_in(BreakInMode.OFF)
+    connected_radio._transport.write.assert_called_once_with("BI0;")
+
+
+@pytest.mark.asyncio
+async def test_set_break_in_accepts_bool_for_backward_compat(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_break_in(True)
+    connected_radio._transport.write.assert_called_once_with("BI1;")
+    connected_radio._transport.write.reset_mock()
+    await connected_radio.set_break_in(False)
+    connected_radio._transport.write.assert_called_once_with("BI0;")
 
 
 @pytest.mark.asyncio

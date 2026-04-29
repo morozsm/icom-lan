@@ -44,7 +44,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Protocol, runtime_checkable
 
 from .radio_state import RadioState, VfoSlotState
-from .types import Mode
+from .types import BreakInMode, Mode
 
 if TYPE_CHECKING:
     from ._state_cache import StateCache
@@ -773,13 +773,31 @@ class AntennaControlCapable(Protocol):
 
 @runtime_checkable
 class CwControlCapable(Protocol):
-    """CW text, key speed, pitch, dash ratio, break-in delay."""
+    """CW text, key speed, pitch, dash ratio, break-in mode/delay."""
 
     async def send_cw_text(self, text: str) -> None: ...
     async def stop_cw_text(self) -> None: ...
 
     async def get_cw_pitch(self) -> int: ...
     async def set_cw_pitch(self, freq: int) -> None: ...
+
+    async def get_break_in(self) -> BreakInMode:
+        """Get CW break-in mode (OFF/SEMI/FULL).
+
+        Backends that only expose binary on/off (e.g. Yaesu CAT) map
+        ``False`` to :attr:`BreakInMode.OFF` and ``True`` to
+        :attr:`BreakInMode.SEMI`. :class:`BreakInMode` is an :class:`IntEnum`
+        and remains bool-compatible at runtime.
+        """
+        ...
+
+    async def set_break_in(self, mode: BreakInMode | int) -> None:
+        """Set CW break-in mode (accepts :class:`BreakInMode` or int).
+
+        Backends that only expose binary on/off (e.g. Yaesu CAT) treat
+        :attr:`BreakInMode.OFF` as off and any other value as on.
+        """
+        ...
 
     async def set_break_in_delay(self, level: int) -> None:
         """Set CW break-in delay (0-255)."""
