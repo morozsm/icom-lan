@@ -964,7 +964,8 @@ class RigctldHandler:
         return RigctldResponse(values=["1" if dual else "0"])
 
     async def _cmd_get_powerstat(self, cmd: RigctldCommand) -> RigctldResponse:
-        return RigctldResponse(values=["1"])
+        on = await self._radio.get_powerstat()
+        return RigctldResponse(values=[str(int(bool(on)))])
 
     async def _cmd_quit(self, cmd: RigctldCommand) -> RigctldResponse:
         # Return OK; server.py detects cmd_echo == "quit" and closes the connection

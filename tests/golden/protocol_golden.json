@@ -249,9 +249,9 @@
   },
   {
     "id": "get_powerstat",
-    "description": "get_powerstat — always returns 1 (rig on)",
+    "description": "get_powerstat — dispatches to radio (ON)",
     "input": "\\get_powerstat",
-    "mock": {},
+    "mock": {"get_powerstat": true},
     "expected_output": "1\n",
     "extended_output": "get_powerstat:\n1\nRPRT 0\n"
   },

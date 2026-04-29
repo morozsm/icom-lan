@@ -95,6 +95,7 @@ def _make_mock_radio() -> _MockRadio:
     radio.set_mode = AsyncMock(return_value=None)
     radio.set_data_mode = AsyncMock(return_value=None)
     radio.set_ptt = AsyncMock(return_value=None)
+    radio.get_powerstat = AsyncMock(return_value=True)
     return radio
 
 
