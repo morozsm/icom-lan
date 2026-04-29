@@ -1352,14 +1352,14 @@ class RadioPoller:
             case VfoSwap():
                 self._last_user_write_ts = time.monotonic()
                 if CAP_DUAL_RX in self._caps:
-                    await radio.vfo_exchange()
+                    await radio.swap_main_sub()
                 # After swap, active VFO stays same but freqs are exchanged
                 if self._on_state_event:
                     self._on_state_event("vfo_swapped", {})
             case VfoEqualize():
                 self._last_user_write_ts = time.monotonic()
                 if CAP_DUAL_RX in self._caps:
-                    await radio.vfo_equalize()
+                    await radio.equalize_main_sub()
             case EnableScope(policy=policy):
                 if CAP_SCOPE in self._caps:
                     # Defer scope enable during initial fetch to avoid

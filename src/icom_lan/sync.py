@@ -231,12 +231,25 @@ class IcomRadio:
     select_vfo = set_vfo
 
     def vfo_equalize(self) -> None:
-        """Copy VFO A to VFO B."""
-        self._run(self._radio.vfo_equalize())
+        """Copy VFO A to VFO B (dispatches to canonical async method)."""
+        # Inline the dispatch previously hidden behind the deprecated
+        # ``vfo_equalize`` alias: dual-RX profiles route to
+        # ``equalize_main_sub`` (MAIN→SUB), single-RX profiles route to
+        # ``equalize_vfo_ab(0)`` (A→B).
+        if self._radio.profile.receiver_count > 1:
+            self._run(self._radio.equalize_main_sub())
+        else:
+            self._run(self._radio.equalize_vfo_ab(0))
 
     def vfo_exchange(self) -> None:
-        """Swap VFO A and B."""
-        self._run(self._radio.vfo_exchange())
+        """Swap VFO A and B (dispatches to canonical async method)."""
+        # Inline the dispatch previously hidden behind the deprecated
+        # ``vfo_exchange`` alias: dual-RX profiles route to ``swap_main_sub``
+        # (MAIN↔SUB), single-RX profiles route to ``swap_vfo_ab(0)`` (A↔B).
+        if self._radio.profile.receiver_count > 1:
+            self._run(self._radio.swap_main_sub())
+        else:
+            self._run(self._radio.swap_vfo_ab(0))
 
     def set_split_mode(self, on: bool) -> None:
         """Enable or disable split mode."""

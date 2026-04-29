@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -168,8 +169,14 @@ class TestApplyProfileFull:
 
     @pytest.mark.asyncio()
     async def test_applies_equalize_vfo(self, radio: AsyncMock) -> None:
+        # #1113: apply_profile now dispatches to the canonical
+        # ``equalize_main_sub`` (dual-RX) or ``equalize_vfo_ab(0)``
+        # (single-RX) instead of the deprecated ``vfo_equalize`` alias.
+        # The bare AsyncMock fixture has no real ``profile`` attribute, so
+        # the dispatch falls through to the single-RX path.
         await apply_profile(radio, OperatingProfile(equalize_vfo=True))
-        radio.vfo_equalize.assert_awaited_once()
+        radio.equalize_vfo_ab.assert_awaited_once_with(0)
+        radio.vfo_equalize.assert_not_awaited()
 
     @pytest.mark.asyncio()
     async def test_scope_enabled(self, radio: AsyncMock) -> None:
@@ -235,7 +242,9 @@ class TestApplyProfileFull:
         radio.set_data_mode.assert_awaited()
         radio.set_data_off_mod_input.assert_awaited()
         radio.set_data1_mod_input.assert_awaited()
-        radio.vfo_equalize.assert_awaited()
+        # #1113: dispatches to canonical ``equalize_vfo_ab(0)`` (bare
+        # AsyncMock has no real profile attribute → single-RX fallback).
+        radio.equalize_vfo_ab.assert_awaited_with(0)
         radio.set_squelch.assert_awaited()
         radio.enable_scope.assert_awaited()
         radio.set_scope_mode.assert_awaited()
@@ -279,6 +288,54 @@ class TestApplyProfileMinimal:
         assert isinstance(snapshot, dict)
         # Only the supported setter was called
         radio.set_freq.assert_awaited_with(14_074_000)
+
+
+# ---------------------------------------------------------------------------
+# apply_profile — equalize_vfo dispatch (issue #1113)
+# ---------------------------------------------------------------------------
+
+
+class TestEqualizeVfoDispatch:
+    """Verify ``equalize_vfo=True`` dispatches to the right canonical method.
+
+    Regression coverage for #1113: ``apply_profile`` must NOT call the
+    deprecated ``vfo_equalize`` alias on the radio.  Dual-RX profiles route
+    to ``equalize_main_sub``; single-RX profiles route to ``equalize_vfo_ab(0)``.
+    """
+
+    @pytest.mark.asyncio()
+    async def test_dual_rx_profile_uses_equalize_main_sub(self) -> None:
+        radio = AsyncMock()
+        radio.snapshot_state.return_value = {}
+        # Profile guard: receiver_count > 1 → dual-RX branch
+        radio.profile = SimpleNamespace(receiver_count=2)
+        await apply_profile(radio, OperatingProfile(equalize_vfo=True))
+        radio.equalize_main_sub.assert_awaited_once_with()
+        radio.equalize_vfo_ab.assert_not_awaited()
+
+    @pytest.mark.asyncio()
+    async def test_single_rx_profile_uses_equalize_vfo_ab(self) -> None:
+        radio = AsyncMock(
+            spec=[
+                "snapshot_state",
+                "equalize_vfo_ab",
+                "profile",
+            ]
+        )
+        radio.snapshot_state = AsyncMock(return_value={})
+        radio.equalize_vfo_ab = AsyncMock()
+        radio.profile = SimpleNamespace(receiver_count=1)
+        await apply_profile(radio, OperatingProfile(equalize_vfo=True))
+        radio.equalize_vfo_ab.assert_awaited_once_with(0)
+
+    @pytest.mark.asyncio()
+    async def test_radio_without_either_method_skips_silently(self) -> None:
+        radio = AsyncMock(spec=["snapshot_state", "profile"])
+        radio.snapshot_state = AsyncMock(return_value={})
+        radio.profile = SimpleNamespace(receiver_count=1)
+        # Should NOT raise even though radio has neither equalize method
+        snapshot = await apply_profile(radio, OperatingProfile(equalize_vfo=True))
+        assert snapshot == {}
 
 
 # ---------------------------------------------------------------------------

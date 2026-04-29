@@ -649,8 +649,13 @@ async def test_enqueue_command_errors() -> None:
         set_scope_ref=AsyncMock(),
         get_scope_hold=AsyncMock(return_value=False),
         set_scope_hold=AsyncMock(),
+        # Keep deprecated aliases so the radio still satisfies
+        # ``DualReceiverCapable`` (Protocol untouched until #1114).
         vfo_exchange=AsyncMock(),
         vfo_equalize=AsyncMock(),
+        # Canonical dual-RX VFO methods (post-#1113).
+        swap_main_sub=AsyncMock(),
+        equalize_main_sub=AsyncMock(),
     )
     handler = _control_handler(
         radio=radio,
