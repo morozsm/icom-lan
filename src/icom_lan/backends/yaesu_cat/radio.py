@@ -1296,6 +1296,39 @@ class YaesuCatRadio:
         sign = "+" if offset >= 0 else "-"
         await self._write("set_clarifier_freq", sign=sign, offset=abs(offset))
 
+    # -- Canonical RIT/XIT surface (RitXitCapable) --------------------------
+    # Cross-vendor names that delegate to the *_clarifier* CAT helpers.
+    # set_rit_status / set_rit_tx_status do read-modify-write on CF000 so a
+    # single-bit setter does not clobber the other bit (P1-02 fix).
+
+    async def get_rit_frequency(self) -> int:
+        """Get RIT frequency offset in Hz (signed)."""
+        return await self.get_clarifier_freq()
+
+    async def set_rit_frequency(self, freq_hz: int) -> None:
+        """Set RIT frequency offset in Hz (signed). Fire-and-forget."""
+        await self.set_clarifier_freq(freq_hz)
+
+    async def get_rit_status(self) -> bool:
+        """Get RIT (RX clarifier) on/off status."""
+        rx_clar, _tx_clar = await self.get_clarifier()
+        return rx_clar
+
+    async def set_rit_status(self, on: bool) -> None:
+        """Set RIT (RX clarifier) on/off — preserves XIT bit (read-modify-write)."""
+        _rx_clar, tx_clar = await self.get_clarifier()
+        await self.set_clarifier(rx_clar=on, tx_clar=tx_clar)
+
+    async def get_rit_tx_status(self) -> bool:
+        """Get RIT TX / XIT (TX clarifier) on/off status."""
+        _rx_clar, tx_clar = await self.get_clarifier()
+        return tx_clar
+
+    async def set_rit_tx_status(self, on: bool) -> None:
+        """Set RIT TX / XIT on/off — preserves RIT bit (read-modify-write)."""
+        rx_clar, _tx_clar = await self.get_clarifier()
+        await self.set_clarifier(rx_clar=rx_clar, tx_clar=on)
+
     # -- D9: Tone/TSQL ------------------------------------------------------
 
     async def get_sql_type(self, receiver: int = 0) -> int:

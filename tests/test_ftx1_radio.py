@@ -916,6 +916,76 @@ async def test_reset_clarifier(connected_radio):
 
 
 # ---------------------------------------------------------------------------
+# Canonical RIT/XIT surface (RitXitCapable) — delegates to *_clarifier* helpers
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_rit_frequency_delegates(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CF001-0250")
+    assert await connected_radio.get_rit_frequency() == -250
+
+
+@pytest.mark.asyncio
+async def test_set_rit_frequency_delegates(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_rit_frequency(600)
+    connected_radio._transport.write.assert_called_once_with("CF001+0600;")
+
+
+@pytest.mark.asyncio
+async def test_get_rit_status_returns_rx_bit(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CF00010000")
+    assert await connected_radio.get_rit_status() is True
+
+
+@pytest.mark.asyncio
+async def test_get_rit_tx_status_returns_tx_bit(connected_radio):
+    # CF000 layout: CF000 + {rx:1d} + {tx:1d} + {pad:03d}
+    connected_radio._transport.query = AsyncMock(return_value="CF00001000")
+    assert await connected_radio.get_rit_tx_status() is True
+
+
+@pytest.mark.asyncio
+async def test_set_rit_status_preserves_xit(connected_radio):
+    """P1-02 fix: enabling RIT must not clobber an active XIT bit."""
+    # Rig currently reports RIT=off, XIT=on (CF000 = 0 1 000).
+    connected_radio._transport.query = AsyncMock(return_value="CF00001000")
+    connected_radio._transport.write = AsyncMock()
+
+    await connected_radio.set_rit_status(True)
+
+    # Wire frame must carry RX=1, TX=1 — XIT bit preserved by RMW.
+    connected_radio._transport.write.assert_called_once_with("CF00011000;")
+
+
+@pytest.mark.asyncio
+async def test_set_rit_tx_status_preserves_rit(connected_radio):
+    """P1-02 fix: enabling XIT must not clobber an active RIT bit."""
+    # Rig currently reports RIT=on, XIT=off (CF000 = 1 0 000).
+    connected_radio._transport.query = AsyncMock(return_value="CF00010000")
+    connected_radio._transport.write = AsyncMock()
+
+    await connected_radio.set_rit_tx_status(True)
+
+    # Wire frame must carry RX=1, TX=1 — RIT bit preserved by RMW.
+    connected_radio._transport.write.assert_called_once_with("CF00011000;")
+
+
+@pytest.mark.asyncio
+async def test_set_rit_status_off_preserves_xit(connected_radio):
+    """RMW symmetry: turning RIT off must not flip XIT off too."""
+    # Rig currently reports RIT=on, XIT=on (CF000 = 1 1 000).
+    connected_radio._transport.query = AsyncMock(return_value="CF00011000")
+    connected_radio._transport.write = AsyncMock()
+
+    await connected_radio.set_rit_status(False)
+
+    # XIT must remain set: RX=0, TX=1.
+    connected_radio._transport.write.assert_called_once_with("CF00001000;")
+
+
+# ---------------------------------------------------------------------------
 # APF (Audio Peak Filter, CO02/CO03)
 # ---------------------------------------------------------------------------
 

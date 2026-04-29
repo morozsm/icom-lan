@@ -418,13 +418,13 @@ class YaesuCatPoller:
 
                 # ── RIT / Clarifier ──
                 case SetRitStatus(on=on):
-                    # RX clarifier only; TX clarifier left unchanged
-                    await radio.set_clarifier(rx_clar=on, tx_clar=False)
+                    # Canonical name; read-modify-write preserves XIT bit.
+                    await radio.set_rit_status(on)
                 case SetRitTxStatus(on=on):
-                    # TX clarifier only; RX clarifier left unchanged
-                    await radio.set_clarifier(rx_clar=False, tx_clar=on)
+                    # Canonical name; read-modify-write preserves RIT bit.
+                    await radio.set_rit_tx_status(on)
                 case SetRitFrequency(freq=freq):
-                    await radio.set_clarifier_freq(freq)
+                    await radio.set_rit_frequency(freq)
 
                 # ── Data Mode ──
                 case SetDataMode(mode=mode):
