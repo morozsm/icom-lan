@@ -205,7 +205,7 @@ class YaesuRouting:
             await radio.set_nr_level(max(0, min(15, round(value * 15))))
             return _ok()
         if level == "NOTCHF":
-            await radio.set_manual_notch_freq(round(value))
+            await radio.set_notch_filter(round(value))
             return _ok()
         if level == "IFSHIFT":
             await radio.set_if_shift(round(value))

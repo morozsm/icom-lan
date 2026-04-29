@@ -508,6 +508,7 @@ def set_key_speed(
 def get_notch_filter(
     to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Notch Filter level command."""
@@ -515,6 +516,8 @@ def get_notch_filter(
         _SUB_NOTCH_FILTER,
         to_addr=to_addr,
         from_addr=from_addr,
+        receiver=receiver,
+        command29=(receiver != RECEIVER_MAIN),
         cmd_map=cmd_map,
         cmd_name="get_notch_filter",
     )
@@ -524,6 +527,7 @@ def set_notch_filter(
     level: int,
     to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Notch Filter level command."""
@@ -532,6 +536,8 @@ def set_notch_filter(
         level,
         to_addr=to_addr,
         from_addr=from_addr,
+        receiver=receiver,
+        command29=(receiver != RECEIVER_MAIN),
         cmd_map=cmd_map,
         cmd_name="set_notch_filter",
     )
