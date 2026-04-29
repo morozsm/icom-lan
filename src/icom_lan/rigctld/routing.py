@@ -234,7 +234,9 @@ class YaesuRouting:
         if func == "VOX":
             return RigctldResponse(values=[str(int(await radio.get_vox()))])
         if func == "TUNER":
-            return RigctldResponse(values=[str(int(await radio.get_tuner() > 0))])
+            return RigctldResponse(
+                values=[str(int(await radio.get_tuner_status() > 0))]
+            )
         if func == "COMP":
             return RigctldResponse(values=[str(int(await radio.get_processor()))])
         if func == "NB":
@@ -256,7 +258,7 @@ class YaesuRouting:
             await radio.set_vox(on)
             return _ok()
         if func == "TUNER":
-            await radio.set_tuner(1 if on else 0)
+            await radio.set_tuner_status(1 if on else 0)
             return _ok()
         if func == "COMP":
             await radio.set_processor(on)

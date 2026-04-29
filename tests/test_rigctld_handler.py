@@ -1878,7 +1878,7 @@ async def test_yaesu_get_func_vox(
 async def test_yaesu_get_func_tuner(
     yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
 ) -> None:
-    yaesu_radio.get_tuner.return_value = 1  # ON
+    yaesu_radio.get_tuner_status.return_value = 1  # ON
     resp = await yaesu_handler.execute(get_cmd("get_func", "TUNER"))
     assert resp.ok
     assert resp.values == ["1"]
@@ -1888,7 +1888,7 @@ async def test_yaesu_get_func_tuner(
 async def test_yaesu_get_func_tuner_off(
     yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
 ) -> None:
-    yaesu_radio.get_tuner.return_value = 0  # OFF
+    yaesu_radio.get_tuner_status.return_value = 0  # OFF
     resp = await yaesu_handler.execute(get_cmd("get_func", "TUNER"))
     assert resp.ok
     assert resp.values == ["0"]
@@ -1998,7 +1998,41 @@ async def test_yaesu_set_func_tuner(
 ) -> None:
     resp = await yaesu_handler.execute(set_cmd("set_func", "TUNER", "1"))
     assert resp.ok
-    yaesu_radio.set_tuner.assert_awaited_once_with(1)
+    yaesu_radio.set_tuner_status.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
+async def test_rigctld_state_tune_icom(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    """get_func TUNER must call canonical get_tuner_status (not get_tuner).
+
+    The canonical SystemControlCapable name is implemented on both Icom
+    and Yaesu backends — using it here keeps the rigctld layer compatible
+    with both without raising AttributeError on the Icom path.
+    Refs #1094.
+    """
+    yaesu_radio.get_tuner_status.return_value = 2  # tuning in progress
+    resp = await yaesu_handler.execute(get_cmd("get_func", "TUNER"))
+    assert resp.ok
+    assert resp.values == ["1"]
+    yaesu_radio.get_tuner_status.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_rigctld_set_func_tune_icom(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    """set_func TUNER 1 must call canonical set_tuner_status (not set_tuner).
+
+    The canonical SystemControlCapable name is implemented on both Icom
+    and Yaesu backends — using it here keeps the rigctld layer compatible
+    with both without raising AttributeError on the Icom path.
+    Refs #1094.
+    """
+    resp = await yaesu_handler.execute(set_cmd("set_func", "TUNER", "1"))
+    assert resp.ok
+    yaesu_radio.set_tuner_status.assert_awaited_once_with(1)
 
 
 @pytest.mark.asyncio
