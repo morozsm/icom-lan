@@ -88,6 +88,9 @@ class _PowerStub:
     async def get_comp_meter(self) -> int: return 0
     async def get_id_meter(self) -> int: return 0
     async def get_vd_meter(self) -> int: return 0
+    async def get_power_meter(self) -> int: return 0
+    async def get_alc_meter(self) -> int: return 0
+    async def get_swr_meter(self) -> int: return 0
 
 
 def test_get_rf_power_visible_on_power_control_capable() -> None:
