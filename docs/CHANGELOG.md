@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **API: tier-1 stability commitment from v0.19 (#1195).** The public API
+  surface is now organised into three explicit tiers (stable / best-effort /
+  internal) with a documented migration policy. See
+  `docs/api/public-api-surface.md` for the tier policy, full symbol lists,
+  and import examples.
 - **Audio-bridge dependencies folded into core install (#1090).** `opuslib`,
   `sounddevice`, and `numpy` moved from the `[bridge]` extra into the main
   `dependencies` list — `pip install icom-lan` now ships the audio bridge,
