@@ -1305,8 +1305,34 @@ class RadioPoller:
                             f"select_vfo({vfo}) is unsupported by profile "
                             f"{self._profile.model}: no MAIN/SUB select code"
                         )
-                    await radio.select_receiver(target_name)
-                    logger.info("radio-poller: select_receiver=%s", target_name)
+                    # Issue #1189: legacy backends (e.g. SerialMockRadio,
+                    # 3rd-party Radio implementers) predate
+                    # ``ReceiverBankCapable`` and only expose the legacy
+                    # ``set_vfo`` overload.  Fall back to it so the poller
+                    # does not AttributeError on those backends.  The
+                    # DeprecationWarning from ``IcomRadio.set_vfo``
+                    # (#1187) is intentional — it signals migration.
+                    select_receiver = getattr(radio, "select_receiver", None)
+                    if select_receiver is not None:
+                        await select_receiver(target_name)
+                        logger.info(
+                            "radio-poller: select_receiver=%s", target_name
+                        )
+                    else:
+                        legacy_set_vfo = getattr(radio, "set_vfo", None)
+                        if legacy_set_vfo is None:
+                            logger.warning(
+                                "radio-poller: select_vfo(%s) — backend "
+                                "lacks select_receiver and set_vfo; skipping",
+                                vfo,
+                            )
+                            return
+                        await legacy_set_vfo(target_name)
+                        logger.info(
+                            "radio-poller: legacy set_vfo=%s "
+                            "(backend lacks ReceiverBankCapable)",
+                            target_name,
+                        )
                     # ``select_receiver`` updates ``_radio_state.active`` on
                     # the dual-RX runtime; mirror it on radios that don't
                     # ship that wiring (test mocks, custom backends).

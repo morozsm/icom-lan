@@ -339,6 +339,30 @@ async def test_rigctld_smoke_with_serial_mock_backend() -> None:
             await writer.drain()
             ptt_resp = await asyncio.wait_for(reader.readuntil(b"\n"), timeout=2.0)
             assert ptt_resp.strip() == b"1"
+
+            # Issue #1189: legacy backends (no ReceiverBankCapable) must
+            # still see ``set_vfo`` actually invoked on ``V VFOA`` rather
+            # than the silent ``RPRT 0`` regression introduced by #1187.
+            # Spy on the radio's legacy ``set_vfo`` to verify dispatch
+            # reached the radio (not the rigctld success code alone,
+            # which would be returned even by the broken silent no-op).
+            calls: list[str] = []
+            original_set_vfo = radio.set_vfo
+
+            async def _spy(vfo: str) -> None:
+                calls.append(vfo)
+                await original_set_vfo(vfo)
+
+            radio.set_vfo = _spy  # type: ignore[method-assign]
+            writer.write(b"V VFOA\n")
+            await writer.drain()
+            set_vfo_resp = await asyncio.wait_for(
+                reader.readuntil(b"\n"), timeout=2.0
+            )
+            assert set_vfo_resp.strip() == b"RPRT 0"
+            assert calls == ["MAIN"], (
+                f"V VFOA must reach legacy set_vfo (got calls={calls!r})"
+            )
         finally:
             await _close_writer(writer)
     finally:

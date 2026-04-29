@@ -2453,6 +2453,87 @@ async def test_set_vfo_no_args_returns_einval(
     assert resp.error == HamlibError.EINVAL
 
 
+# -- legacy backend fallback (issue #1189) ------------------------------------
+
+
+@pytest.fixture
+def legacy_dual_rx_radio() -> AsyncMock:
+    """Legacy dual-RX backend lacking ReceiverBankCapable / VfoSlotCapable.
+
+    Issue #1189: backends predating #1170/#1172 (e.g. ``SerialMockRadio``,
+    3rd-party ``Radio`` implementers) only expose the legacy ``set_vfo``
+    overload.  ``_cmd_set_vfo`` must fall back to it instead of returning
+    a silent ``RPRT 0``.
+    """
+    radio = AsyncMock(spec_set=["capabilities", "profile", "set_vfo"])
+    radio.capabilities = set(FULL_ICOM_CAPS)
+    radio.profile = _FakeProfile(receiver_count=2, vfo_scheme="main_sub")
+    radio.set_vfo = AsyncMock()
+    return radio
+
+
+@pytest.fixture
+def legacy_single_rx_radio() -> AsyncMock:
+    """Legacy single-RX backend lacking VfoSlotCapable."""
+    radio = AsyncMock(spec_set=["capabilities", "profile", "set_vfo"])
+    radio.capabilities = set(FULL_ICOM_CAPS)
+    radio.profile = _FakeProfile(receiver_count=1, vfo_scheme="ab")
+    radio.set_vfo = AsyncMock()
+    return radio
+
+
+@pytest.fixture
+def legacy_no_vfo_radio() -> AsyncMock:
+    """Backend with no VFO support at all — neither new nor legacy methods."""
+    radio = AsyncMock(spec_set=["capabilities", "profile"])
+    radio.capabilities = set(FULL_ICOM_CAPS)
+    radio.profile = _FakeProfile(receiver_count=2, vfo_scheme="main_sub")
+    return radio
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_legacy_dual_rx_falls_back_to_set_vfo(
+    legacy_dual_rx_radio: AsyncMock, config: RigctldConfig
+) -> None:
+    handler = RigctldHandler(legacy_dual_rx_radio, config)
+    resp = await handler.execute(set_cmd("set_vfo", "VFOB"))
+    assert resp.ok
+    # Legacy overload receives MAIN/SUB on dual-RX (matches pre-#1187 mapping).
+    legacy_dual_rx_radio.set_vfo.assert_awaited_once_with("SUB")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_legacy_dual_rx_vfoa_falls_back_to_set_vfo(
+    legacy_dual_rx_radio: AsyncMock, config: RigctldConfig
+) -> None:
+    handler = RigctldHandler(legacy_dual_rx_radio, config)
+    resp = await handler.execute(set_cmd("set_vfo", "VFOA"))
+    assert resp.ok
+    legacy_dual_rx_radio.set_vfo.assert_awaited_once_with("MAIN")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_legacy_single_rx_falls_back_to_set_vfo(
+    legacy_single_rx_radio: AsyncMock, config: RigctldConfig
+) -> None:
+    handler = RigctldHandler(legacy_single_rx_radio, config)
+    resp = await handler.execute(set_cmd("set_vfo", "VFOB"))
+    assert resp.ok
+    # Legacy overload receives A/B on single-RX.
+    legacy_single_rx_radio.set_vfo.assert_awaited_once_with("B")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_no_capability_returns_enavail(
+    legacy_no_vfo_radio: AsyncMock, config: RigctldConfig
+) -> None:
+    # Backend without select_receiver / set_vfo_slot / set_vfo:
+    # rigctld must surface ENAVAIL rather than silent RPRT 0 success.
+    handler = RigctldHandler(legacy_no_vfo_radio, config)
+    resp = await handler.execute(set_cmd("set_vfo", "VFOA"))
+    assert resp.error == HamlibError.ENAVAIL
+
+
 # -- set_split_vfo ------------------------------------------------------------
 
 
