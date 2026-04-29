@@ -1141,6 +1141,18 @@ async def test_set_level_nb(handler: RigctldHandler, mock_radio: AsyncMock) -> N
 
 
 @pytest.mark.asyncio
+async def test_set_level_notchf_icom_no_attribute_error(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """rigctld smoke (#1102, closes P0-03 from #1091): set_level NOTCHF on
+    an Icom-typed radio must not raise AttributeError. The Icom fallback
+    path has no NOTCHF case, so the handler is expected to return EINVAL —
+    crucially, without crashing on a Yaesu-only attribute."""
+    resp = await handler.execute(set_cmd("set_level", "NOTCHF", "1500"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
 async def test_set_level_comp(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
     resp = await handler.execute(set_cmd("set_level", "COMP", "1.0"))
     assert resp.ok
@@ -1841,7 +1853,9 @@ async def test_yaesu_set_level_notchf(
 ) -> None:
     resp = await yaesu_handler.execute(set_cmd("set_level", "NOTCHF", "150"))
     assert resp.ok
-    yaesu_radio.set_manual_notch_freq.assert_awaited_once_with(150)
+    # NOTCHF now routes through the cross-vendor set_notch_filter alias
+    # (closes P0-03 from hotfix epic #1091).
+    yaesu_radio.set_notch_filter.assert_awaited_once_with(150)
 
 
 @pytest.mark.asyncio

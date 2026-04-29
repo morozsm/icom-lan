@@ -1852,19 +1852,27 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         """Set key speed in WPM."""
         await self._send_fire_and_forget(set_key_speed(wpm, to_addr=self._radio_addr))
 
-    async def get_notch_filter(self) -> int:
+    async def get_notch_filter(self, receiver: int = RECEIVER_MAIN) -> int:
         """Read notch filter level (0-255)."""
+        self._require_receiver(receiver, operation="get_notch_filter")
+        self._require_cmd29_route(
+            0x14, 0x0D, receiver=receiver, operation="get_notch_filter"
+        )
         return await self._get_bcd_level(
-            get_notch_filter(to_addr=self._radio_addr),
-            key="get_notch_filter",
+            get_notch_filter(to_addr=self._radio_addr, receiver=receiver),
+            key=f"get_notch_filter:{receiver}",
             command=0x14,
             sub=0x0D,
         )
 
-    async def set_notch_filter(self, level: int) -> None:
+    async def set_notch_filter(self, level: int, receiver: int = RECEIVER_MAIN) -> None:
         """Set notch filter level (0-255)."""
+        self._require_receiver(receiver, operation="set_notch_filter")
+        self._require_cmd29_route(
+            0x14, 0x0D, receiver=receiver, operation="set_notch_filter"
+        )
         await self._send_fire_and_forget(
-            set_notch_filter(level, to_addr=self._radio_addr)
+            set_notch_filter(level, to_addr=self._radio_addr, receiver=receiver)
         )
 
     async def get_compressor_level(self) -> int:

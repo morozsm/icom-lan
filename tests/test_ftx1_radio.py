@@ -498,6 +498,22 @@ async def test_set_manual_notch_freq(connected_radio):
     connected_radio._transport.write.assert_called_once_with("BP01080;")
 
 
+@pytest.mark.asyncio
+async def test_set_notch_filter_delegates_to_manual_notch_freq(connected_radio):
+    """Cross-vendor set_notch_filter alias forwards to BP01 (issue #1102)."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_notch_filter(80)
+    connected_radio._transport.write.assert_called_once_with("BP01080;")
+
+
+@pytest.mark.asyncio
+async def test_get_notch_filter_returns_freq_index(connected_radio):
+    """Cross-vendor get_notch_filter alias returns BP01 freq index (issue #1102)."""
+    responses = iter(["BP00001", "BP01120"])
+    connected_radio._transport.query = AsyncMock(side_effect=responses)
+    assert await connected_radio.get_notch_filter() == 120
+
+
 # ---------------------------------------------------------------------------
 # D4: Filters
 # ---------------------------------------------------------------------------

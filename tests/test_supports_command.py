@@ -149,3 +149,35 @@ class TestSerialBackendsSupportsCommand:
 
         assert hasattr(Icom7610SerialRadio, "supports_command")
         assert Icom7610SerialRadio.supports_command is CoreRadio.supports_command
+
+
+# ---------------------------------------------------------------------------
+# DspControlCapable structural conformance — issue #1102
+# ---------------------------------------------------------------------------
+
+
+class TestDspControlCapableNotchExtension:
+    """Both backends carry the extended notch surface (set/get_notch_filter)."""
+
+    def test_core_radio_exposes_notch_filter_methods(self):
+        for name in ("set_notch_filter", "get_notch_filter"):
+            assert hasattr(CoreRadio, name), (
+                f"CoreRadio must implement {name} (DspControlCapable, #1102)"
+            )
+
+    def test_yaesu_cat_radio_exposes_notch_filter_methods(self):
+        for name in ("set_notch_filter", "get_notch_filter"):
+            assert hasattr(YaesuCatRadio, name), (
+                f"YaesuCatRadio must implement {name} (DspControlCapable, #1102)"
+            )
+
+    def test_notch_filter_signature_accepts_receiver(self):
+        """set/get_notch_filter must accept the receiver kwarg on both backends."""
+        import inspect
+
+        for cls in (CoreRadio, YaesuCatRadio):
+            for name in ("set_notch_filter", "get_notch_filter"):
+                sig = inspect.signature(getattr(cls, name))
+                assert "receiver" in sig.parameters, (
+                    f"{cls.__name__}.{name} must accept 'receiver' kwarg"
+                )

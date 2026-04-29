@@ -945,6 +945,24 @@ class YaesuCatRadio:
         """Set manual notch frequency index (0–255, BP01)."""
         await self._write("set_manual_notch_freq", freq=freq)
 
+    async def set_notch_filter(self, level: int, receiver: int = 0) -> None:
+        """Set notch filter position (0–255).
+
+        Cross-vendor alias delegating to Yaesu BP01
+        (:meth:`set_manual_notch_freq`) — matches the Icom semantic of
+        ``0x14 0x0D``.
+        """
+        await self.set_manual_notch_freq(level, receiver=receiver)
+
+    async def get_notch_filter(self, receiver: int = 0) -> int:
+        """Get notch filter position (0–255).
+
+        Returns only the frequency index from the Yaesu manual-notch state
+        tuple, mirroring the Icom ``0x14 0x0D`` read.
+        """
+        _, freq = await self.get_manual_notch(receiver=receiver)
+        return int(freq)
+
     # -- D4: Filters --------------------------------------------------------
 
     async def get_filter_width(self, receiver: int = 0) -> int:
