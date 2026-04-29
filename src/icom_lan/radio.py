@@ -3958,7 +3958,14 @@ def _check_protocol_compliance() -> None:
     Note: ``@runtime_checkable`` checks only method/attribute *existence*.
     It does not validate full runtime semantics.
     """
-    from .radio_protocol import AudioCapable, DualReceiverCapable, Radio, ScopeCapable
+    from .radio_protocol import (
+        AudioCapable,
+        DualReceiverCapable,
+        Radio,
+        ReceiverBankCapable,
+        ScopeCapable,
+        VfoSlotCapable,
+    )
 
     assert isinstance(IcomRadio(host=""), Radio), (
         "IcomRadio does not satisfy Radio protocol"
@@ -3971,4 +3978,10 @@ def _check_protocol_compliance() -> None:
     )
     assert isinstance(IcomRadio(host=""), DualReceiverCapable), (
         "IcomRadio does not satisfy DualReceiverCapable protocol"
+    )
+    assert isinstance(IcomRadio(host=""), ReceiverBankCapable), (
+        "IcomRadio does not satisfy ReceiverBankCapable protocol"
+    )
+    assert isinstance(IcomRadio(host=""), VfoSlotCapable), (
+        "IcomRadio does not satisfy VfoSlotCapable protocol"
     )

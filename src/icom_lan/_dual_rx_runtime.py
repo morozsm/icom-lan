@@ -355,3 +355,168 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
             self._radio_addr, CONTROLLER_ADDR, _CMD_VFO, data=bytes([code])
         )
         await self._send_civ_raw(civ, wait_response=False)
+
+    # ------------------------------------------------------------------
+    # ReceiverBankCapable — Transceiver → Receiver tier (issue #1170)
+    # ------------------------------------------------------------------
+
+    @property
+    def receiver_count(self) -> int:
+        """Number of independent receivers exposed by this transceiver.
+
+        Profile-driven via ``[radio] receiver_count`` in the rig TOML.
+        IC-7610 / IC-9700 report ``2`` (MAIN + SUB); IC-7300 / IC-705
+        report ``1``.
+        """
+        return int(self._profile.receiver_count)
+
+    @staticmethod
+    def _normalize_receiver_index(which: int | str) -> int:
+        """Normalize a ``select_receiver`` argument to a 0-based index.
+
+        Accepts integer indices (``0`` / ``1``) or case-insensitive names
+        (``"main"`` / ``"sub"``).  Raises :class:`ValueError` on any other
+        value.
+        """
+        if isinstance(which, bool):
+            # ``bool`` is a subclass of ``int`` but is never a valid receiver
+            # index — reject explicitly to avoid silent ``True``→1 conversion.
+            raise ValueError(
+                f"select_receiver: which must be int or str, got {type(which).__name__}"
+            )
+        if isinstance(which, str):
+            key = which.strip().lower()
+            if key == "main":
+                return 0
+            if key == "sub":
+                return 1
+            raise ValueError(
+                f"select_receiver: unknown receiver name {which!r} "
+                "(expected 'main' or 'sub')"
+            )
+        if isinstance(which, int):
+            return int(which)
+        raise ValueError(
+            f"select_receiver: which must be int or str, got {type(which).__name__}"
+        )
+
+    async def select_receiver(self, which: int | str) -> None:
+        """Make ``which`` the active receiver for subsequent commands.
+
+        On dual-RX Icom rigs (IC-7610 / IC-9700) issues the profile's
+        ``main_select`` / ``sub_select`` opcode (``0x07 0xD0`` /
+        ``0x07 0xD1``) and updates :attr:`RadioState.active`.  On single-RX
+        profiles only ``which == 0`` is accepted and the call is a no-op
+        (matching the :class:`~icom_lan.radio_protocol.ReceiverBankCapable`
+        contract).  Out-of-range indices and unknown names raise
+        :class:`ValueError`.
+        """
+        self._check_connected()
+        index = self._normalize_receiver_index(which)
+        count = self.receiver_count
+        if index < 0 or index >= count:
+            raise ValueError(
+                f"select_receiver: receiver index {index} out of range "
+                f"for receiver_count={count}"
+            )
+        if count <= 1:
+            # Single-RX: nothing to switch.
+            return
+        target = "MAIN" if index == 0 else "SUB"
+        await self.set_vfo(target)
+        self._radio_state.active = target
+
+    async def get_active_receiver(self) -> int:
+        """Return the index of the currently active receiver.
+
+        Returns ``0`` for MAIN, ``1`` for SUB.  Reads the cached
+        :attr:`RadioState.active` value (poller-populated on dual-RX rigs).
+        Single-RX profiles always return ``0``.
+        """
+        if self.receiver_count <= 1:
+            return 0
+        active = getattr(self._radio_state, "active", "MAIN")
+        return 1 if active == "SUB" else 0
+
+    # ------------------------------------------------------------------
+    # VfoSlotCapable — per-receiver A/B slot ops (issue #1170)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _normalize_vfo_slot(slot: str) -> str:
+        """Validate and upper-case a VFO slot argument (``"A"`` or ``"B"``)."""
+        if not isinstance(slot, str):
+            raise ValueError(f"slot must be str, got {type(slot).__name__}")
+        norm = slot.strip().upper()
+        if norm not in {"A", "B"}:
+            raise ValueError(f"slot must be 'A' or 'B', got {slot!r}")
+        return norm
+
+    def _check_vfo_slot_receiver(self, receiver: int, *, operation: str) -> None:
+        """Raise ``ValueError`` when ``receiver`` is out of range for the profile."""
+        count = self.receiver_count
+        if receiver < 0 or receiver >= count:
+            raise ValueError(
+                f"{operation}: receiver index {receiver} out of range "
+                f"for receiver_count={count}"
+            )
+
+    async def get_vfo_slot(self, receiver: int = 0) -> str:
+        """Return the active VFO slot (``"A"`` or ``"B"``) for ``receiver``.
+
+        Reads cached :attr:`ReceiverState.active_slot` (poller-populated).
+        Single-RX rigs only accept ``receiver == 0``; out-of-range indices
+        raise :class:`ValueError`.
+        """
+        self._check_vfo_slot_receiver(receiver, operation="get_vfo_slot")
+        if self.receiver_count > 1:
+            rx_state = (
+                self._radio_state.sub if receiver == 1 else self._radio_state.main
+            )
+        else:
+            rx_state = self._radio_state.main
+        slot = getattr(rx_state, "active_slot", "A")
+        return "B" if str(slot).upper() == "B" else "A"
+
+    async def set_vfo_slot(self, slot: str, receiver: int = 0) -> None:
+        """Make ``slot`` (``"A"`` or ``"B"``) the active VFO on ``receiver``.
+
+        Wire bytes: CI-V ``0x07 0x00`` (A) or ``0x07 0x01`` (B).  On
+        dual-RX rigs (IC-7610 / IC-9700) the target receiver is selected
+        first via the VFO-switch pattern (``0x07 0xD0`` / ``0xD1``) so the
+        slot-select opcode affects the intended receiver, then the
+        previous receiver is restored.  Single-RX rigs send the opcode
+        directly.
+
+        Raises :class:`ValueError` for an invalid slot or out-of-range
+        receiver index.
+        """
+        self._check_connected()
+        self._check_vfo_slot_receiver(receiver, operation="set_vfo_slot")
+        norm_slot = self._normalize_vfo_slot(slot)
+        slot_code = 0x00 if norm_slot == "A" else 0x01
+
+        async def _emit_slot() -> None:
+            civ = build_civ_frame(
+                self._radio_addr,
+                CONTROLLER_ADDR,
+                _CMD_VFO,
+                data=bytes([slot_code]),
+            )
+            await self._send_civ_raw(civ, wait_response=False)
+            # Update cached per-receiver active_slot for subsequent get_vfo_slot.
+            rx_state = (
+                self._radio_state.sub
+                if (receiver == 1 and self.receiver_count > 1)
+                else self._radio_state.main
+            )
+            rx_state.active_slot = norm_slot
+
+        if self.receiver_count > 1:
+            await self._run_with_receiver_vfo_fallback(
+                receiver=receiver,
+                operation="set_vfo_slot",
+                action=_emit_slot,
+            )
+        else:
+            await _emit_slot()
