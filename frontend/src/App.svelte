@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { initBatteryMonitor } from './lib/utils/battery';
-  import { initUiVersion, getUiVersion } from './lib/stores/ui-version.svelte';
   import RadioLayoutV2 from './components-v2/layout/RadioLayout.svelte';
   import ControlButtonDemo from './components-v2/controls/ControlButtonDemo.svelte';
   import LocalExtensionsHost from './lib/local-extensions/LocalExtensionsHost.svelte';
@@ -25,8 +24,13 @@
       return;
     }
 
-    // Initialize UI version from URL param or localStorage
-    initUiVersion();
+    // Stale-bookmark notice: ?ui=v1 is no longer supported (v0.20+). Emit once per session.
+    if (typeof window !== 'undefined') {
+      const uiParam = new URLSearchParams(window.location.search).get('ui');
+      if (uiParam === 'v1') {
+        console.warn('[icom-lan] ?ui=v1 is no longer supported; v2 is the only UI. Update bookmarks.');
+      }
+    }
 
     initMediaSession();
 
@@ -66,9 +70,6 @@
       if (retryTimer) clearTimeout(retryTimer);
     };
   });
-
-  // Reactive UI version tracking
-  let uiVersion = $derived(getUiVersion());
 </script>
 
 {#if demoMode === 'control-buttons'}
@@ -86,8 +87,6 @@
       {/if}
     </div>
   </div>
-{:else if uiVersion === 'v2'}
-  <RadioLayoutV2 />
 {:else}
   <RadioLayoutV2 />
 {/if}
