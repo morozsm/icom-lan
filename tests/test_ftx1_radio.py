@@ -1046,15 +1046,39 @@ async def test_set_audio_peak_filter_mode_0_disables_apf(connected_radio):
 
 
 @pytest.mark.asyncio
-async def test_set_audio_peak_filter_mode_1_enables_apf_and_centres_freq(
+async def test_set_audio_peak_filter_mode_1_enables_apf_only(
     connected_radio,
 ):
-    """Mode 1 (soft) → APF on (CO020001;) plus centre-frequency reset (CO030000;)."""
+    """Mode 1 (soft) → APF on (CO020001;) only — no implicit freq reset.
+
+    Regression for #1141: an unconditional `set_apf_freq(0)` would clobber
+    any user-tuned APF centre frequency every time APF was toggled on.
+    """
     connected_radio._transport.write = AsyncMock()
     await connected_radio.set_audio_peak_filter(1)
-    assert connected_radio._transport.write.await_count == 2
+    connected_radio._transport.write.assert_called_once_with("CO020001;")
+
+
+@pytest.mark.asyncio
+async def test_set_audio_peak_filter_mode_1_preserves_freq_across_toggle(
+    connected_radio,
+):
+    """APF centre frequency must survive an off/on toggle (#1141).
+
+    Sequence: enable APF (mode 1) → tune freq → disable (mode 0) →
+    re-enable (mode 1). Only the bool toggles and the explicit freq set
+    must hit the wire; nothing in `set_audio_peak_filter` may overwrite
+    the user-set frequency.
+    """
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_audio_peak_filter(1)
+    await connected_radio.set_apf_freq(200)
+    await connected_radio.set_audio_peak_filter(0)
+    await connected_radio.set_audio_peak_filter(1)
     sent = [c.args[0] for c in connected_radio._transport.write.await_args_list]
-    assert sent == ["CO020001;", "CO030000;"]
+    assert sent == ["CO020001;", "CO030200;", "CO020000;", "CO020001;"]
+    # Critical: only one CO03 frame — the explicit user one.
+    assert sum(1 for s in sent if s.startswith("CO03")) == 1
 
 
 @pytest.mark.asyncio
