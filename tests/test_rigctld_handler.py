@@ -1327,6 +1327,45 @@ async def test_get_func_lock(handler: RigctldHandler, mock_radio: AsyncMock) -> 
 
 
 @pytest.mark.asyncio
+async def test_rigctld_get_func_lock_icom(config: RigctldConfig) -> None:
+    """get_func LOCK on Icom backend uses canonical get_dial_lock (issue #1092).
+
+    Icom radios implement only the canonical SystemControlCapable name
+    (get_dial_lock); they do NOT expose get_lock. A spec'd mock that lacks
+    get_lock would raise AttributeError if routing called the wrong method.
+    """
+
+    class _IcomLikeRadio:
+        backend_id = "icom7610"
+
+        async def get_dial_lock(self) -> bool:
+            return True
+
+    handler = RigctldHandler(_IcomLikeRadio(), config)  # type: ignore[arg-type]
+    resp = await handler.execute(get_cmd("get_func", "LOCK"))
+    assert resp.ok
+    assert resp.values[0] == "1"
+
+
+@pytest.mark.asyncio
+async def test_rigctld_set_func_lock_icom(config: RigctldConfig) -> None:
+    """set_func LOCK 1 on Icom backend uses canonical set_dial_lock (issue #1092)."""
+
+    calls: list[bool] = []
+
+    class _IcomLikeRadio:
+        backend_id = "icom7610"
+
+        async def set_dial_lock(self, on: bool) -> None:
+            calls.append(on)
+
+    handler = RigctldHandler(_IcomLikeRadio(), config)  # type: ignore[arg-type]
+    resp = await handler.execute(set_cmd("set_func", "LOCK", "1"))
+    assert resp.ok
+    assert calls == [True]
+
+
+@pytest.mark.asyncio
 async def test_get_func_mon(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
     mock_radio.get_monitor = AsyncMock(return_value=False)
     resp = await handler.execute(get_cmd("get_func", "MON"))
@@ -1938,7 +1977,7 @@ async def test_yaesu_get_func_nr(
 async def test_yaesu_get_func_lock(
     yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
 ) -> None:
-    yaesu_radio.get_lock.return_value = True
+    yaesu_radio.get_dial_lock.return_value = True
     resp = await yaesu_handler.execute(get_cmd("get_func", "LOCK"))
     assert resp.ok
     assert resp.values == ["1"]
@@ -2034,7 +2073,7 @@ async def test_yaesu_set_func_lock(
 ) -> None:
     resp = await yaesu_handler.execute(set_cmd("set_func", "LOCK", "1"))
     assert resp.ok
-    yaesu_radio.set_lock.assert_awaited_once_with(True)
+    yaesu_radio.set_dial_lock.assert_awaited_once_with(True)
 
 
 @pytest.mark.asyncio

@@ -242,7 +242,7 @@ class YaesuRouting:
         if func == "NR":
             return RigctldResponse(values=[str(int(await radio.get_nr_level() > 0))])
         if func == "LOCK":
-            return RigctldResponse(values=[str(int(await radio.get_lock()))])
+            return RigctldResponse(values=[str(int(await radio.get_dial_lock()))])
         if func == "SPLIT":
             return RigctldResponse(values=[str(int(await radio.get_split()))])
         if func == "AGC":
@@ -268,7 +268,7 @@ class YaesuRouting:
             await radio.set_nr(on)
             return _ok()
         if func == "LOCK":
-            await radio.set_lock(on)
+            await radio.set_dial_lock(on)
             return _ok()
         if func == "SPLIT":
             await radio.set_split(on)
