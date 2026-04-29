@@ -491,6 +491,75 @@ class TestRfGainAfLevel:
         with pytest.raises(ValueError):
             await radio.set_af_level(-1)
 
+    @pytest.mark.asyncio
+    async def test_get_rf_gain_sub_uses_cmd29(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """get_rf_gain(receiver=1) should send a cmd29-wrapped frame."""
+        d = f"{200:04d}"
+        b0 = (int(d[0]) << 4) | int(d[1])
+        b1 = (int(d[2]) << 4) | int(d[3])
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            _CMD_LEVEL,
+            sub=0x02,
+            data=bytes([b0, b1]),
+            receiver=1,
+        )
+        mock_transport.queue_response(_wrap_civ_in_udp(civ))
+        result = await radio.get_rf_gain(receiver=1)
+        # Verify the request used cmd29 routing
+        sent = bytes(mock_transport.sent_packets[-1])
+        # Find CI-V payload — last sent frame must be cmd29 (0x29) wrapping 0x14 0x02
+        assert b"\x29\x01\x14\x02" in sent
+        assert result == 200
+
+    @pytest.mark.asyncio
+    async def test_get_af_level_sub_uses_cmd29(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """get_af_level(receiver=1) should send a cmd29-wrapped frame."""
+        d = f"{150:04d}"
+        b0 = (int(d[0]) << 4) | int(d[1])
+        b1 = (int(d[2]) << 4) | int(d[3])
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            _CMD_LEVEL,
+            sub=0x01,
+            data=bytes([b0, b1]),
+            receiver=1,
+        )
+        mock_transport.queue_response(_wrap_civ_in_udp(civ))
+        result = await radio.get_af_level(receiver=1)
+        sent = bytes(mock_transport.sent_packets[-1])
+        assert b"\x29\x01\x14\x01" in sent
+        assert result == 150
+
+
+class TestLevelsCapableProtocol:
+    """Protocol satisfaction: backends must implement LevelsCapable getters/setters."""
+
+    def test_icom_radio_satisfies_levels_capable(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        from icom_lan.radio_protocol import LevelsCapable
+
+        assert isinstance(radio, LevelsCapable)
+
+    def test_icom_radio_has_af_rf_getters_with_receiver_param(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        import inspect
+
+        # Both getters must accept a `receiver` keyword (P3-03 fix).
+        for fn_name in ("get_af_level", "get_rf_gain"):
+            sig = inspect.signature(getattr(radio, fn_name))
+            assert "receiver" in sig.parameters, (
+                f"{fn_name} is missing `receiver` parameter"
+            )
+
 
 class TestPtt:
     """Test PTT toggle."""
