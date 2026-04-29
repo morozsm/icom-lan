@@ -109,6 +109,7 @@ _IC7610_DUMP_STATE: list[str] = [
 _GET_LEVEL_FLOAT: dict[str, str] = {
     "AF": "get_af_level",
     "RF": "get_rf_gain",
+    "SQL": "get_squelch",
     "NR": "get_nr_level",
     "NB": "get_nb_level",
     "COMP": "get_compressor_level",

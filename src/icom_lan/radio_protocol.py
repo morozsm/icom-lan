@@ -266,6 +266,17 @@ class LevelsCapable(Protocol):
         """
         ...
 
+    async def get_squelch(self, receiver: int = 0) -> int:
+        """Get squelch level (0-255).
+
+        Args:
+            receiver: 0 = main (default), 1 = sub.
+
+        Returns:
+            Current squelch level in 0-255 scale.
+        """
+        ...
+
     async def get_nr_level(self, receiver: int = 0) -> int:
         """Get noise reduction level (0-255)."""
         ...

@@ -399,6 +399,7 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
             "set_rf_gain",
             "get_rf_gain",
             "set_squelch",
+            "get_squelch",
             "get_nr_level",
             "set_nr_level",
             "get_nb_level",
@@ -1719,6 +1720,27 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
 
         civ = _set_squelch(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_squelch(self, receiver: int = 0) -> int:
+        """Read the current squelch level (0-255)."""
+        self._check_connected()
+        self._require_capability("squelch", operation="get_squelch")
+        self._require_receiver(receiver, operation="get_squelch")
+        self._require_cmd29_route(
+            0x14,
+            0x03,
+            receiver=receiver,
+            operation="get_squelch",
+        )
+        from .commands import get_squelch as _get_squelch
+
+        civ = _get_squelch(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bcd_level(
+            civ,
+            key=f"get_squelch:{receiver}",
+            command=0x14,
+            sub=0x03,
+        )
 
     async def get_apf_type_level(self, receiver: int = RECEIVER_MAIN) -> int:
         """Read APF Type Level (0-255)."""
