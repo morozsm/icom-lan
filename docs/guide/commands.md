@@ -80,11 +80,11 @@ s = await radio.get_s_meter()
 swr = await radio.get_swr()
 
 # ALC meter (0–255, during TX only)
-alc = await radio.get_alc()
+alc = await radio.get_alc_meter()
 ```
 
 !!! warning "TX-Only Meters"
-    `get_swr()` and `get_alc()` will timeout if the radio is not transmitting. Wrap them in try/except:
+    `get_swr()` and `get_alc_meter()` will timeout if the radio is not transmitting. Wrap them in try/except:
 
     ```python
     from icom_lan.exceptions import TimeoutError

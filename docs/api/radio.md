@@ -299,10 +299,10 @@ Read the SWR meter value (TX only). **Returns:** `int` (0–255)
 
 **Raises:** `TimeoutError` if not transmitting.
 
-### `get_alc()`
+### `get_alc_meter()`
 
 ```python
-async def get_alc(self) -> int
+async def get_alc_meter(self) -> int
 ```
 
 Read the ALC meter value (TX only). **Returns:** `int` (0–255)

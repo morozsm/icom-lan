@@ -329,9 +329,6 @@ class SerialMockRadio:
     async def get_swr_meter(self) -> int:
         return 25
 
-    async def get_alc(self) -> int:
-        return 80
-
     async def get_alc_meter(self) -> int:
         return 80
 
