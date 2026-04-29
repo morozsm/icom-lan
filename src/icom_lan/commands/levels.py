@@ -991,6 +991,74 @@ _DEPRECATED_ALIASES: dict[str, str] = {
 }
 
 
+# ``__all__`` lists every public name exported by this module. It must include
+# the deprecated aliases above so that ``from icom_lan.commands.levels import *``
+# triggers ``__getattr__`` (PEP 562) for them — wildcard import iterates
+# ``__all__`` rather than module globals, so without this list the deprecation
+# path would be invisible to star-imports and consumers would see ``NameError``
+# instead of the intended ``DeprecationWarning`` + working forward.
+__all__ = [
+    # Canonical level builders (alphabetised).
+    "get_af_level",
+    "get_anti_vox_gain",
+    "get_apf_type_level",
+    "get_break_in_delay",
+    "get_compressor_level",
+    "get_cw_pitch",
+    "get_dash_ratio",
+    "get_digisel_shift",
+    "get_drive_gain",
+    "get_key_speed",
+    "get_mic_gain",
+    "get_monitor_gain",
+    "get_nb_depth",
+    "get_nb_level",
+    "get_nb_width",
+    "get_notch_filter",
+    "get_nr_level",
+    "get_pbt_inner",
+    "get_pbt_outer",
+    "get_ref_adjust",
+    "get_rf_gain",
+    "get_rf_power",
+    "get_squelch",
+    "get_vox_delay",
+    "get_vox_gain",
+    "set_af_level",
+    "set_anti_vox_gain",
+    "set_apf_type_level",
+    "set_break_in_delay",
+    "set_compressor_level",
+    "set_cw_pitch",
+    "set_dash_ratio",
+    "set_digisel_shift",
+    "set_drive_gain",
+    "set_key_speed",
+    "set_mic_gain",
+    "set_monitor_gain",
+    "set_nb_depth",
+    "set_nb_level",
+    "set_nb_width",
+    "set_notch_filter",
+    "set_nr_level",
+    "set_pbt_inner",
+    "set_pbt_outer",
+    "set_ref_adjust",
+    "set_rf_gain",
+    "set_rf_power",
+    "set_squelch",
+    "set_vox_delay",
+    "set_vox_gain",
+    # Deprecated aliases — resolved lazily by ``__getattr__`` below.
+    # ruff F822: these names are intentionally not module globals; PEP 562
+    # ``__getattr__`` rewrites them to the canonical builders on first access.
+    "get_power",  # noqa: F822
+    "set_power",  # noqa: F822
+    "get_sql",  # noqa: F822
+    "set_sql",  # noqa: F822
+]
+
+
 def __getattr__(name: str) -> Any:
     """Emit ``DeprecationWarning`` for legacy alias access (PEP 562)."""
     canonical = _DEPRECATED_ALIASES.get(name)
