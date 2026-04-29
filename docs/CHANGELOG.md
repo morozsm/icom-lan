@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`IcomRadio.get_alc` / `sync.IcomRadio.get_alc` (#1207)** — deprecated in
   v0.19 (#1129), removed per schedule. Use `get_alc_meter`
   (`MetersCapable`).
+- **`icom_lan.commands.levels` backward-compat aliases (#1208).** The
+  `get_power` / `set_power` / `get_sql` / `set_sql` aliases (deprecated in
+  v0.19, #1167 + #1182) are gone — both the PEP 562 `__getattr__` shim and
+  the sentinel `__all__` entries in `icom_lan.commands.levels` and
+  `icom_lan.commands` have been deleted. Use the canonical builders
+  directly: `get_rf_power`, `set_rf_power`, `get_squelch`, `set_squelch`.
 
 ## [0.19.0] — 2026-04-29
 

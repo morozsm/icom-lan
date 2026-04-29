@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import math
-import warnings
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ._builders import (
     _build_level_get,
@@ -980,23 +979,6 @@ def set_vox_delay(
     )
 
 
-# Backward-compat aliases — DEPRECATED in v0.19, will be removed in v0.20.
-# Use the canonical builders directly: get_rf_power, set_rf_power,
-# get_squelch, set_squelch.
-_DEPRECATED_ALIASES: dict[str, str] = {
-    "get_power": "get_rf_power",
-    "set_power": "set_rf_power",
-    "get_sql": "get_squelch",
-    "set_sql": "set_squelch",
-}
-
-
-# ``__all__`` lists every public name exported by this module. It must include
-# the deprecated aliases above so that ``from icom_lan.commands.levels import *``
-# triggers ``__getattr__`` (PEP 562) for them — wildcard import iterates
-# ``__all__`` rather than module globals, so without this list the deprecation
-# path would be invisible to star-imports and consumers would see ``NameError``
-# instead of the intended ``DeprecationWarning`` + working forward.
 __all__ = [
     # Canonical level builders (alphabetised).
     "get_af_level",
@@ -1049,25 +1031,4 @@ __all__ = [
     "set_squelch",
     "set_vox_delay",
     "set_vox_gain",
-    # Deprecated aliases — resolved lazily by ``__getattr__`` below.
-    # ruff F822: these names are intentionally not module globals; PEP 562
-    # ``__getattr__`` rewrites them to the canonical builders on first access.
-    "get_power",  # noqa: F822
-    "set_power",  # noqa: F822
-    "get_sql",  # noqa: F822
-    "set_sql",  # noqa: F822
 ]
-
-
-def __getattr__(name: str) -> Any:
-    """Emit ``DeprecationWarning`` for legacy alias access (PEP 562)."""
-    canonical = _DEPRECATED_ALIASES.get(name)
-    if canonical is not None:
-        warnings.warn(
-            f"icom_lan.commands.levels.{name} is deprecated since v0.19 and "
-            f"will be removed in v0.20; use {canonical} instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return globals()[canonical]
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

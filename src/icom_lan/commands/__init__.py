@@ -16,9 +16,6 @@ Reference: wfview icomcommander.cpp, IC-7610.rig
 
 # Re-export everything from sub-modules -- no logic in this file.
 
-import warnings as _warnings
-from typing import Any as _Any
-
 from ..types import bcd_decode
 
 # --- _frame.py (kernel) ---
@@ -417,32 +414,6 @@ from .config import (
     set_usb_mod_level,
 )
 
-# Backward-compat aliases — DEPRECATED in v0.19, will be removed in v0.20.
-# Access via ``icom_lan.commands.<alias>`` emits ``DeprecationWarning``.
-# Use the canonical builders directly: ``get_rf_power``, ``set_rf_power``,
-# ``get_squelch``, ``set_squelch``.
-_DEPRECATED_ALIASES: dict[str, str] = {
-    "get_power": "get_rf_power",
-    "set_power": "set_rf_power",
-    "get_sql": "get_squelch",
-    "set_sql": "set_squelch",
-}
-
-
-def __getattr__(name: str) -> _Any:
-    """Forward deprecated alias access with a warning (PEP 562)."""
-    canonical = _DEPRECATED_ALIASES.get(name)
-    if canonical is not None:
-        _warnings.warn(
-            f"icom_lan.commands.{name} is deprecated since v0.19 and will be "
-            f"removed in v0.20; use {canonical} instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return globals()[canonical]
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 __all__ = [
     # Internal helpers re-exported for sibling modules
     "_bcd_byte",
@@ -494,9 +465,6 @@ __all__ = [
     # TOML canonical names
     "get_rf_power",
     "set_rf_power",
-    # Backward-compat aliases
-    "get_power",
-    "set_power",
     "get_s_meter",
     "get_swr",
     "get_alc",
@@ -564,9 +532,6 @@ __all__ = [
     # Squelch (TOML canonical)
     "get_squelch",
     "set_squelch",
-    # Backward-compat aliases
-    "get_sql",
-    "set_sql",
     "get_s_meter_sql_status",
     "get_overflow_status",
     "get_agc",
