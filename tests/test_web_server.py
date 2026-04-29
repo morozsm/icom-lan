@@ -2659,6 +2659,17 @@ class TestSwitchScopeReceiver:
         # Canonical dual-RX VFO methods on ``DualReceiverCapable`` (post-#1114).
         radio.swap_main_sub = AsyncMock()
         radio.equalize_main_sub = AsyncMock()
+        # Receiver-tier methods (issue #1170 / #1172).  Make
+        # ``select_receiver`` mirror the wire-level CI-V the runtime would
+        # emit so existing assertions on ``send_civ(0x07, …)`` still apply.
+        async def _select_receiver(which: object) -> None:
+            name = str(which).strip().upper()
+            code = 0xD1 if name in ("SUB", "1") else 0xD0
+            await radio.send_civ(0x07, data=bytes([code]))
+            radio._radio_state.active = "SUB" if code == 0xD1 else "MAIN"
+
+        radio.select_receiver = AsyncMock(side_effect=_select_receiver)
+        radio.set_vfo_slot = AsyncMock()
         return radio
 
     async def test_switch_scope_receiver_main_sends_civ(self) -> None:
@@ -2730,7 +2741,14 @@ class TestSwitchScopeReceiver:
         )
 
     async def test_select_vfo_sub_sends_receiver_select(self) -> None:
-        """SelectVfo("SUB") sends receiver-select (0x07 0xD1) when active=MAIN."""
+        """SelectVfo("SUB") goes through ``select_receiver`` (issue #1172).
+
+        Wave 4-C migrated the poller off the raw ``_civ(0x07, [0xD1])``
+        write to the typed ``ReceiverBankCapable.select_receiver`` API.
+        We assert both the public-API call and the wire-level CI-V the
+        mock emits as a side-effect (back-compat with downstream
+        test scaffolding that watches ``send_civ``).
+        """
         from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SelectVfo
 
         radio = self._make_radio()
@@ -2742,6 +2760,9 @@ class TestSwitchScopeReceiver:
         await asyncio.sleep(0.03)
         poller.stop()
 
+        # Public API: poller now routes through ``select_receiver``.
+        radio.select_receiver.assert_awaited_once_with("SUB")
+        # Wire level (mock side-effect): CI-V 0x07 0xD1 emitted.
         sub_select_calls = [
             c
             for c in radio.send_civ.call_args_list
@@ -2781,6 +2802,8 @@ class TestSwitchScopeReceiver:
         await asyncio.sleep(0.03)
         poller.stop()
 
+        # Idempotent: no call to the public API when already on the target.
+        radio.select_receiver.assert_not_awaited()
         select_calls = [
             c
             for c in radio.send_civ.call_args_list

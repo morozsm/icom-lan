@@ -660,14 +660,25 @@ class RigctldHandler:
         if vfo not in ("VFOA", "VFOB") or info is None:
             return _ok()
         rc, _ = info
-        set_vfo = getattr(self._radio, "set_vfo", None)
-        if set_vfo is None:
-            return _ok()
+        # Issue #1172: route by capability, not by string-overloaded
+        # ``set_vfo``.  Dual-RX rigs use ``select_receiver`` (the
+        # Transceiver→Receiver tier from #1170); single-RX rigs use
+        # ``set_vfo_slot`` for the per-receiver A/B switch.  Both are
+        # part of the public protocol surface (``ReceiverBankCapable`` /
+        # ``VfoSlotCapable``) so the legacy MAIN/SUB↔A/B mapping that
+        # used to live here is gone.
         if rc >= 2:
+            select_receiver = getattr(self._radio, "select_receiver", None)
+            if select_receiver is None:
+                return _ok()
             target = "MAIN" if vfo == "VFOA" else "SUB"
+            await select_receiver(target)
         else:
-            target = "A" if vfo == "VFOA" else "B"
-        await set_vfo(target)
+            set_vfo_slot = getattr(self._radio, "set_vfo_slot", None)
+            if set_vfo_slot is None:
+                return _ok()
+            slot = "A" if vfo == "VFOA" else "B"
+            await set_vfo_slot(slot)
         return _ok()
 
     # ------------------------------------------------------------------

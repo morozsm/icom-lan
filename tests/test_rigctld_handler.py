@@ -2394,8 +2394,10 @@ async def test_set_vfo_dual_rx_vfob_selects_sub(
 ) -> None:
     resp = await dual_rx_handler.execute(set_cmd("set_vfo", "VFOB"))
     assert resp.ok
-    # SUB maps to CI-V 0x07 0xD1 via radio.set_vfo("SUB").
-    dual_rx_radio.set_vfo.assert_awaited_once_with("SUB")
+    # Issue #1172: dual-RX VFOB → ``select_receiver("SUB")`` (CI-V
+    # 0x07 0xD1).  No fallback through legacy ``set_vfo`` overload.
+    dual_rx_radio.select_receiver.assert_awaited_once_with("SUB")
+    dual_rx_radio.set_vfo.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -2404,7 +2406,8 @@ async def test_set_vfo_dual_rx_vfoa_selects_main(
 ) -> None:
     resp = await dual_rx_handler.execute(set_cmd("set_vfo", "VFOA"))
     assert resp.ok
-    dual_rx_radio.set_vfo.assert_awaited_once_with("MAIN")
+    dual_rx_radio.select_receiver.assert_awaited_once_with("MAIN")
+    dual_rx_radio.set_vfo.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -2413,8 +2416,10 @@ async def test_set_vfo_single_rx_vfob_selects_slot_b(
 ) -> None:
     resp = await single_rx_handler.execute(set_cmd("set_vfo", "VFOB"))
     assert resp.ok
-    # "B" maps to CI-V 0x07 0x01 via radio.set_vfo("B").
-    single_rx_radio.set_vfo.assert_awaited_once_with("B")
+    # Issue #1172: single-RX VFOB → ``set_vfo_slot("B")`` (CI-V
+    # 0x07 0x01).  No fallback through legacy ``set_vfo`` overload.
+    single_rx_radio.set_vfo_slot.assert_awaited_once_with("B")
+    single_rx_radio.set_vfo.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -2423,7 +2428,8 @@ async def test_set_vfo_single_rx_vfoa_selects_slot_a(
 ) -> None:
     resp = await single_rx_handler.execute(set_cmd("set_vfo", "VFOA"))
     assert resp.ok
-    single_rx_radio.set_vfo.assert_awaited_once_with("A")
+    single_rx_radio.set_vfo_slot.assert_awaited_once_with("A")
+    single_rx_radio.set_vfo.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -2435,6 +2441,8 @@ async def test_set_vfo_unknown_name_is_backward_compat_ok(
     resp = await dual_rx_handler.execute(set_cmd("set_vfo", "VFO-C"))
     assert resp.ok
     dual_rx_radio.set_vfo.assert_not_awaited()
+    dual_rx_radio.select_receiver.assert_not_awaited()
+    dual_rx_radio.set_vfo_slot.assert_not_awaited()
 
 
 @pytest.mark.asyncio

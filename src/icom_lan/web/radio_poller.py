@@ -1251,15 +1251,18 @@ class RadioPoller:
                         logger.warning("set_band: unknown bsr_code=%d", band)
             case SelectVfo(vfo=vfo):
                 self._last_user_write_ts = time.monotonic()
-                # Select the target receiver via 0x07 0xD0 (MAIN) or 0xD1
-                # (SUB).  Pre-#771 this used a MAIN↔SUB swap (0x07 0xB0)
-                # as a hack so that LAN audio (MAIN-only at the time)
-                # would "follow" the selected receiver.  After #721/#755
-                # introduced Phones L/R Mix + audio_config, audio routing
-                # is independent of which receiver is selected, and the
-                # swap hack actively corrupted user state on every click
-                # (frequencies/modes traded places).  Now uses the proper
-                # CI-V receiver-select primitive.  Idempotent: re-clicking
+                # Select the target receiver via the public
+                # ``ReceiverBankCapable.select_receiver`` (issue #1172).
+                # Pre-#771 this used a MAIN↔SUB swap (0x07 0xB0) as a hack
+                # so that LAN audio (MAIN-only at the time) would "follow"
+                # the selected receiver.  After #721/#755 introduced
+                # Phones L/R Mix + audio_config, audio routing is
+                # independent of which receiver is selected, and the swap
+                # hack actively corrupted user state on every click
+                # (frequencies/modes traded places).  Wave 4-A landed
+                # ``select_receiver`` (CI-V 0x07 0xD0/0xD1) on every
+                # backend, so the poller now goes through the typed API
+                # rather than a raw ``_civ`` write.  Idempotent: re-clicking
                 # the active receiver emits no CI-V (the state event still
                 # fires so UI listeners can refresh).
                 vfo_upper = vfo.upper()
@@ -1274,22 +1277,18 @@ class RadioPoller:
                 # mypy's type narrowing across branches.
                 target_name = "SUB" if is_sub else "MAIN"
                 if target_name != current:
-                    code = (
-                        self._profile.vfo_sub_code
-                        if is_sub
-                        else self._profile.vfo_main_code
-                    )
-                    if code is None:
+                    if (is_sub and self._profile.vfo_sub_code is None) or (
+                        not is_sub and self._profile.vfo_main_code is None
+                    ):
                         raise CommandError(
                             f"select_vfo({vfo}) is unsupported by profile "
                             f"{self._profile.model}: no MAIN/SUB select code"
                         )
-                    await self._civ(0x07, data=bytes([code]))
-                    logger.info(
-                        "radio-poller: select VFO=%s (0x07 0x%02X)",
-                        target_name,
-                        code,
-                    )
+                    await radio.select_receiver(target_name)
+                    logger.info("radio-poller: select_receiver=%s", target_name)
+                    # ``select_receiver`` updates ``_radio_state.active`` on
+                    # the dual-RX runtime; mirror it on radios that don't
+                    # ship that wiring (test mocks, custom backends).
                     rs = getattr(self._radio, "_radio_state", None)
                     if rs is not None and hasattr(rs, "active"):
                         rs.active = target_name

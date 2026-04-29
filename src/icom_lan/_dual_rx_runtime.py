@@ -115,7 +115,7 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
                     f"{operation} receiver={receiver} is unsupported for profile "
                     f"{self._profile.model}: no MAIN VFO select code"
                 )
-            await self.set_vfo(target)
+            await self._set_vfo_wire(target)
             self._radio_state.active = target
             switched = True
 
@@ -124,7 +124,7 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
         finally:
             if switched:
                 try:
-                    await self.set_vfo(current)
+                    await self._set_vfo_wire(current)
                     self._radio_state.active = current
                 except TimeoutError:
                     # Do not swallow — radio would silently remain on the
@@ -136,7 +136,7 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
                         operation,
                         current,
                     )
-                    await self.set_vfo(current)
+                    await self._set_vfo_wire(current)
                     self._radio_state.active = current
 
     async def _get_frequency_main(
@@ -325,7 +325,7 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
             )
         if self._profile.receiver_count > 1:
             target = "MAIN" if receiver == RECEIVER_MAIN else "SUB"
-            await self.set_vfo(target)
+            await self._set_vfo_wire(target)
         civ = build_civ_frame(
             self._radio_addr, CONTROLLER_ADDR, _CMD_VFO, data=bytes([code])
         )
@@ -350,7 +350,7 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
             )
         if self._profile.receiver_count > 1:
             target = "MAIN" if receiver == RECEIVER_MAIN else "SUB"
-            await self.set_vfo(target)
+            await self._set_vfo_wire(target)
         civ = build_civ_frame(
             self._radio_addr, CONTROLLER_ADDR, _CMD_VFO, data=bytes([code])
         )
@@ -423,7 +423,7 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
             # Single-RX: nothing to switch.
             return
         target = "MAIN" if index == 0 else "SUB"
-        await self.set_vfo(target)
+        await self._set_vfo_wire(target)
         self._radio_state.active = target
 
     async def get_active_receiver(self) -> int:

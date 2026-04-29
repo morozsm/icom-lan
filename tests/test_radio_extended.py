@@ -56,7 +56,8 @@ class TestVFO:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        await radio.set_vfo("A")
+        with pytest.warns(DeprecationWarning, match="select_receiver"):
+            await radio.set_vfo("A")
         assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
@@ -64,28 +65,61 @@ class TestVFO:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        await radio.set_vfo("B")
+        with pytest.warns(DeprecationWarning, match="select_receiver"):
+            await radio.set_vfo("B")
 
     @pytest.mark.asyncio
     async def test_select_vfo_main(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        await radio.set_vfo("MAIN")
+        with pytest.warns(DeprecationWarning, match="select_receiver"):
+            await radio.set_vfo("MAIN")
 
     @pytest.mark.asyncio
     async def test_select_vfo_nak(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_nak_response())
-        with pytest.raises(CommandError):
+        with pytest.raises(CommandError), pytest.warns(DeprecationWarning):
             await radio.set_vfo("A")
 
     @pytest.mark.asyncio
     async def test_select_vfo_disconnected(self) -> None:
         r = IcomRadio("192.168.1.100")
-        with pytest.raises(ConnectionError):
+        with pytest.raises(ConnectionError), pytest.warns(DeprecationWarning):
             await r.set_vfo("A")
+
+    @pytest.mark.asyncio
+    async def test_set_vfo_emits_deprecation_warning(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """Issue #1172: legacy ``set_vfo`` overload warns; removal v0.20.
+
+        The warning message must mention both ``select_receiver`` (the new
+        Receiver-tier replacement) and ``set_vfo_slot`` (the new VFO-slot
+        replacement) so users know which API to migrate to.
+        """
+        mock_transport.queue_response(_ack_response())
+        with pytest.warns(DeprecationWarning) as record:
+            await radio.set_vfo("MAIN")
+        assert len(record) == 1
+        msg = str(record[0].message)
+        assert "select_receiver" in msg
+        assert "set_vfo_slot" in msg
+        assert "v0.20" in msg
+
+    @pytest.mark.asyncio
+    async def test_set_vfo_wire_does_not_warn(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """Internal ``_set_vfo_wire`` is silent — used by capability impls."""
+        import warnings
+
+        mock_transport.queue_response(_ack_response())
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            await radio._set_vfo_wire("A")
 
     def test_vfo_exchange_attribute_removed(self) -> None:
         """Deprecated ``vfo_exchange`` alias is removed in v0.19."""
@@ -401,24 +435,27 @@ class TestReceiverAwareContract:
     async def test_set_frequency_receiver_sub_uses_vfo_fallback(
         self, radio: IcomRadio
     ) -> None:
-        radio.set_vfo = AsyncMock()  # type: ignore[method-assign]
+        # Issue #1172: receiver-VFO fallback now goes through the
+        # internal ``_set_vfo_wire`` so the legacy ``set_vfo`` overload
+        # does not self-trigger its DeprecationWarning.
+        radio._set_vfo_wire = AsyncMock()  # type: ignore[method-assign]
         radio._send_civ_raw = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
         await radio.set_freq(14_074_000, receiver=1)
 
-        radio.set_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+        radio._set_vfo_wire.assert_has_awaits([call("SUB"), call("MAIN")])
         radio._send_civ_raw.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_set_mode_receiver_sub_uses_vfo_fallback(
         self, radio: IcomRadio
     ) -> None:
-        radio.set_vfo = AsyncMock()  # type: ignore[method-assign]
+        radio._set_vfo_wire = AsyncMock()  # type: ignore[method-assign]
         radio._send_civ_raw = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
         await radio.set_mode("USB", receiver=1)
 
-        radio.set_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+        radio._set_vfo_wire.assert_has_awaits([call("SUB"), call("MAIN")])
         radio._send_civ_raw.assert_awaited_once()
 
     @pytest.mark.asyncio

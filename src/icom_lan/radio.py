@@ -2866,12 +2866,17 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     # VFO / Split
     # ------------------------------------------------------------------
 
-    async def set_vfo(self, vfo: str = "A") -> None:
-        """Select VFO.
+    async def _set_vfo_wire(self, vfo: str) -> None:
+        """Wire-level CI-V VFO select (no deprecation warning).
+
+        Internal helper used by capability-protocol implementations
+        (:meth:`select_receiver`, :meth:`_run_with_receiver_vfo_fallback`,
+        :meth:`swap_vfo_ab`, :meth:`equalize_vfo_ab`) so the migrated
+        protocol surface does not self-trigger the legacy
+        :meth:`set_vfo` deprecation warning.
 
         Args:
-            vfo: "A", "B", "MAIN", or "SUB".
-                 IC-7610 uses MAIN/SUB.
+            vfo: "A", "B", "MAIN", or "SUB" (case-insensitive on input).
         """
         self._check_connected()
         civ = _select_vfo_cmd(vfo, to_addr=self._radio_addr)
@@ -2880,6 +2885,29 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         if ack is False:
             raise CommandError(f"Radio rejected VFO select {vfo}")
         self._last_vfo = vfo.upper()
+
+    async def set_vfo(self, vfo: str = "A") -> None:
+        """Select VFO (legacy overload).
+
+        .. deprecated:: 0.19
+            Use :meth:`select_receiver` for MAIN/SUB receiver switching
+            (``"MAIN"`` / ``"SUB"`` on dual-RX rigs) and
+            :meth:`set_vfo_slot` for A/B slot switching within a receiver
+            (``"A"`` / ``"B"``).  ``set_vfo`` will be removed in v0.20.
+
+        Args:
+            vfo: "A", "B", "MAIN", or "SUB".  IC-7610 uses MAIN/SUB for
+                 receiver select.
+        """
+        import warnings
+
+        warnings.warn(
+            "IcomRadio.set_vfo() is deprecated; use select_receiver() for "
+            "MAIN/SUB or set_vfo_slot() for A/B. Removal scheduled for v0.20.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        await self._set_vfo_wire(vfo)
 
     async def set_split(self, on: bool) -> None:
         """Enable or disable split mode (CI-V ``0x0F``)."""
@@ -3663,7 +3691,10 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
                 logger.debug("restore_state: set_split failed", exc_info=True)
         if "vfo" in state:
             try:
-                await self.set_vfo(str(state["vfo"]))
+                # Internal: bypass the public ``set_vfo`` so restore_state
+                # does not emit a DeprecationWarning when reapplying a
+                # snapshot taken before the migration.
+                await self._set_vfo_wire(str(state["vfo"]))
             except Exception:
                 logger.debug("restore_state: set_vfo failed", exc_info=True)
 

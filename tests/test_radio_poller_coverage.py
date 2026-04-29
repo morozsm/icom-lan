@@ -89,6 +89,18 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_split = AsyncMock()
     radio.equalize_main_sub = AsyncMock()
     radio.swap_main_sub = AsyncMock()
+
+    # Receiver-tier capabilities (issue #1170 / #1172).  ``select_receiver``
+    # mirrors the wire-level CI-V the runtime would emit so existing
+    # ``send_civ(0x07, [0xD0/0xD1])`` assertions still apply.
+    async def _select_receiver(which: object) -> None:
+        name = str(which).strip().upper()
+        code = 0xD1 if name in ("SUB", "1") else 0xD0
+        await radio.send_civ(0x07, sub=None, data=bytes([code]), wait_response=False)
+        radio._radio_state.active = "SUB" if code == 0xD1 else "MAIN"
+
+    radio.select_receiver = AsyncMock(side_effect=_select_receiver)
+    radio.set_vfo_slot = AsyncMock()
     radio.get_dual_watch = AsyncMock(return_value=False)
     radio.set_tuner_status = AsyncMock()
     radio.get_tuner_status = AsyncMock(return_value=0)
