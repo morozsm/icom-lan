@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Literal, cast
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from ..._bounded_queue import BoundedQueue
 from ...profiles import RadioProfile
@@ -899,179 +900,317 @@ class ControlHandler:
 
         Returns None if *name* is not a read-only command.
         """
-        if name == "get_system_date":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_SYSTEM_SETTINGS not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            year, month, day = await radio.get_system_date()
-            return {"year": year, "month": month, "day": day}
-        if name == "get_system_time":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_SYSTEM_SETTINGS not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            hour, minute = await radio.get_system_time()
-            return {"hour": hour, "minute": minute}
-        if name == "get_dual_watch":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_DUAL_WATCH not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            on = await radio.get_dual_watch()
-            return {"on": on}
-        if name == "get_tuner_status":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_TUNER not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            status = await radio.get_tuner_status()
-            label = {0: "OFF", 1: "ON", 2: "TUNING"}.get(status, "UNKNOWN")
-            return {"status": status, "label": label}
-        if name == "send_cw_text":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_CW not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            text = str(params.get("text", ""))
-            if len(text) > _MAX_CW_TEXT_CHARS:
-                raise ValueError(
-                    "CW text too long: "
-                    f"max {_MAX_CW_TEXT_CHARS} characters, got {len(text)}"
-                )
-            await radio.send_cw_text(text)
-            return {"text": text}
-        if name == "stop_cw_text":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_CW not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            await radio.stop_cw_text()
-            return {}
-        if name == "get_break_in_delay":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_BREAK_IN not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            level = await radio.get_break_in_delay()
-            return {"level": level}
-        if name == "get_dash_ratio":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_CW not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            value = await radio.get_dash_ratio()
-            return {"value": value}
-        if name in ("get_acc1_mod_level", "get_usb_mod_level", "get_lan_mod_level"):
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_DATA_MODE not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            level = await getattr(radio, name)()
-            return {"level": level}
-        if name in (
-            "get_data_off_mod_input",
-            "get_data1_mod_input",
-            "get_data2_mod_input",
-            "get_data3_mod_input",
-        ):
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_DATA_MODE not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            source = await getattr(radio, name)()
-            return {"source": source}
-        if name == "set_tuner_status":
-            if "value" not in params:
-                raise ValueError("missing required 'value' parameter")
-            value = int(params["value"])
-            if value not in (0, 1, 2):
-                raise ValueError(f"tuner value must be 0, 1, or 2, got {value}")
-            if self._read_only and value == 2:
-                raise PermissionError(
-                    "read-only mode: set_tuner_status TUNING rejected"
-                )
-            # Try direct call if the radio has the method
-            if radio is not None and CAP_TUNER in radio.capabilities:
-                await radio.set_tuner_status(value)
-            else:
-                # Route through command queue
-                from ..radio_poller import SetTunerStatus  # noqa: TID251
+        handler = self._READ_ONLY_HANDLERS.get(name)
+        if handler is None:
+            return None
+        return await handler(self, params, radio)
 
-                q = self._server.command_queue if self._server is not None else None
-                if q is None:
-                    raise RuntimeError("no command queue available")
-                q.put(SetTunerStatus(value))
-            label = {0: "OFF", 1: "ON", 2: "TUNING"}[value]
-            return {"value": value, "label": label}
-        if name == "get_ref_adjust":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_SYSTEM_SETTINGS not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            value = await radio.get_ref_adjust()
-            return {"value": value}
-        if name == "get_civ_transceive":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_SYSTEM_SETTINGS not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            on = await radio.get_civ_transceive()
-            return {"on": on}
-        if name == "get_civ_output_ant":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_ANTENNA not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            on = await radio.get_civ_output_ant()
-            return {"on": on}
-        if name == "get_af_mute":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_AF_LEVEL not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            rx = int(params.get("receiver", 0))
-            self._ensure_receiver_supported(rx)
-            on = await radio.get_af_mute(receiver=rx)
-            return {"on": on, "receiver": rx}
-        if name == "get_tuning_step":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_TUNING_STEP not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            step = await radio.get_tuning_step()
-            return {"step": step}
-        if name == "get_utc_offset":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_SYSTEM_SETTINGS not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            hours, minutes, is_negative = await radio.get_utc_offset()
-            return {"hours": hours, "minutes": minutes, "is_negative": is_negative}
-        if name == "get_band_edge_freq":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_BAND_EDGE not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            freq = await radio.get_band_edge_freq()
-            return {"freq": freq}
-        if name == "get_xfc_status":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_XFC not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            on = await radio.get_xfc_status()
-            return {"on": on}
-        if name == "get_tx_freq_monitor":
-            if radio is None:
-                raise RuntimeError("radio connection not available")
-            if CAP_TX not in radio.capabilities:
-                raise RuntimeError("radio does not support this command")
-            on = await radio.get_tx_freq_monitor()
-            return {"on": on}
-        if name == "cw_auto_tune":
-            return await self._cw_auto_tune()
-        return None
+    # ------------------------------------------------------------------
+    # Read-only command handlers (one per command, dispatched via table)
+    # ------------------------------------------------------------------
+
+    async def _ro_get_system_date(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_SYSTEM_SETTINGS not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        year, month, day = await radio.get_system_date()
+        return {"year": year, "month": month, "day": day}
+
+    async def _ro_get_system_time(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_SYSTEM_SETTINGS not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        hour, minute = await radio.get_system_time()
+        return {"hour": hour, "minute": minute}
+
+    async def _ro_get_dual_watch(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_DUAL_WATCH not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        on = await radio.get_dual_watch()
+        return {"on": on}
+
+    async def _ro_get_tuner_status(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_TUNER not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        status = await radio.get_tuner_status()
+        label = {0: "OFF", 1: "ON", 2: "TUNING"}.get(status, "UNKNOWN")
+        return {"status": status, "label": label}
+
+    async def _ro_send_cw_text(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_CW not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        text = str(params.get("text", ""))
+        if len(text) > _MAX_CW_TEXT_CHARS:
+            raise ValueError(
+                "CW text too long: "
+                f"max {_MAX_CW_TEXT_CHARS} characters, got {len(text)}"
+            )
+        await radio.send_cw_text(text)
+        return {"text": text}
+
+    async def _ro_stop_cw_text(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_CW not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        await radio.stop_cw_text()
+        return {}
+
+    async def _ro_get_break_in_delay(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_BREAK_IN not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        level = await radio.get_break_in_delay()
+        return {"level": level}
+
+    async def _ro_get_dash_ratio(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_CW not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        value = await radio.get_dash_ratio()
+        return {"value": value}
+
+    async def _get_mod_level(self, attr: str, radio: "Radio | None") -> dict[str, Any]:
+        # Shared body for get_acc1_mod_level / get_usb_mod_level / get_lan_mod_level.
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_DATA_MODE not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        level = await getattr(radio, attr)()
+        return {"level": level}
+
+    async def _ro_get_acc1_mod_level(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        return await self._get_mod_level("get_acc1_mod_level", radio)
+
+    async def _ro_get_usb_mod_level(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        return await self._get_mod_level("get_usb_mod_level", radio)
+
+    async def _ro_get_lan_mod_level(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        return await self._get_mod_level("get_lan_mod_level", radio)
+
+    async def _get_data_mod_input(
+        self, attr: str, radio: "Radio | None"
+    ) -> dict[str, Any]:
+        # Shared body for get_data{off,1,2,3}_mod_input.
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_DATA_MODE not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        source = await getattr(radio, attr)()
+        return {"source": source}
+
+    async def _ro_get_data_off_mod_input(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        return await self._get_data_mod_input("get_data_off_mod_input", radio)
+
+    async def _ro_get_data1_mod_input(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        return await self._get_data_mod_input("get_data1_mod_input", radio)
+
+    async def _ro_get_data2_mod_input(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        return await self._get_data_mod_input("get_data2_mod_input", radio)
+
+    async def _ro_get_data3_mod_input(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        return await self._get_data_mod_input("get_data3_mod_input", radio)
+
+    async def _ro_set_tuner_status(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if "value" not in params:
+            raise ValueError("missing required 'value' parameter")
+        value = int(params["value"])
+        if value not in (0, 1, 2):
+            raise ValueError(f"tuner value must be 0, 1, or 2, got {value}")
+        if self._read_only and value == 2:
+            raise PermissionError("read-only mode: set_tuner_status TUNING rejected")
+        # Try direct call if the radio has the method
+        if radio is not None and CAP_TUNER in radio.capabilities:
+            await radio.set_tuner_status(value)
+        else:
+            # Route through command queue
+            from ..radio_poller import SetTunerStatus  # noqa: TID251
+
+            q = self._server.command_queue if self._server is not None else None
+            if q is None:
+                raise RuntimeError("no command queue available")
+            q.put(SetTunerStatus(value))
+        label = {0: "OFF", 1: "ON", 2: "TUNING"}[value]
+        return {"value": value, "label": label}
+
+    async def _ro_get_ref_adjust(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_SYSTEM_SETTINGS not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        value = await radio.get_ref_adjust()
+        return {"value": value}
+
+    async def _ro_get_civ_transceive(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_SYSTEM_SETTINGS not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        on = await radio.get_civ_transceive()
+        return {"on": on}
+
+    async def _ro_get_civ_output_ant(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_ANTENNA not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        on = await radio.get_civ_output_ant()
+        return {"on": on}
+
+    async def _ro_get_af_mute(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_AF_LEVEL not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        rx = int(params.get("receiver", 0))
+        self._ensure_receiver_supported(rx)
+        on = await radio.get_af_mute(receiver=rx)
+        return {"on": on, "receiver": rx}
+
+    async def _ro_get_tuning_step(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_TUNING_STEP not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        step = await radio.get_tuning_step()
+        return {"step": step}
+
+    async def _ro_get_utc_offset(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_SYSTEM_SETTINGS not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        hours, minutes, is_negative = await radio.get_utc_offset()
+        return {"hours": hours, "minutes": minutes, "is_negative": is_negative}
+
+    async def _ro_get_band_edge_freq(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_BAND_EDGE not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        freq = await radio.get_band_edge_freq()
+        return {"freq": freq}
+
+    async def _ro_get_xfc_status(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_XFC not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        on = await radio.get_xfc_status()
+        return {"on": on}
+
+    async def _ro_get_tx_freq_monitor(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        if radio is None:
+            raise RuntimeError("radio connection not available")
+        if CAP_TX not in radio.capabilities:
+            raise RuntimeError("radio does not support this command")
+        on = await radio.get_tx_freq_monitor()
+        return {"on": on}
+
+    async def _ro_cw_auto_tune(
+        self, params: dict[str, Any], radio: "Radio | None"
+    ) -> dict[str, Any]:
+        return await self._cw_auto_tune()
+
+    # Dispatch table: command name → read-only handler.
+    # Entries returning None mean the command is not handled here and the
+    # caller (``_enqueue_command``) routes it through the command queue.
+    _READ_ONLY_HANDLERS: ClassVar[
+        dict[
+            str,
+            Callable[
+                ["ControlHandler", dict[str, Any], "Radio | None"],
+                Awaitable[dict[str, Any]],
+            ],
+        ]
+    ] = {
+        "get_system_date": _ro_get_system_date,
+        "get_system_time": _ro_get_system_time,
+        "get_dual_watch": _ro_get_dual_watch,
+        "get_tuner_status": _ro_get_tuner_status,
+        "send_cw_text": _ro_send_cw_text,
+        "stop_cw_text": _ro_stop_cw_text,
+        "get_break_in_delay": _ro_get_break_in_delay,
+        "get_dash_ratio": _ro_get_dash_ratio,
+        "get_acc1_mod_level": _ro_get_acc1_mod_level,
+        "get_usb_mod_level": _ro_get_usb_mod_level,
+        "get_lan_mod_level": _ro_get_lan_mod_level,
+        "get_data_off_mod_input": _ro_get_data_off_mod_input,
+        "get_data1_mod_input": _ro_get_data1_mod_input,
+        "get_data2_mod_input": _ro_get_data2_mod_input,
+        "get_data3_mod_input": _ro_get_data3_mod_input,
+        "set_tuner_status": _ro_set_tuner_status,
+        "get_ref_adjust": _ro_get_ref_adjust,
+        "get_civ_transceive": _ro_get_civ_transceive,
+        "get_civ_output_ant": _ro_get_civ_output_ant,
+        "get_af_mute": _ro_get_af_mute,
+        "get_tuning_step": _ro_get_tuning_step,
+        "get_utc_offset": _ro_get_utc_offset,
+        "get_band_edge_freq": _ro_get_band_edge_freq,
+        "get_xfc_status": _ro_get_xfc_status,
+        "get_tx_freq_monitor": _ro_get_tx_freq_monitor,
+        "cw_auto_tune": _ro_cw_auto_tune,
+    }
 
     async def _cw_auto_tune(self) -> dict[str, Any]:
         """Detect CW tone via FFT and shift VFO to zero-beat."""
