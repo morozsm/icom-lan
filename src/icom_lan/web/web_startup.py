@@ -12,8 +12,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
+from ..core.radio_protocol import StatePollable
 from ..radio_state import RadioState
 from ..startup_checks import assert_radio_startup_ready
 from .discovery import DiscoveryResponder, RadioInfo  # noqa: TID251
@@ -84,22 +85,19 @@ async def start_web_server(server: WebServer) -> None:
     if server._radio is not None:
         from ..radio_protocol import StateNotifyCapable
 
-        # --- Yaesu CAT backend: use radio.create_state_poller (request-response) ---
-        if getattr(server._radio, "backend_id", None) == "yaesu_cat":
+        # --- Request-response state poller (Yaesu CAT et al.) ---
+        if isinstance(server._radio, StatePollable):
 
-            def _yaesu_state_cb(state: RadioState) -> None:
+            def _state_cb(state: RadioState) -> None:
                 server._radio_state = state
                 server._broadcast_state_update()
 
-            # ``create_state_poller`` is a YaesuCatRadio-specific factory; the
-            # generic ``Radio`` protocol does not declare it, so cast to Any
-            # to express the duck-typed call without importing the concrete.
-            server._yaesu_poller = cast(Any, server._radio).create_state_poller(
-                callback=_yaesu_state_cb,
+            server._state_poller = server._radio.create_state_poller(
+                callback=_state_cb,
                 command_queue=server._command_queue,
             )
-            server._spawn(server._yaesu_poller.start())
-            logger.info("Yaesu CAT poller started")
+            server._spawn(server._state_poller.start())
+            logger.info("state poller started")
         else:
             # --- Icom CI-V backend: fire-and-forget RadioPoller ---
             if isinstance(server._radio, StateNotifyCapable):
@@ -169,12 +167,12 @@ async def stop_web_server(server: WebServer) -> None:
     if server._radio_poller is not None:
         server._radio_poller.stop()
         server._radio_poller = None
-    if server._yaesu_poller is not None:
+    if server._state_poller is not None:
         try:
-            await asyncio.wait_for(server._yaesu_poller.stop(), timeout=2.0)
+            await asyncio.wait_for(server._state_poller.stop(), timeout=2.0)
         except TimeoutError:
-            logger.warning("yaesu poller stop timed out")
-        server._yaesu_poller = None
+            logger.warning("state poller stop timed out")
+        server._state_poller = None
 
     # 2. Stop audio relay (stops AudioBus subscription → stop_audio_rx_opus)
     try:
