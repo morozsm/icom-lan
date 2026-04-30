@@ -13,6 +13,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from enum import StrEnum
 
+from ._bounded_queue import BoundedQueue
 from ._queue_pressure import PRESSURE_THRESHOLD
 from .exceptions import TimeoutError as _TimeoutError
 from .types import HEADER_SIZE, PacketType
@@ -109,7 +110,7 @@ class IcomTransport:
         self._ping_task: asyncio.Task[None] | None = None
         self._idle_task: asyncio.Task[None] | None = None
         self._retransmit_task: asyncio.Task[None] | None = None
-        self._packet_queue: asyncio.Queue[bytes] = asyncio.Queue(
+        self._packet_queue: BoundedQueue[bytes] = BoundedQueue(
             maxsize=PACKET_QUEUE_MAXSIZE
         )
         # Optional callback invoked when queue pressure exceeds 75%.

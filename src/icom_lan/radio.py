@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 from ._audio_recovery import AudioRecoveryRuntime, AudioRecoveryState
 from ._audio_runtime_mixin import AudioRuntimeMixin
 from ._audio_transcoder import PcmOpusTranscoder
+from ._bounded_queue import BoundedQueue
 from ._civ_rx import CivRuntime
 from ._dual_rx_runtime import DualRxRuntimeMixin
 from ._scope_runtime import ScopeRuntimeMixin
@@ -725,10 +726,10 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         self._civ_data_watchdog_task: asyncio.Task[None] | None = None
         self._civ_request_tracker = CivRequestTracker()
         self._civ_epoch = self._civ_request_tracker.generation
-        self._scope_frame_queue: asyncio.Queue[ScopeFrame] = asyncio.Queue(maxsize=64)
+        self._scope_frame_queue: BoundedQueue[ScopeFrame] = BoundedQueue(maxsize=64)
         self._scope_activity_counter: int = 0
         self._scope_activity_event = asyncio.Event()
-        self._civ_event_queue: asyncio.Queue[CivEvent] = asyncio.Queue(maxsize=256)
+        self._civ_event_queue: BoundedQueue[CivEvent] = BoundedQueue(maxsize=256)
         self._civ_ack_sink_grace: float = (
             float(os.environ.get("ICOM_CIV_ACK_SINK_GRACE_MS", "120")) / 1000.0
         )

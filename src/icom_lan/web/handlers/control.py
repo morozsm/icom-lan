@@ -7,6 +7,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+from ..._bounded_queue import BoundedQueue
 from ...profiles import RadioProfile
 from ...radio_state import RadioState
 from ..protocol import (  # noqa: TID251
@@ -374,7 +375,7 @@ class ControlHandler:
         self._server = server
         self._read_only = read_only
         self._subscribed_streams: set[str] = set()
-        self._event_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(
+        self._event_queue: BoundedQueue[dict[str, Any]] = BoundedQueue(
             maxsize=100,
         )
         # Per-command rate limiting: command_name -> (last_time, drop_count)

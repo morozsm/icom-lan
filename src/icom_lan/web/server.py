@@ -32,6 +32,7 @@ from collections.abc import Coroutine
 from typing import TYPE_CHECKING, Any, cast
 
 from .. import __version__
+from .._bounded_queue import BoundedQueue
 from ..radio_state import RadioState
 from ..capabilities import CAP_AUDIO, CAP_SCOPE
 from ..audio_analyzer import AudioAnalyzer
@@ -325,7 +326,7 @@ class WebServer:
         self._radio_poller: RadioPoller | None = None
         self._yaesu_poller: Any | None = None  # YaesuCatPoller (lazy)
         # Control handler event queues
-        self._control_event_queues: set[asyncio.Queue[dict[str, Any]]] = set()
+        self._control_event_queues: set[BoundedQueue[dict[str, Any]]] = set()
         # State broadcast throttle
         self._last_state_broadcast: float = 0.0
         # Delta encoder for efficient state broadcasting
@@ -579,11 +580,11 @@ class WebServer:
         """Command queue consumed by RadioPoller."""
         return self._command_queue
 
-    def register_control_event_queue(self, q: asyncio.Queue[dict[str, Any]]) -> None:
+    def register_control_event_queue(self, q: BoundedQueue[dict[str, Any]]) -> None:
         """Register a ControlHandler event queue for broadcast."""
         self._control_event_queues.add(q)
 
-    def unregister_control_event_queue(self, q: asyncio.Queue[dict[str, Any]]) -> None:
+    def unregister_control_event_queue(self, q: BoundedQueue[dict[str, Any]]) -> None:
         """Unregister a ControlHandler event queue."""
         self._control_event_queues.discard(q)
 

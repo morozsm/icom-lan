@@ -1164,12 +1164,7 @@ class CivRuntime:
     def _publish_scope_frame(self, frame: ScopeFrame) -> None:
         """Publish a complete scope frame to callback and bounded queue."""
         self._publish_civ_event(CivEvent(type=CivEventType.SCOPE_FRAME))
-        if self._host._scope_frame_queue.full():
-            try:
-                self._host._scope_frame_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
-        self._host._scope_frame_queue.put_nowait(frame)
+        self._host._scope_frame_queue.put_drop_oldest(frame)
         callback = self._host._scope_callback
         if callback is not None:
             try:
@@ -1179,12 +1174,7 @@ class CivRuntime:
 
     def _publish_civ_event(self, event: CivEvent) -> None:
         """Publish CI-V event to internal event queue (best effort)."""
-        if self._host._civ_event_queue.full():
-            try:
-                self._host._civ_event_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
-        self._host._civ_event_queue.put_nowait(event)
+        self._host._civ_event_queue.put_drop_oldest(event)
 
     def _check_connected(self) -> None:
         """Raise ConnectionError if not connected."""

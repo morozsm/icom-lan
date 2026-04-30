@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`AudioStats.jitter_ms` renamed to `reorder_depth_ema_ms` (#1231).** The
   field measures reorder-depth EMA, not RFC 3550 jitter. Internal field; no
   back-compat alias.
+- **`BoundedQueue` helper extracted to `_bounded_queue.py` (#1230).** Four
+  asyncio call sites (transport RX, radio scope/civ event queues, web fanout)
+  now share a single bounded-queue implementation. No behavior change; drop
+  policies preserved per callsite.
 
 ### Deprecated
 

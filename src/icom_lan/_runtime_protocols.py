@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .audio import AudioPacket, AudioStream
     from .civ import CivEvent, CivRequestTracker
     from .commander import IcomCommander
+    from ._bounded_queue import BoundedQueue
     from ._civ_rx import CivRuntime
     from ._state_cache import StateCache
     from .radio_state import RadioState
@@ -67,11 +68,11 @@ class CivRuntimeHost(Protocol):
 
     # Scope and CI-V event queues
     _scope_assembler: "ScopeAssembler"
-    _scope_frame_queue: "asyncio.Queue[ScopeFrame]"
+    _scope_frame_queue: "BoundedQueue[ScopeFrame]"
     _scope_callback: "Callable[[ScopeFrame], Any] | None"
     _scope_activity_counter: int
     _scope_activity_event: asyncio.Event
-    _civ_event_queue: "asyncio.Queue[CivEvent]"
+    _civ_event_queue: "BoundedQueue[CivEvent]"
 
     # State cache / last-known values
     _state_cache: "StateCache"
