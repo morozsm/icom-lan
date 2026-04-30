@@ -324,7 +324,7 @@ class WebServer:
             )
         self._command_queue: CommandQueue = CommandQueue()
         self._radio_poller: RadioPoller | None = None
-        self._yaesu_poller: Any | None = None  # YaesuCatPoller (lazy)
+        self._state_poller: Any | None = None  # StatePoller (lazy, optional)
         # Control handler event queues
         self._control_event_queues: set[BoundedQueue[dict[str, Any]]] = set()
         # State broadcast throttle
