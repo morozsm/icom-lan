@@ -157,12 +157,9 @@ describe('getNeedleMarks POWER', () => {
 // ---------------------------------------------------------------------------
 
 vi.mock('$lib/stores/capabilities.svelte', () => ({
-  hasTx: vi.fn(() => true),
   getMeterCalibration: vi.fn(() => null),
   getMeterRedline: vi.fn(() => null),
 }));
-
-import { hasTx } from '$lib/stores/capabilities.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
@@ -177,7 +174,6 @@ function mountPanel(props: ComponentProps<typeof MeterPanel>) {
 
 beforeEach(() => {
   components = [];
-  vi.mocked(hasTx).mockReturnValue(true);
 });
 
 afterEach(() => {
@@ -192,6 +188,7 @@ const baseProps: ComponentProps<typeof MeterPanel> = {
   alc: 64,
   txActive: false,
   meterSource: 'S',
+  hasTx: true,
   onMeterSourceChange: vi.fn(),
 };
 
@@ -259,9 +256,8 @@ describe('TX meters visibility', () => {
 });
 
 describe('TX source buttons visibility', () => {
-  it('hides SWR and Po buttons when hasTx returns false', () => {
-    vi.mocked(hasTx).mockReturnValue(false);
-    const t = mountPanel(baseProps);
+  it('hides SWR and Po buttons when hasTx prop is false', () => {
+    const t = mountPanel({ ...baseProps, hasTx: false });
     const btns = Array.from(t.querySelectorAll('.source-btn'));
     expect(btns.every((b) => b.textContent?.trim() === 'S')).toBe(true);
     expect(btns).toHaveLength(1);

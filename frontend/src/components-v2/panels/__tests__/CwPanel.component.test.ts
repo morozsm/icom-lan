@@ -10,6 +10,9 @@ const mockProps = {
   twinPeak: false,
   currentMode: 'CW',
   hasCw: true,
+  hasBreakIn: true,
+  hasApf: true,
+  hasTwinPeak: true,
 };
 
 const mockHandlers = {
@@ -26,10 +29,6 @@ const mockHandlers = {
 vi.mock('$lib/runtime/adapters/panel-adapters', () => ({
   deriveCwProps: () => mockProps,
   getCwHandlers: () => mockHandlers,
-}));
-
-vi.mock('$lib/stores/capabilities.svelte', () => ({
-  hasCapability: vi.fn(() => true),
 }));
 
 import CwPanel from '../CwPanel.svelte';
@@ -50,7 +49,8 @@ beforeEach(() => {
   components = [];
   Object.assign(mockProps, {
     cwPitch: 600, keySpeed: 12, breakIn: 0, breakInDelay: 0,
-    apfMode: 0, twinPeak: false, currentMode: 'CW', hasCw: true,
+    apfMode: 0, twinPeak: false, currentMode: 'CW',
+    hasCw: true, hasBreakIn: true, hasApf: true, hasTwinPeak: true,
   });
 });
 

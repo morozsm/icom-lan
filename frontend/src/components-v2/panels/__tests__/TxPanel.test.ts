@@ -55,6 +55,9 @@ const mockProps = {
   monActive: false,
   monLevel: 64,
   driveGain: 128,
+  hasTx: true,
+  hasTuner: true,
+  hasMonitor: true,
 };
 
 const mockHandlers = {
@@ -72,12 +75,6 @@ const mockHandlers = {
   onPttOff: vi.fn(),
 };
 
-// Mock hasTx so we can control its return value
-vi.mock('$lib/stores/capabilities.svelte', () => ({
-  hasTx: vi.fn(() => true),
-  hasCapability: vi.fn(() => true),
-}));
-
 vi.mock('$lib/runtime/adapters/panel-adapters', () => ({
   deriveTxProps: () => mockProps,
   getTxHandlers: () => mockHandlers,
@@ -90,7 +87,6 @@ vi.mock('$lib/runtime/adapters/tx-adapter', () => ({
   }),
 }));
 
-import { hasTx } from '$lib/stores/capabilities.svelte';
 import TxPanel from '../TxPanel.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
@@ -114,11 +110,11 @@ function openTxSettings(container: HTMLElement) {
 
 beforeEach(() => {
   components = [];
-  vi.mocked(hasTx).mockReturnValue(true);
   Object.assign(mockProps, {
     txActive: false, rfPower: 128, micGain: 128, atuActive: false,
     atuTuning: false, voxActive: false, compActive: false, compLevel: 64,
     monActive: false, monLevel: 64, driveGain: 128,
+    hasTx: true, hasTuner: true, hasMonitor: true,
   });
   mockHandlers.onRfPowerChange = vi.fn();
   mockHandlers.onMicGainChange = vi.fn();
@@ -191,15 +187,13 @@ describe('panel structure', () => {
 });
 
 describe('hasTx gating', () => {
-  it('renders panel content when hasTx returns true', () => {
-    vi.mocked(hasTx).mockReturnValue(true);
-    const t = mountPanel();
+  it('renders panel content when hasTx prop is true', () => {
+    const t = mountPanel({ hasTx: true });
     expect(t.querySelector('.tx-panel')).not.toBeNull();
   });
 
-  it('hides panel content when hasTx returns false', () => {
-    vi.mocked(hasTx).mockReturnValue(false);
-    const t = mountPanel();
+  it('hides panel content when hasTx prop is false', () => {
+    const t = mountPanel({ hasTx: false });
     expect(t.querySelector('.tx-panel')).toBeNull();
   });
 });

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import { HardwareButton } from '$lib/Button';
-  import { hasCapability } from '$lib/stores/capabilities.svelte';
   import { buildNrOptions, buildNotchOptions } from './dsp-utils';
   import {
     AGC_TIME_LABELS,
@@ -41,8 +40,8 @@
 
   /* NOTCH_WIDTH_LABELS, AGC_TIME_LABELS imported from dsp-panel-logic */
 
-  let showNr = $derived(hasCapability('nr'));
-  let showNb = $derived(hasCapability('nb'));
+  let showNr = $derived(p.hasNr);
+  let showNb = $derived(p.hasNb);
 
   let nrOptions = $derived(buildNrOptions());
   let notchOptions = $derived(buildNotchOptions());

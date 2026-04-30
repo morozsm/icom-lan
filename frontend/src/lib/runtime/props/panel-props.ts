@@ -336,11 +336,13 @@ export interface DspProps {
   notchFreq: number;
   manualNotchWidth: number;
   agcTimeConstant: number;
+  hasNr: boolean;
+  hasNb: boolean;
 }
 
 export function toDspProps(
   state: ServerState | null,
-  _caps: Capabilities | null,
+  caps: Capabilities | null,
 ): DspProps {
   const rx = state ? activeRx(state) : null;
 
@@ -359,6 +361,8 @@ export function toDspProps(
     notchFreq: state?.notchFilter ?? 0,
     manualNotchWidth: rx?.manualNotchWidth ?? 0,
     agcTimeConstant: rx?.agcTimeConstant ?? 0,
+    hasNr: hasCap(caps, 'nr'),
+    hasNb: hasCap(caps, 'nb'),
   };
 }
 
@@ -376,11 +380,14 @@ export interface TxProps {
   monActive: boolean;
   monLevel: number;
   driveGain: number;
+  hasTx: boolean;
+  hasTuner: boolean;
+  hasMonitor: boolean;
 }
 
 export function toTxProps(
   state: ServerState | null,
-  _caps: Capabilities | null,
+  caps: Capabilities | null,
 ): TxProps {
   return {
     txActive: state?.ptt ?? false,
@@ -394,6 +401,9 @@ export function toTxProps(
     monActive: state?.monitorOn ?? false,
     monLevel: state?.monitorGain ?? 128,
     driveGain: state?.driveGain ?? 128,
+    hasTx: caps?.tx ?? false,
+    hasTuner: hasCap(caps, 'tuner'),
+    hasMonitor: hasCap(caps, 'monitor'),
   };
 }
 
@@ -414,6 +424,9 @@ export interface CwProps {
   reversePaddle: boolean;
   keyerType: number;
   hasCw: boolean;
+  hasBreakIn: boolean;
+  hasApf: boolean;
+  hasTwinPeak: boolean;
 }
 
 export function toCwProps(
@@ -436,7 +449,10 @@ export function toCwProps(
     sidetoneLevel: state?.monitorGain ?? 128,
     reversePaddle: (state?.dashRatio ?? 0) < 0,
     keyerType: 0,
-    hasCw: caps?.capabilities?.includes('cw') ?? false,
+    hasCw: hasCap(caps, 'cw'),
+    hasBreakIn: hasCap(caps, 'break_in'),
+    hasApf: hasCap(caps, 'apf'),
+    hasTwinPeak: hasCap(caps, 'twin_peak'),
   };
 }
 
@@ -453,9 +469,13 @@ export interface MeterProps {
   id: number;
   txActive: boolean;
   meterSource: string;
+  hasTx: boolean;
 }
 
-export function toMeterProps(state: ServerState | null): MeterProps {
+export function toMeterProps(
+  state: ServerState | null,
+  caps: Capabilities | null,
+): MeterProps {
   const rx = state ? activeRx(state) : null;
   return {
     sValue: rx?.sMeter ?? 0,
@@ -468,6 +488,7 @@ export function toMeterProps(state: ServerState | null): MeterProps {
     id: state?.idMeter ?? 0,
     txActive: state?.ptt ?? false,
     meterSource: (state as { meterSource?: string } | null)?.meterSource ?? 'S',
+    hasTx: caps?.tx ?? false,
   };
 }
 

@@ -2,7 +2,6 @@
   import '../controls/control-button.css';
   import { HardwareButton } from '$lib/Button';
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
-  import { hasCapability } from '$lib/stores/capabilities.svelte';
 
   import { formatBreakIn, isBreakInActive, isApfActive } from './cw-panel-logic';
   import { deriveCwProps, getCwHandlers } from '$lib/runtime/adapters/panel-adapters';
@@ -25,15 +24,16 @@
   const onApfChange = handlers.onApfChange;
   const onTwinPeakToggle = handlers.onTwinPeakToggle;
   const onAutoTune = handlers.onAutoTune;
-  let showBreakIn = $derived(hasCapability('break_in'));
-  let showApf = $derived(hasCapability('apf'));
-  let showTwinPeak = $derived(hasCapability('twin_peak'));
+  let showCw = $derived(p.hasCw);
+  let showBreakIn = $derived(p.hasBreakIn);
+  let showApf = $derived(p.hasApf);
+  let showTwinPeak = $derived(p.hasTwinPeak);
   let breakInActive = $derived(isBreakInActive(breakIn));
   let apfActive = $derived(isApfActive(apfMode));
   let breakInLabel = $derived(formatBreakIn(breakIn));
 </script>
 
-{#if hasCapability('cw')}
+{#if showCw}
   <div class="panel-body">
     <div class="cw-mode-line">
       <span class="cw-mode-label">RX mode</span>

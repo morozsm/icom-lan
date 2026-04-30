@@ -74,7 +74,7 @@ export function getScanHandlers() { return _scanHandlers; }
 
 // ── Meter ──
 export function deriveMeterProps() {
-  return toMeterProps(runtime.state);
+  return toMeterProps(runtime.state, runtime.caps);
 }
 const _meterHandlers = makeMeterHandlers();
 export function getMeterHandlers() { return _meterHandlers; }

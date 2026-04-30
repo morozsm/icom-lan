@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`transport._handle_packet` decomposed into dispatch table (#1239).**
   Six packet types (single/multi retransmit, ping req/reply, scope fast-path,
   generic data) now dispatch via a dict; behavior preserved.
+- **Batch 1 of panel→adapter migration (#1244).** `CwPanel`, `DspPanel`,
+  `MeterPanel`, `TxPanel` no longer import from `$lib/stores/capabilities`
+  directly; capability flags now flow via panel-props from the wiring layer.
+  Tier 2 batch 1 of #1063.
 
 ### Docs
 

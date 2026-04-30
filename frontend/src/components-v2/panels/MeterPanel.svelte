@@ -2,7 +2,6 @@
   import '../controls/control-button.css';
   import BarGauge from '../meters/BarGauge.svelte';
   import NeedleGauge from '../meters/NeedleGauge.svelte';
-  import { hasTx } from '$lib/stores/capabilities.svelte';
   import {
     normalize,
     formatPowerWatts,
@@ -20,6 +19,7 @@
     alc: number;
     txActive: boolean;
     meterSource: MeterSource;
+    hasTx: boolean;
     onMeterSourceChange: (v: string) => void;
   }
 
@@ -30,6 +30,7 @@
     alc,
     txActive,
     meterSource,
+    hasTx,
     onMeterSourceChange,
   }: Props = $props();
 
@@ -80,7 +81,7 @@
         style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-bright)"
         onclick={() => onMeterSourceChange('S')}
       >S</button>
-      {#if hasTx()}
+      {#if hasTx}
         <button
           type="button"
           class="source-btn v2-control-button"

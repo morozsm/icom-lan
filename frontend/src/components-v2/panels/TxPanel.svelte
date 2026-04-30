@@ -1,7 +1,6 @@
 <script lang="ts">
   import { HardwareButton } from '$lib/Button';
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
-  import { hasTx, hasCapability } from '$lib/stores/capabilities.svelte';
   import { txStatusColor } from './tx-utils';
   import { getTxAudioControl } from '$lib/runtime/adapters/tx-adapter';
   import { deriveTxProps, getTxHandlers } from '$lib/runtime/adapters/panel-adapters';
@@ -35,7 +34,9 @@
   const onPttOff = handlers.onPttOff;
 
   let tuneButtonColor = $derived(txStatusColor(atuActive, atuTuning));
-  let showMon = $derived(hasCapability('monitor'));
+  let showTx = $derived(p.hasTx);
+  let showTuner = $derived(p.hasTuner);
+  let showMon = $derived(p.hasMonitor);
 
   // ── PTT (hold-to-talk + double-tap latch) ──
   const PTT_DOUBLE_TAP_MS = 300;
@@ -108,7 +109,7 @@
   }
 </script>
 
-{#if hasTx()}
+{#if showTx}
   <div class="tx-panel" bind:this={modalAnchor}>
     <!-- TX indicator strip -->
     <div class="tx-strip" class:tx-active={txActive}>
@@ -129,7 +130,7 @@
     {/if}
 
     <div class="tx-button-grid">
-      {#if hasCapability('tuner')}
+      {#if showTuner}
         <HardwareButton
           active={atuActive}
           indicator="edge-left"

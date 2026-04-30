@@ -13,6 +13,8 @@ const mockProps = {
   nbWidth: 0,
   manualNotchWidth: 0,
   agcTimeConstant: 0,
+  hasNr: true,
+  hasNb: true,
 };
 
 const mockHandlers = {
@@ -27,10 +29,6 @@ const mockHandlers = {
   onManualNotchWidthChange: vi.fn(),
   onAgcTimeChange: vi.fn(),
 };
-
-vi.mock('$lib/stores/capabilities.svelte', () => ({
-  hasCapability: vi.fn(() => true),
-}));
 
 vi.mock('$lib/runtime/adapters/panel-adapters', () => ({
   deriveDspProps: () => mockProps,
@@ -105,6 +103,7 @@ beforeEach(() => {
     nrMode: 0, nrLevel: 128, nbActive: false, nbLevel: 128,
     notchMode: 'off', notchFreq: 1000, nbDepth: 0, nbWidth: 0,
     manualNotchWidth: 0, agcTimeConstant: 0,
+    hasNr: true, hasNb: true,
   });
   mockHandlers.onNrModeChange = vi.fn();
   mockHandlers.onNrLevelChange = vi.fn();
