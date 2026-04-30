@@ -517,19 +517,86 @@ The per-issue Phase 3 metadata uses
 
 ### 5.1 Shim file template
 
-Every old top-level path becomes a shim file. **Verbatim template
-agreed with the maintainer:**
+Every old top-level path becomes a shim file. The canonical template
+is the **sys.modules-alias** form (Step 2b onward; Step 2a's six
+shims were retrofitted in the same PR for consistency):
 
 ```python
-# Re-export shim for backwards compatibility.
-# Canonical location: icom_lan.<new_layer>.<module>
-# Do not add new symbols here — add them at the canonical location.
+"""Re-export shim for backwards compatibility.
+
+Canonical location: icom_lan.<new_layer>.<module>
+Do not add new symbols here — add them at the canonical location.
+
+This file uses the sys.modules-alias pattern: importing this shim
+makes ``icom_lan.<module>`` literally the same module object as
+``icom_lan.<new_layer>.<module>``. This preserves attribute walks
+(incl. stdlib names like ``asyncio`` not in ``__all__``) and
+monkeypatch targets such as
+``unittest.mock.patch('icom_lan.transport.asyncio.get_running_loop', …)``.
+
+The two import lines below are BOTH load-bearing — do not remove
+either:
+
+* ``from icom_lan.<new_layer>.<module> import *`` — static-analysis
+  adapter. Mypy and ruff resolve re-exported names through
+  star-imports; they do not model the ``sys.modules`` mutation.
+  Without this line, every consumer of
+  ``from icom_lan.<module> import X`` triggers ``attr-defined``
+  errors. At runtime this populates the temporary module object,
+  which is immediately superseded by the swap below.
+
+* ``sys.modules[__name__] = _canonical`` — the runtime invariant.
+  Makes ``icom_lan.<module>`` and ``icom_lan.<new_layer>.<module>``
+  the same module object so attribute lookups (including stdlib
+  names imported by the canonical module) flow to the canonical
+  module.
+"""
+
+import sys
+
 from icom_lan.<new_layer>.<module> import *  # noqa: F401, F403
+import icom_lan.<new_layer>.<module> as _canonical
+
+sys.modules[__name__] = _canonical
 ```
 
-The header is a grep-able marker (`grep -rn "Re-export shim"
-src/icom_lan/`) and a signal to PR reviewers: do not edit by hand,
-file edits go to the canonical location.
+The "Re-export shim" header is a grep-able marker (`grep -rn
+"Re-export shim" src/icom_lan/`) and a signal to PR reviewers: do
+not edit by hand, file edits go to the canonical location.
+
+#### 5.1.1 Why sys.modules-alias (and not plain `from … import *`)
+
+The original verbatim template was a single-line `from
+icom_lan.<new_layer>.<module> import *`. It broke during Step 2b
+verification: four tests in `tests/test_civ.py` and
+`tests/test_transport.py` use `unittest.mock.patch` against
+attributes like `"icom_lan.transport.asyncio.get_running_loop"` and
+`"icom_lan.transport.time.monotonic"`. These targets walk
+`icom_lan.transport.asyncio` and `icom_lan.transport.time` — but
+stdlib module attributes (`asyncio`, `time`) are not in the
+canonical module's `__all__`, so `import *` does not propagate
+them. The patch target then resolves to a name that does not exist
+on the shim module, and the test fails.
+
+The sys.modules-alias form makes the old dotted path *literally the
+same module object* as the canonical one. Every attribute on the
+canonical module — public, private, stdlib import, dynamically set
+— is reachable through the old path because there is no
+intermediate object to walk. The hybrid keeps the `from … import *`
+solely so static analyzers (mypy, ruff) can see the re-exported
+names; at runtime that import populates a throwaway module object
+that the swap on the next line replaces.
+
+Two consequences worth noting:
+
+* The shim docstring is longer than the original verbatim template,
+  on purpose. The dual-line invariant is non-obvious; future
+  readers must understand why both lines are load-bearing before
+  "simplifying" by deleting one.
+* Identity is the only correctness check that matters: `import
+  sys; assert sys.modules['icom_lan.<module>'] is
+  sys.modules['icom_lan.<new_layer>.<module>']`. Every PR that
+  adds or modifies a shim should verify this one-liner.
 
 ### 5.2 Why silent (no `DeprecationWarning`)
 
