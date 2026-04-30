@@ -271,7 +271,7 @@ the step for finer-grained splitting in Phase 3 issue authoring.
 
 | # | Description | Files moved | Approx. LOC moved | Shim files |
 |---:|---|---:|---:|---:|
-| 1 | Skeleton: empty new package dirs | 0 | ~50 (new `__init__.py`s) | 0 |
+| 1 | Skeleton: empty `core/` + `runtime/` package dirs + `tests/contracts/test_lazy_imports.py` (only 2 of 5 new packages here; see Step 1 detail for why) | 0 | ~50 (new `__init__.py`s + ~3 contract tests) | 0 |
 | 2 | Move `core` foundationals (types, exceptions, auth, transport, civ, protocol, capabilities, env_config, _optional_deps) | 9 | ~800 (split if >500) | 9 |
 | 3 | Move `core` contract trio + transport primitives (radio_protocol, radio_state, _state_cache, _queue_pressure, _bounded_queue) | 5 | ~400 | 5 |
 | 4 | Move `commands` top-level (commander, command_map, command_spec) | 3 | ~300 | 3 |
@@ -297,21 +297,42 @@ the verification gate for each step.
 #### Step 1 — Skeleton + lazy-resolution contract test
 
 - **Scope:**
-  1. Create empty packages `core/`, `profiles/`, `runtime/`,
-     `scope/`, `cli/`. Each gets a stub `__init__.py` with a
-     docstring pointing at the relevant `LAYER.md` (LAYER.md files
-     come in Phase 5; the docstring placeholder is fine).
-  2. Create `tests/contracts/test_lazy_imports.py` with three test
-     functions (`test_tier1_names_resolve`,
-     `test_tier2_lazy_names_resolve`, `test_audio_lazy_names_resolve`)
-     enumerating the hard-coded name lists transcribed from
+  1. Create the two **non-colliding** layer packages:
+     `src/icom_lan/core/` and `src/icom_lan/runtime/`. Each gets a
+     stub `__init__.py` with a docstring pointing at the relevant
+     `LAYER.md` (LAYER.md files come in Phase 5; the docstring
+     placeholder is fine) plus `__all__: list[str] = []`.
+
+     **Why only two new packages here, not five.** Three of the
+     proposed new layer directory names (`cli/`, `profiles/`,
+     `scope/`) collide with same-named existing modules (`cli.py`,
+     `profiles.py`, `scope.py`). Creating an empty
+     `profiles/__init__.py` while `profiles.py` exists makes
+     Python's regular-package rule shadow the `.py` file: the
+     package wins, but the package is empty, so eager imports such
+     as `from .profiles import RadioProfile` at
+     `src/icom_lan/__init__.py:41` immediately raise `ImportError`.
+     Same trap applies to `cli/` (used by `__main__.py:5`) and
+     `scope/`. The colliding packages are therefore materialised
+     **inside their respective move steps** — Step 5 for
+     `profiles/`, Step 6 for `scope/`, Step 12 for `cli/` — where
+     the `.py` file moves into the new package as one atomic
+     operation, leaving no shadow window. (Empirically verified by
+     a Step 1 sub-agent before this plan correction was issued.)
+  2. Create the contract-test package: `tests/contracts/__init__.py`
+     (empty package marker) and `tests/contracts/test_lazy_imports.py`
+     with three test functions (`test_tier1_names_resolve`,
+     `test_tier2_lazy_names_resolve`,
+     `test_audio_lazy_names_resolve`) enumerating the hard-coded
+     name lists transcribed from
      `discovery-artifacts/init-snapshot.md`. Structure per §6.1.
-- **Acceptance:** `tests/` collect 5210 + N (where N = number of
-  contract tests added — should equal 3 if the test functions are
-  not parametrised, or 60 + 28 + audio-count if they are);
-  `mypy src/` clean; `ruff check` clean. The new contract test
-  passes against the *current* (pre-migration) layout — this locks
-  the public-API surface as a baseline before any file moves.
+- **Acceptance:** `tests/` collect 5213 (5210 baseline + 3 contract
+  tests); `mypy src/` clean; `ruff check` clean. The new contract
+  tests pass against the *current* (pre-migration) layout — this
+  locks the public-API surface as a baseline before any file moves.
+  All five eventual layer paths are importable: `core` and
+  `runtime` because the new packages exist; `cli`, `profiles`,
+  `scope` because their `.py` modules still exist.
 
 The contract test file is the single source of truth for the
 public-API surface throughout the migration. Steps 2–13 each rely
@@ -351,16 +372,41 @@ construction (one source, one runner).
 
 #### Step 5 — `profiles`
 
-- **Scope:** move `profiles.py`, `rig_loader.py` into `profiles/`.
+- **Scope:** create `src/icom_lan/profiles/` package as part of this
+  step (it does NOT exist before this step — see Step 1 collision
+  note) and move `profiles.py`, `rig_loader.py` into it. Two
+  implementation patterns are acceptable; pick whichever the
+  Phase 4 sub-agent prefers, document in the PR description:
+  - **Pattern A (recommended):** rename `src/icom_lan/profiles.py` →
+    `src/icom_lan/profiles/__init__.py` (package's `__init__.py`
+    holds the existing module's content) and move `rig_loader.py`
+    → `src/icom_lan/profiles/rig_loader.py`. Add a re-export shim
+    at the old `src/icom_lan/rig_loader.py` per §5.1 template.
+    The old `profiles.py` ceases to exist (its name is taken by
+    the package), and no shim is needed there because the package
+    serves it directly.
+  - **Pattern B:** create `src/icom_lan/profiles/__init__.py` that
+    re-exports from `src/icom_lan/profiles/profile.py`, move both
+    files into the new package, leave shims at old top-level paths
+    for both. Slightly more files, equal correctness.
 - **Risk pre-mitigation:** the function-local cycle-breaker at
   `profiles.py:266` (`profiles → rig_loader`) MUST be preserved
-  verbatim. Do NOT "clean up" the deferred import. Same for the
-  top-level `rig_loader → profiles` import.
+  verbatim — wherever the moved file lives, the function-local
+  `from .rig_loader import …` must still be inside the function
+  body. Same for the top-level `rig_loader → profiles` import,
+  which becomes `from . import …` (or `from .profiles import …`)
+  in the new layout.
 
 #### Step 6 — `scope`
 
-- **Scope:** move `scope.py`, `scope_render.py` into `scope/`. Tiny
-  step.
+- **Scope:** create `src/icom_lan/scope/` package as part of this
+  step (it does NOT exist before this step — see Step 1 collision
+  note) and move `scope.py`, `scope_render.py` into it. Same two
+  patterns as Step 5: rename `scope.py` → `scope/__init__.py` and
+  move `scope_render.py` → `scope/render.py` (Pattern A,
+  recommended), or split into `scope/frame.py` + `scope/render.py`
+  with a re-exporting `__init__.py` (Pattern B). Tiny step either
+  way.
 
 #### Step 7 — `audio` top-level (likely split 7a/7b)
 
@@ -408,13 +454,20 @@ construction (one source, one runner).
 
 #### Step 12 — `cli`
 
-- **Scope:** move `cli.py` into `cli/cli.py` or `cli/__init__.py`.
+- **Scope:** create `src/icom_lan/cli/` package as part of this
+  step (it does NOT exist before this step — see Step 1 collision
+  note) and move `cli.py` into it. Pattern A (recommended):
+  rename `cli.py` → `cli/__init__.py`. Pattern B: split into
+  `cli/main.py` with re-exporting `__init__.py`.
   **Decision needed in this step's PR:** does `__main__.py` move
   too, or stay top-level? Recommendation: keep `__main__.py` at
   top level for `python -m icom_lan` discoverability, with one
-  line `from icom_lan.cli import main; main()`. State this
-  decision in the PR description; small change, not a separate
-  step.
+  line `from icom_lan.cli import main; main()`. The current
+  `__main__.py:5` already imports `from .cli import main` —
+  that import path keeps working under both patterns A and B (it
+  resolves to the package's exported `main`). State the
+  Pattern A vs B decision in the PR description; small change,
+  not a separate step.
 
 #### Step 13 — `import-linter` integration + LAZY_MAP cleanup
 
