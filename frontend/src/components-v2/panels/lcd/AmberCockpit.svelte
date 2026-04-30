@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { radio } from '$lib/stores/radio.svelte';
-  import { hasAudioFft, hasDualReceiver, getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
+  import {
+    deriveAmberCockpitProps, getAmberCockpitHandlers,
+  } from '$lib/runtime/adapters/panel-adapters';
   import {
     toTxProps, toRitXitProps, toVfoOpsProps, toMeterProps,
     toDspProps, toFilterProps,
@@ -13,8 +14,9 @@
   import AmberTelemetryStrip from './AmberTelemetryStrip.svelte';
   import AmberMemoryStrip from './AmberMemoryStrip.svelte';
   import type { IndToken } from './AmberIndStrip.svelte';
-  import { qsyHistory } from '$lib/stores/qsy-history.svelte';
   import { runtime } from '$lib/runtime';
+
+  const handlers = getAmberCockpitHandlers();
 
   // Band lookup by frequency (LCD-specific)
   const BANDS: [string, number, number][] = [
@@ -44,8 +46,10 @@
     return '';
   }
 
-  let radioState = $derived(radio.current);
-  let caps = $derived(getCapabilities());
+  let cockpitProps = $derived(deriveAmberCockpitProps());
+  let radioState = $derived(cockpitProps.radioState);
+  let caps = $derived(cockpitProps.caps);
+  let hasCap = $derived(cockpitProps.hasCapability);
 
   // ── Adapter-derived state ──
   let tx = $derived(toTxProps(radioState, null));
@@ -92,7 +96,7 @@
   let fftPixels = $state<Uint8Array | null>(null);
   let fftBandwidth = $state<number | undefined>(undefined);
   let fftPush: ((data: Uint8Array) => void) | null = null;
-  let showFft = $derived(hasAudioFft());
+  let showFft = $derived(cockpitProps.hasAudioFft);
 
   // FTX-1 AGC: 0=OFF, 1=FAST, 2=MID, 3=SLOW, 4=AUTO-F, 5=AUTO-M, 6=AUTO-S
   const AGC_LABELS: Record<number, string> = {
@@ -107,22 +111,22 @@
       id: 'tx', label: 'TX', active: tx.txActive,
       variant: tx.txActive ? 'tx' : undefined,
     },
-    ...(hasCapability('vox') ? [{ id: 'vox' as const, label: 'VOX', active: tx.voxActive }] : []),
-    ...(hasCapability('compressor') ? [{
+    ...(hasCap('vox') ? [{ id: 'vox' as const, label: 'VOX', active: tx.voxActive }] : []),
+    ...(hasCap('compressor') ? [{
       id: 'proc' as const,
       label: tx.compActive ? `PROC ${tx.compLevel}` : 'PROC',
       active: tx.compActive,
     }] : []),
-    ...(hasCapability('tuner') ? [{
+    ...(hasCap('tuner') ? [{
       id: 'atu' as const,
       label: tx.atuTuning ? 'TUNE' : 'ATU',
       active: tx.atuActive,
       variant: tx.atuTuning ? ('tuning' as const) : undefined,
     }] : []),
-    ...(hasCapability('split') ? [{ id: 'split' as const, label: 'SPLIT', active: vfoOps.splitActive }] : []),
-    ...(hasCapability('dial_lock') ? [{ id: 'lock' as const, label: 'LOCK', active: lockActive }] : []),
+    ...(hasCap('split') ? [{ id: 'split' as const, label: 'SPLIT', active: vfoOps.splitActive }] : []),
+    ...(hasCap('dial_lock') ? [{ id: 'lock' as const, label: 'LOCK', active: lockActive }] : []),
     ...(dataActive ? [{ id: 'data' as const, label: 'DATA', active: true }] : []),
-    ...(hasCapability('ip_plus') ? [{
+    ...(hasCap('ip_plus') ? [{
       // IP+ is a per-receiver setting on IC-7610 (codex P2 on PR #906).
       // Bind to the active RX so SUB's IP+ state is reflected when SUB is active.
       id: 'ipPlus' as const, label: 'IP+', active: rx?.ipplus ?? false,
@@ -136,96 +140,96 @@
 
   // vfoATokens: per-receiver indicators for VFO A (main)
   let vfoATokens = $derived<IndToken[]>([
-    ...(hasCapability('attenuator') ? [{
+    ...(hasCap('attenuator') ? [{
       id: 'att' as const, label: 'ATT', active: (radioState?.main?.att ?? 0) > 0,
     }] : []),
-    ...(hasCapability('preamp') ? [{
+    ...(hasCap('preamp') ? [{
       id: 'pre' as const,
       label: (radioState?.main?.preamp ?? 0) === 0 ? 'IPO'
            : (radioState?.main?.preamp ?? 0) === 1 ? 'AMP1' : 'AMP2',
       active: true,
     }] : []),
-    ...(hasCapability('digisel') ? [{
+    ...(hasCap('digisel') ? [{
       id: 'digisel' as const, label: 'DIGI-SEL', active: radioState?.main?.digisel ?? false,
     }] : []),
-    ...(hasCapability('nb') ? [{
+    ...(hasCap('nb') ? [{
       id: 'nb' as const,
       label: (radioState?.main?.nb ?? false) || (radioState?.main?.nbLevel ?? 0) > 0
         ? `NB ${radioState?.main?.nbLevel ?? 0}` : 'NB',
       active: (radioState?.main?.nb ?? false) || (radioState?.main?.nbLevel ?? 0) > 0,
     }] : []),
-    ...(hasCapability('nr') ? [{
+    ...(hasCap('nr') ? [{
       id: 'nr' as const,
       label: (radioState?.main?.nr ?? false) || (radioState?.main?.nrLevel ?? 0) > 0
         ? `NR ${radioState?.main?.nrLevel ?? 0}` : 'NR',
       active: (radioState?.main?.nr ?? false) || (radioState?.main?.nrLevel ?? 0) > 0,
     }] : []),
-    ...(hasCapability('contour') ? [{
+    ...(hasCap('contour') ? [{
       id: 'cont' as const, label: 'CONT',
       active: (radioState?.main?.contour ?? 0) > 0,
     }] : []),
-    ...(hasCapability('notch') ? [
+    ...(hasCap('notch') ? [
       { id: 'notch' as const, label: 'NOTCH', active: radioState?.main?.manualNotch ?? false },
       { id: 'anf' as const, label: 'ANF', active: radioState?.main?.autoNotch ?? false },
     ] : []),
     { id: 'agc' as const, label: `AGC ${agcLabelFor(radioState?.main?.agc ?? 2)}`, active: true },
-    ...(hasCapability('rf_gain') ? [{
+    ...(hasCap('rf_gain') ? [{
       id: 'rfg' as const, label: 'RFG', active: (radioState?.main?.rfGain ?? 255) < 255,
     }] : []),
-    ...(hasCapability('squelch') ? [{
+    ...(hasCap('squelch') ? [{
       id: 'sql' as const, label: 'SQL', active: (radioState?.main?.squelch ?? 0) > 0,
     }] : []),
-    ...(hasCapability('rit') ? [{
+    ...(hasCap('rit') ? [{
       id: 'rit' as const, label: 'RIT', active: ritXit.ritActive,
     }] : []),
   ]);
 
   // vfoBTokens: per-receiver indicators for VFO B (sub)
   let vfoBTokens = $derived<IndToken[]>([
-    ...(hasCapability('attenuator') ? [{
+    ...(hasCap('attenuator') ? [{
       id: 'att' as const, label: 'ATT', active: (radioState?.sub?.att ?? 0) > 0,
     }] : []),
-    ...(hasCapability('preamp') ? [{
+    ...(hasCap('preamp') ? [{
       id: 'pre' as const,
       label: (radioState?.sub?.preamp ?? 0) === 0 ? 'IPO'
            : (radioState?.sub?.preamp ?? 0) === 1 ? 'AMP1' : 'AMP2',
       active: true,
     }] : []),
-    ...(hasCapability('digisel') ? [{
+    ...(hasCap('digisel') ? [{
       id: 'digisel' as const, label: 'DIGI-SEL', active: radioState?.sub?.digisel ?? false,
     }] : []),
-    ...(hasCapability('nb') ? [{
+    ...(hasCap('nb') ? [{
       id: 'nb' as const,
       label: (radioState?.sub?.nb ?? false) || (radioState?.sub?.nbLevel ?? 0) > 0
         ? `NB ${radioState?.sub?.nbLevel ?? 0}` : 'NB',
       active: (radioState?.sub?.nb ?? false) || (radioState?.sub?.nbLevel ?? 0) > 0,
     }] : []),
-    ...(hasCapability('nr') ? [{
+    ...(hasCap('nr') ? [{
       id: 'nr' as const,
       label: (radioState?.sub?.nr ?? false) || (radioState?.sub?.nrLevel ?? 0) > 0
         ? `NR ${radioState?.sub?.nrLevel ?? 0}` : 'NR',
       active: (radioState?.sub?.nr ?? false) || (radioState?.sub?.nrLevel ?? 0) > 0,
     }] : []),
-    ...(hasCapability('contour') ? [{
+    ...(hasCap('contour') ? [{
       id: 'cont' as const, label: 'CONT',
       active: (radioState?.sub?.contour ?? 0) > 0,
     }] : []),
-    ...(hasCapability('notch') ? [
+    ...(hasCap('notch') ? [
       { id: 'notch' as const, label: 'NOTCH', active: radioState?.sub?.manualNotch ?? false },
       { id: 'anf' as const, label: 'ANF', active: radioState?.sub?.autoNotch ?? false },
     ] : []),
     { id: 'agc' as const, label: `AGC ${agcLabelFor(radioState?.sub?.agc ?? 2)}`, active: true },
-    ...(hasCapability('rf_gain') ? [{
+    ...(hasCap('rf_gain') ? [{
       id: 'rfg' as const, label: 'RFG', active: (radioState?.sub?.rfGain ?? 255) < 255,
     }] : []),
-    ...(hasCapability('squelch') ? [{
+    ...(hasCap('squelch') ? [{
       id: 'sql' as const, label: 'SQL', active: (radioState?.sub?.squelch ?? 0) > 0,
     }] : []),
   ]);
 
   // Scope subscription — delegates lifecycle to ScopeController (ADR INV-2, INV-5)
   $effect(() => {
-    if (!hasAudioFft()) return;
+    if (!cockpitProps.hasAudioFft) return;
 
     return runtime.scope.subscribe((frame) => {
       fftPixels = frame.pixels;
@@ -235,12 +239,13 @@
   });
 
   // Record active-receiver frequency changes into the local QSY history
-  // ring buffer (#836). `qsyHistory.record()` internally debounces +
-  // filters by Δ ≥ 500 Hz so dial-hunting doesn't pollute the buffer.
+  // ring buffer (#836). The handler delegates to `recordQsy()` in the
+  // adapter, which preserves the store-internal debounce + Δ ≥ 500 Hz
+  // filter so dial-hunting doesn't pollute the buffer.
   $effect(() => {
     const freq = rx?.freqHz ?? 0;
     const mode = rx?.mode ?? '';
-    if (freq > 0) qsyHistory.record(freq, mode);
+    handlers.onTuningChange(freq, mode);
   });
 
   function handleQsyRecall(freqHz: number, mode: string): void {
@@ -291,7 +296,7 @@
   - Indicators (status tokens) placed in aux row, full-width in both modes.
 -->
 <div class="amber-lcd" class:tx-active={tx.txActive}>
-  <div class="lcd-screen" class:dual={hasDualReceiver()}>
+  <div class="lcd-screen" class:dual={cockpitProps.hasDualReceiver}>
     <div class="lcd-scanlines"></div>
 
     <!-- ═══ Global indicator strip (TX/VOX/PROC/ATU/SPLIT/LOCK/DATA/IP+) ═══ -->
@@ -342,7 +347,7 @@
     </div>
 
     <!-- ═══ VFO B cockpit (sub receiver — equal peer on dual-RX) ═══ -->
-    {#if hasDualReceiver()}
+    {#if cockpitProps.hasDualReceiver}
       <div
         class="lcd-vfo-col lcd-vfo-b"
         class:inactive={!vfoBActive}

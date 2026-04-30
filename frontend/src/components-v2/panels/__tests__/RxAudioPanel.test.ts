@@ -11,6 +11,8 @@ const mockProps = {
   monitorMode: 'local' as 'local' | 'live' | 'mute',
   afLevel: 128,
   hasLiveAudio: false,
+  isAudioConnected: true,
+  hasDualReceiver: false,
 };
 
 const mockHandlers = {
@@ -21,10 +23,6 @@ const mockHandlers = {
 vi.mock('$lib/runtime/adapters/audio-adapter', () => ({
   deriveRxAudioProps: () => mockProps,
   getRxAudioHandlers: () => mockHandlers,
-}));
-
-vi.mock('$lib/stores/connection.svelte', () => ({
-  isAudioConnected: vi.fn(() => true),
 }));
 
 // ---------------------------------------------------------------------------
@@ -128,6 +126,8 @@ beforeEach(() => {
   mockProps.monitorMode = 'local';
   mockProps.afLevel = 128;
   mockProps.hasLiveAudio = false;
+  mockProps.isAudioConnected = true;
+  mockProps.hasDualReceiver = false;
   mockHandlers.onMonitorModeChange = vi.fn();
   mockHandlers.onAfLevelChange = vi.fn();
 });

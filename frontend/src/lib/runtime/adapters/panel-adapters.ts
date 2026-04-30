@@ -26,6 +26,7 @@ import {
 import {
   hasAudioFft, hasDualReceiver, hasCapability,
 } from '$lib/stores/capabilities.svelte';
+import { recordQsy } from './qsy-history-adapter';
 import type { ServerState } from '$lib/types/state';
 import type { Capabilities } from '$lib/types/capabilities';
 
@@ -166,4 +167,47 @@ export function deriveAmberScopeProps(): AmberScopeProps {
     hasDualReceiver: hasDualReceiver(),
     hasCapability,
   };
+}
+
+// ── AmberCockpit (LCD skin) ──
+// Merge point for Cluster B (radio.current), Cluster A (capabilities), and
+// Cluster D (qsy-history write) — see audit doc Batch 5. Same shape as
+// AmberScope (~16 hasCapability(name) checks → expose the function rather
+// than inflate the type). The qsy-history write happens via the handler
+// bundle below (`onTuningChange`) so the panel never imports the qsy store.
+export interface AmberCockpitProps {
+  radioState: ServerState | null;
+  caps: Capabilities | null;
+  hasAudioFft: boolean;
+  hasDualReceiver: boolean;
+  hasCapability: (name: string) => boolean;
+}
+
+export function deriveAmberCockpitProps(): AmberCockpitProps {
+  return {
+    radioState: runtime.state,
+    caps: runtime.caps,
+    hasAudioFft: hasAudioFft(),
+    hasDualReceiver: hasDualReceiver(),
+    hasCapability,
+  };
+}
+
+export interface AmberCockpitHandlers {
+  /**
+   * Record a tuning change into the QSY history ring buffer (#836). The
+   * underlying store debounces internally — caller may invoke this from a
+   * reactive `$effect` whenever active-receiver freq/mode changes.
+   */
+  onTuningChange: (freqHz: number, mode: string) => void;
+}
+
+const _amberCockpitHandlers: AmberCockpitHandlers = {
+  onTuningChange: (freqHz: number, mode: string) => {
+    if (freqHz > 0) recordQsy(freqHz, mode);
+  },
+};
+
+export function getAmberCockpitHandlers(): AmberCockpitHandlers {
+  return _amberCockpitHandlers;
 }
