@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   asyncio call sites (transport RX, radio scope/civ event queues, web fanout)
   now share a single bounded-queue implementation. No behavior change; drop
   policies preserved per callsite.
+- **`transport._handle_packet` decomposed into dispatch table (#1239).**
+  Six packet types (single/multi retransmit, ping req/reply, scope fast-path,
+  generic data) now dispatch via a dict; behavior preserved.
 
 ### Docs
 

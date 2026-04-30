@@ -12,6 +12,7 @@ import time
 from collections import OrderedDict
 from collections.abc import Callable
 from enum import StrEnum
+from typing import ClassVar
 
 from ._bounded_queue import BoundedQueue
 from ._queue_pressure import PRESSURE_THRESHOLD
@@ -504,7 +505,7 @@ class IcomTransport:
         return [bytes(pkt)]
 
     def _handle_packet(self, data: bytes) -> None:
-        """Process an incoming UDP packet."""
+        """Process an incoming UDP packet via dispatch table."""
         if len(data) < HEADER_SIZE:
             return
         self.rx_packet_count += 1
@@ -514,41 +515,63 @@ class IcomTransport:
         seq = struct.unpack_from("<H", data, 6)[0]
         sender_id = struct.unpack_from("<I", data, 8)[0]
 
-        if length == CONTROL_SIZE and ptype == 0x01 and len(data) == CONTROL_SIZE:
+        handler = self._PACKET_HANDLERS.get(ptype)
+        if handler is not None and handler(self, data, length, seq, sender_id):
+            return
+        self._handle_data_packet(data, ptype, seq, sender_id)
+
+    def _handle_retransmit_packet(
+        self, data: bytes, length: int, seq: int, sender_id: int
+    ) -> bool:
+        """Handle ptype=0x01 retransmit requests (single or multi)."""
+        if length == CONTROL_SIZE and len(data) == CONTROL_SIZE:
             # Single retransmit request from radio
             if seq in self.tx_buffer:
                 logger.debug("Retransmitting seq 0x%04X", seq)
                 self._raw_send(self.tx_buffer[seq])
-            return
+            return True
 
-        if length != CONTROL_SIZE and ptype == 0x01:
-            # Multi retransmit request
-            for i in range(CONTROL_SIZE, len(data), 2):
-                if i + 2 <= len(data):
-                    rseq = struct.unpack_from("<H", data, i)[0]
-                    if rseq in self.tx_buffer:
-                        self._raw_send(self.tx_buffer[rseq])
-            return
+        # Multi retransmit request
+        for i in range(CONTROL_SIZE, len(data), 2):
+            if i + 2 <= len(data):
+                rseq = struct.unpack_from("<H", data, i)[0]
+                if rseq in self.tx_buffer:
+                    self._raw_send(self.tx_buffer[rseq])
+        return True
 
-        if len(data) == PING_SIZE and ptype == PacketType.PING:
-            reply_flag = data[0x10]
-            if reply_flag == 0x00:
-                # Ping request from radio — send reply
-                reply = bytearray(PING_SIZE)
-                struct.pack_into("<I", reply, 0, PING_SIZE)
-                struct.pack_into("<H", reply, 4, PacketType.PING)
-                struct.pack_into("<H", reply, 6, seq)
-                struct.pack_into("<I", reply, 8, self.my_id)
-                struct.pack_into("<I", reply, 0x0C, self.remote_id)
-                reply[0x10] = 0x01  # reply flag
-                reply[0x11:0x15] = data[0x11:0x15]  # echo time
-                self._raw_send(bytes(reply))
-            elif reply_flag == 0x01:
-                # Response to our ping
-                if seq == self.ping_seq - 1 or seq == self.ping_seq:
-                    pass  # Latency measurement could go here
-            return
+    def _handle_ping_packet(
+        self, data: bytes, length: int, seq: int, sender_id: int
+    ) -> bool:
+        """Handle ptype=PING packets (request or reply).
 
+        Returns True if handled.  A PING-typed packet with the wrong size
+        falls through to the data-packet path (preserves prior semantics).
+        """
+        if len(data) != PING_SIZE:
+            return False
+
+        reply_flag = data[0x10]
+        if reply_flag == 0x00:
+            # Ping request from radio — send reply
+            reply = bytearray(PING_SIZE)
+            struct.pack_into("<I", reply, 0, PING_SIZE)
+            struct.pack_into("<H", reply, 4, PacketType.PING)
+            struct.pack_into("<H", reply, 6, seq)
+            struct.pack_into("<I", reply, 8, self.my_id)
+            struct.pack_into("<I", reply, 0x0C, self.remote_id)
+            reply[0x10] = 0x01  # reply flag
+            reply[0x11:0x15] = data[0x11:0x15]  # echo time
+            self._raw_send(bytes(reply))
+        elif reply_flag == 0x01:
+            # Response to our ping
+            if seq == self.ping_seq - 1 or seq == self.ping_seq:
+                pass  # Latency measurement could go here
+        return True
+
+    def _handle_data_packet(
+        self, data: bytes, ptype: int, seq: int, sender_id: int
+    ) -> None:
+        """Handle generic data packets: scope fast-path, queueing, overflow."""
         # Track sequence for data packets
         if ptype == 0x00 and seq != 0:
             self._record_rx_seq(seq)
@@ -650,6 +673,16 @@ class IcomTransport:
                 sender_id,
                 self._packet_queue.maxsize,
             )
+
+    # Dispatch table: ptype → handler returning True if consumed.
+    # Falls through to ``_handle_data_packet`` when no entry matches or a
+    # handler returns False (e.g. PING with non-canonical size).
+    _PACKET_HANDLERS: ClassVar[
+        dict[int, Callable[["IcomTransport", bytes, int, int, int], bool]]
+    ] = {
+        0x01: _handle_retransmit_packet,
+        PacketType.PING: _handle_ping_packet,
+    }
 
     async def _ping_loop(self) -> None:
         """Background task: send pings every PING_PERIOD."""
