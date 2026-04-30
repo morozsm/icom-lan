@@ -5,7 +5,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .radio_protocol import Radio
+    from icom_lan.radio_protocol import Radio
 
 __all__ = ["assert_radio_startup_ready", "wait_for_radio_startup_ready"]
 

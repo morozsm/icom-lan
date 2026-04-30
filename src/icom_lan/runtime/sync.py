@@ -15,14 +15,14 @@ Example::
 import asyncio
 from typing import Any, Callable, Coroutine, TypeVar
 
-from .audio import AudioPacket
+from icom_lan.audio import AudioPacket
 from .ic705 import (
     prepare_ic705_data_profile as _prepare_ic705_data_profile,
     restore_ic705_data_profile as _restore_ic705_data_profile,
 )
 from .radio import IcomRadio as _AsyncIcomRadio, _DEFAULT_AUDIO_CODEC  # noqa: TID251
-from .capabilities import CAP_METERS, CAP_POWER_CONTROL
-from .types import AudioCodec, Mode, ScopeCompletionPolicy
+from icom_lan.capabilities import CAP_METERS, CAP_POWER_CONTROL
+from icom_lan.types import AudioCodec, Mode, ScopeCompletionPolicy
 
 T = TypeVar("T")
 
