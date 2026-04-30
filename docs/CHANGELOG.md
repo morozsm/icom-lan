@@ -46,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   batch, no non-test panel under `components-v2/panels/` imports from
   `$lib/stores/*`. Tier 2 batch 5/5 of #1063 — unblocks #1241 (ESLint
   lockdown).
+- **ESLint lockdown: panels banned from `$lib/stores/*` (#1241).** With all
+  18 panels migrated to adapters across batches 1-5, the boundary is now
+  enforced at lint time. Tests remain exempt for mocking purposes. Closes
+  Tier 2 of #1063.
 
 ### Docs
 
