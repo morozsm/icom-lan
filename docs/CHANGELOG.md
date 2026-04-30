@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`snapshot_state` / `restore_state` extracted to `radio_state_snapshot.py`
+  (#1258).** ~150 LOC moved out of `radio.py` god-object; `IcomRadio` methods
+  are thin delegators. Public API unchanged. Tier 3 wave 3 of #1063.
 - **`_civ_rx._update_radio_state_from_frame` decomposed into table-driven
   dispatch (#1257).** The 400-line if/elif over CI-V commands now dispatches
   via `_HANDLERS: dict[int, Callable]`; each branch is a small private
