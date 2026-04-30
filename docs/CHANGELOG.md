@@ -103,6 +103,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   product: no telemetry, headless sacred, no hollowing out, Radio protocol
   + `local-extensions/` as the Pro boundary, frontend WebKitGTK-floor
   compatibility. CLAUDE.md gains a one-line cross-link.
+- **`AudioBackend` Protocol docstring promoted to stability marker (#1275).**
+  The Protocol (and `PortAudioBackend` / `FakeAudioBackend` impls) now
+  document their tier and breakage policy in their own docstrings, matching
+  `docs/api/public-api-surface.md` (Tier 2 — Best-effort, lazily exposed via
+  PEP 562 `__getattr__`). Closes `05-recommendations.md` PR 4.
 - **Panel → adapter migration plan (#1240).** Doc at
   `docs/plans/2026-04-29-panel-adapter-migration.md` inventories the 18
   remaining panels with direct `$lib/stores/*` imports, groups them into

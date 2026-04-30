@@ -92,7 +92,20 @@ class TxStream(Protocol):
 
 @runtime_checkable
 class AudioBackend(Protocol):
-    """Abstract audio backend capable of listing devices and opening streams."""
+    """Abstract audio backend capable of listing devices and opening streams.
+
+    **Tier 2 — Best-effort.** Import path:
+    ``from icom_lan.audio.backend import AudioBackend`` (also lazily exposed
+    on the top-level ``icom_lan`` package via PEP 562 ``__getattr__``).
+
+    The contract is the four methods declared below: :meth:`list_devices`,
+    :meth:`check_sample_rate`, :meth:`open_rx`, :meth:`open_tx`. Streams
+    returned by ``open_rx`` / ``open_tx`` follow the :class:`RxStream` and
+    :class:`TxStream` protocols.
+
+    Stability: breaking changes require a CHANGELOG note plus a minor version
+    bump per ``docs/api/public-api-surface.md``. No strict semver guarantee.
+    """
 
     def list_devices(self) -> list[AudioDeviceInfo]: ...
 
@@ -324,7 +337,18 @@ class _PortAudioTxStream:
 
 
 class PortAudioBackend:
-    """AudioBackend backed by PortAudio via *sounddevice*."""
+    """AudioBackend backed by PortAudio via *sounddevice*.
+
+    **Tier 2 — Best-effort.** Import path:
+    ``from icom_lan.audio.backend import PortAudioBackend``. Implements the
+    :class:`AudioBackend` protocol on top of the optional ``[bridge]`` extras
+    (``sounddevice`` + ``numpy``); dependencies are loaded lazily on first
+    method call so importing this class does not require PortAudio at import
+    time.
+
+    Stability: breaking changes require a CHANGELOG note plus a minor version
+    bump per ``docs/api/public-api-surface.md``. No strict semver guarantee.
+    """
 
     def __init__(
         self,
@@ -519,7 +543,17 @@ class FakeTxStream:
 
 
 class FakeAudioBackend:
-    """Deterministic AudioBackend for tests — no real audio hardware."""
+    """Deterministic AudioBackend for tests — no real audio hardware.
+
+    **Tier 2 — Best-effort.** Import path:
+    ``from icom_lan.audio.backend import FakeAudioBackend``. Implements the
+    :class:`AudioBackend` protocol with in-memory :class:`FakeRxStream` /
+    :class:`FakeTxStream` doubles so consumer code can be exercised without
+    PortAudio or any optional extras.
+
+    Stability: breaking changes require a CHANGELOG note plus a minor version
+    bump per ``docs/api/public-api-surface.md``. No strict semver guarantee.
+    """
 
     def __init__(
         self,
