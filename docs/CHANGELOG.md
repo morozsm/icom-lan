@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Method/path routing extracted from `web/server.py` into `web_routing.py`
+  (#1262).** The route dispatch — previously inline in `WebServer` — now lives
+  in a dedicated module; `WebServer` delegates. Public API unchanged. Tier 3
+  wave 4 of #1063.
 - **`ControlButtonDemo` is now lazy-loaded (#1232).** Moved out of the main
   bundle into a code-split chunk; the demo component loads on demand when the
   debug route is mounted.
