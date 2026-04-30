@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
     from ._runtime_protocols import ControlPhaseHost
 
+from . import radio_state_snapshot as _state_snapshot
 from ._audio_recovery import AudioRecoveryRuntime, AudioRecoveryState
 from ._audio_runtime_mixin import AudioRuntimeMixin
 from ._audio_transcoder import PcmOpusTranscoder
@@ -3568,139 +3569,18 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         )
 
     async def snapshot_state(self) -> dict[str, object]:
-        """Best-effort snapshot of core rig state for safe restore."""
-        self._check_connected()
-        state: dict[str, object] = {}
+        """Best-effort snapshot of core rig state for safe restore.
 
-        try:
-            state["frequency"] = await self.get_freq()
-        except Exception:
-            logger.debug("snapshot: get_freq failed, using cache", exc_info=True)
-            if self._last_freq_hz is not None:
-                state["frequency"] = self._last_freq_hz
-
-        try:
-            mode, filt = await self.get_mode_info()
-            state["mode"] = mode
-            if filt is not None:
-                state["filter"] = filt
-        except Exception:
-            logger.debug("snapshot: get_mode_info failed, using cache", exc_info=True)
-            if self._last_mode is not None:
-                state["mode"] = self._last_mode
-            if self._filter_width is not None:
-                state["filter"] = self._filter_width
-
-        try:
-            state["power"] = await self.get_rf_power()
-        except Exception:
-            logger.debug("snapshot: get_rf_power failed, using cache", exc_info=True)
-            if self._last_power is not None:
-                state["power"] = self._last_power
-
-        if self._last_split is not None:
-            state["split"] = self._last_split
-        if self._last_vfo is not None:
-            state["vfo"] = self._last_vfo
-        if self._attenuator_state is not None:
-            state["attenuator"] = self._attenuator_state
-        if self._preamp_level is not None:
-            state["preamp"] = self._preamp_level
-        try:
-            state["vox"] = await self.get_vox()
-        except Exception:
-            logger.debug("snapshot: get_vox failed", exc_info=True)
-        try:
-            state["data_mode"] = await self.get_data_mode()
-        except Exception:
-            logger.debug("snapshot: get_data_mode failed", exc_info=True)
-        try:
-            state["data_off_mod_input"] = await self.get_data_off_mod_input()
-        except Exception:
-            logger.debug("snapshot: get_data_off_mod_input failed", exc_info=True)
-        try:
-            state["data1_mod_input"] = await self.get_data1_mod_input()
-        except Exception:
-            logger.debug("snapshot: get_data1_mod_input failed", exc_info=True)
-
-        return state
+        Implementation lives in :mod:`icom_lan.radio_state_snapshot` (#1258).
+        """
+        return await _state_snapshot.snapshot_state(self)
 
     async def restore_state(self, state: dict[str, object]) -> None:
-        """Best-effort restore of state produced by snapshot_state()."""
-        self._check_connected()
+        """Best-effort restore of state produced by :meth:`snapshot_state`.
 
-        if "split" in state:
-            try:
-                await self.set_split(bool(state["split"]))
-            except Exception:
-                logger.debug("restore_state: set_split failed", exc_info=True)
-        if "vfo" in state:
-            try:
-                # Internal: ``_set_vfo_wire`` accepts the full
-                # "A"/"B"/"MAIN"/"SUB" alphabet that snapshots may carry
-                # (the public ``set_vfo`` overload was removed in v0.20,
-                # see #1206 — ``set_vfo_slot`` only accepts A/B).
-                await self._set_vfo_wire(str(state["vfo"]))
-            except Exception:
-                logger.debug("restore_state: set_vfo failed", exc_info=True)
-
-        if "power" in state:
-            try:
-                await self.set_rf_power(int(cast(int, state["power"])))
-            except Exception:
-                logger.debug("restore_state: set_rf_power failed", exc_info=True)
-
-        mode = state.get("mode")
-        filt = state.get("filter")
-        if isinstance(mode, Mode):
-            try:
-                await self.set_mode(
-                    mode, filter_width=int(filt) if isinstance(filt, int) else None
-                )
-            except Exception:
-                logger.debug("restore_state: set_mode failed", exc_info=True)
-
-        if "frequency" in state:
-            try:
-                await self.set_freq(int(cast(int, state["frequency"])))
-            except Exception:
-                logger.debug("restore_state: set_frequency failed", exc_info=True)
-
-        if "attenuator" in state:
-            try:
-                await self.set_attenuator(bool(state["attenuator"]))
-            except Exception:
-                logger.debug("restore_state: set_attenuator failed", exc_info=True)
-
-        if "preamp" in state:
-            try:
-                await self.set_preamp(int(cast(int, state["preamp"])))
-            except Exception:
-                logger.debug("restore_state: set_preamp failed", exc_info=True)
-        if "vox" in state:
-            try:
-                await self.set_vox(bool(state["vox"]))
-            except Exception:
-                logger.debug("restore_state: set_vox failed", exc_info=True)
-        if "data_mode" in state:
-            try:
-                await self.set_data_mode(bool(state["data_mode"]))
-            except Exception:
-                logger.debug("restore_state: set_data_mode failed", exc_info=True)
-        if "data_off_mod_input" in state:
-            try:
-                await self.set_data_off_mod_input(
-                    int(cast(int, state["data_off_mod_input"]))
-                )
-            except Exception:
-                logger.debug(
-                    "restore_state: set_data_off_mod_input failed", exc_info=True
-                )
-        if "data1_mod_input" in state:
-            try:
-                await self.set_data1_mod_input(int(cast(int, state["data1_mod_input"])))
-            except Exception:
-                logger.debug("restore_state: set_data1_mod_input failed", exc_info=True)
+        Implementation lives in :mod:`icom_lan.radio_state_snapshot` (#1258).
+        """
+        await _state_snapshot.restore_state(self, state)
 
     async def run_state_transaction(
         self,
