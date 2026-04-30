@@ -11,6 +11,7 @@
 
 import { sendCommand } from '$lib/transport/ws-client';
 import { getActiveReceiver, getRadioState, patchActiveReceiver, patchRadioState, patchReceiver } from '$lib/stores/radio.svelte';
+import type { ReceiverState } from '$lib/types/state';
 import { getCapabilities } from '$lib/stores/capabilities.svelte';
 import { adjustTuningStep, getTuningStep } from '$lib/stores/tuning.svelte';
 import { audioManager } from '$lib/audio/audio-manager';
@@ -81,14 +82,14 @@ export function makeVfoHandlers() {
       // change within one tick rather than waiting for the next poll.
       const s = getRadioState();
       if (s?.main && s?.sub) {
-        const mainSnap: Record<string, unknown> = {};
-        const subSnap: Record<string, unknown> = {};
+        const mainSnap: Partial<ReceiverState> = {};
+        const subSnap: Partial<ReceiverState> = {};
         for (const f of _MAIN_SUB_EQUALIZE_FIELDS) {
-          mainSnap[f] = (s.sub as any)[f];
-          subSnap[f] = (s.main as any)[f];
+          mainSnap[f] = s.sub[f];
+          subSnap[f] = s.main[f];
         }
-        patchReceiver(0, mainSnap as any);
-        patchReceiver(1, subSnap as any);
+        patchReceiver(0, mainSnap);
+        patchReceiver(1, subSnap);
       }
       cmd('vfo_swap');
     },
@@ -99,11 +100,11 @@ export function makeVfoHandlers() {
       // poll cycle (~250ms) to see the change.
       const s = getRadioState();
       if (s?.main) {
-        const snap: Record<string, unknown> = {};
+        const snap: Partial<ReceiverState> = {};
         for (const f of _MAIN_SUB_EQUALIZE_FIELDS) {
-          snap[f] = (s.main as any)[f];
+          snap[f] = s.main[f];
         }
-        patchReceiver(1, snap as any);
+        patchReceiver(1, snap);
       }
       cmd('vfo_equalize');
     },
@@ -741,19 +742,19 @@ export function makeAntennaHandlers() {
   return {
     onSelectAnt1: () => {
       // Preserve current RX-ANT state when switching TX antenna.
-      const rxOn = (getRadioState() as any)?.rxAntenna1 ?? false;
+      const rxOn = getRadioState()?.rxAntenna1 ?? false;
       patchRadioState({ txAntenna: 1 });
       cmd('set_antenna_1', { on: rxOn });
     },
     onSelectAnt2: () => {
-      const rxOn = (getRadioState() as any)?.rxAntenna2 ?? false;
+      const rxOn = getRadioState()?.rxAntenna2 ?? false;
       patchRadioState({ txAntenna: 2 });
       cmd('set_antenna_2', { on: rxOn });
     },
     onToggleRxAnt: () => {
       // RX-ANT is encoded as data byte of 0x12 0x00/0x01 and is tied to the current TX ANT.
-      const s = getRadioState() as any;
-      const tx = (s?.txAntenna ?? 1) as number;
+      const s = getRadioState();
+      const tx = s?.txAntenna ?? 1;
       const current = tx === 2 ? (s?.rxAntenna2 ?? false) : (s?.rxAntenna1 ?? false);
       const next = !current;
       if (tx === 2) {
@@ -1037,7 +1038,7 @@ export function makeKeyboardHandlers() {
           return;
         }
         case 'scope_span_step': {
-          const scope = (getRadioState() as any)?.scopeControls;
+          const scope = getRadioState()?.scopeControls;
           const current = scope?.span ?? 3;
           const delta = action.params?.direction === 'down' ? -1 : 1;
           const span = clampSpan(current, delta);
@@ -1045,7 +1046,7 @@ export function makeKeyboardHandlers() {
           return;
         }
         case 'scope_ref_step': {
-          const scope = (getRadioState() as any)?.scopeControls;
+          const scope = getRadioState()?.scopeControls;
           const current = scope?.refDb ?? 0;
           const delta = action.params?.direction === 'down' ? -5 : 5;
           const ref = clampRef(current, delta);
@@ -1053,19 +1054,19 @@ export function makeKeyboardHandlers() {
           return;
         }
         case 'scope_toggle_hold': {
-          const scope = (getRadioState() as any)?.scopeControls;
+          const scope = getRadioState()?.scopeControls;
           const on = !(scope?.hold ?? false);
           cmd('set_scope_hold', { on });
           return;
         }
         case 'scope_toggle_dual': {
-          const scope = (getRadioState() as any)?.scopeControls;
+          const scope = getRadioState()?.scopeControls;
           const dual = !(scope?.dual ?? false);
           cmd('set_scope_dual', { dual });
           return;
         }
         case 'scope_toggle_fst': {
-          const scope = (getRadioState() as any)?.scopeControls;
+          const scope = getRadioState()?.scopeControls;
           const currentSpeed = scope?.speed ?? 1;
           // Toggle FST (speed=0) vs MID (speed=1).
           const speed = currentSpeed === 0 ? 1 : 0;

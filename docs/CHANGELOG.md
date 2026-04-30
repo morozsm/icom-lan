@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`ControlButtonDemo` is now lazy-loaded (#1232).** Moved out of the main
   bundle into a code-split chunk; the demo component loads on demand when the
   debug route is mounted.
+- **Type safety: removed `as any` casts in `command-bus.ts` (#1233).** The 14
+  casts were replaced with precise types; any remaining cases (if any) are
+  documented with `eslint-disable-next-line` and a rationale.
 
 ### Deprecated
 
