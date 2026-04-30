@@ -56,8 +56,8 @@ from .types import AudioCodec, BreakInMode, Mode
 
 if TYPE_CHECKING:
     from ._state_cache import StateCache
-    from .audio_bus import AudioBus
-    from .scope import ScopeFrame
+    from icom_lan.audio_bus import AudioBus
+    from icom_lan.scope import ScopeFrame
     from .types import BandStackRegister, MemoryChannel, ScopeFixedEdge
 
 __all__ = [
