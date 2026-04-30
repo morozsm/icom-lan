@@ -448,7 +448,7 @@ class TestAudioStreamStats:
         assert stats["state"] == AudioState.RECEIVING
         assert stats["packets_lost"] == 1
         assert stats["packet_loss_percent"] == 25.0
-        assert stats["jitter_ms"] >= 0.0
+        assert stats["reorder_depth_ema_ms"] >= 0.0
         assert stats["jitter_max_ms"] >= 0.0
         assert stats["underrun_count"] >= 1
         assert stats["estimated_latency_ms"] >= 40.0

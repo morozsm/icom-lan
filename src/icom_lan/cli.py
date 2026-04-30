@@ -1497,7 +1497,7 @@ def _print_audio_stats(stats: dict[str, bool | int | float | str]) -> None:
     print(f"  tx_packets_sent: {stats['tx_packets_sent']}")
     print(f"  packets_lost: {stats['packets_lost']}")
     print(f"  packet_loss_percent: {float(stats['packet_loss_percent']):.3f}")
-    print(f"  jitter_ms: {float(stats['jitter_ms']):.3f}")
+    print(f"  reorder_depth_ema_ms: {float(stats['reorder_depth_ema_ms']):.3f}")
     print(f"  jitter_max_ms: {float(stats['jitter_max_ms']):.3f}")
     print(f"  underrun_count: {stats['underrun_count']}")
     print(f"  overrun_count: {stats['overrun_count']}")

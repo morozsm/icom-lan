@@ -84,7 +84,8 @@ class AudioStats:
     tx_packets_sent: int
     packets_lost: int
     packet_loss_percent: float
-    jitter_ms: float
+    # EMA of reorder depth, not RFC 3550 jitter.
+    reorder_depth_ema_ms: float
     jitter_max_ms: float
     underrun_count: int
     overrun_count: int
@@ -106,7 +107,7 @@ class AudioStats:
             tx_packets_sent=0,
             packets_lost=0,
             packet_loss_percent=0.0,
-            jitter_ms=0.0,
+            reorder_depth_ema_ms=0.0,
             jitter_max_ms=0.0,
             underrun_count=0,
             overrun_count=0,
@@ -128,7 +129,7 @@ class AudioStats:
             "tx_packets_sent": self.tx_packets_sent,
             "packets_lost": self.packets_lost,
             "packet_loss_percent": self.packet_loss_percent,
-            "jitter_ms": self.jitter_ms,
+            "reorder_depth_ema_ms": self.reorder_depth_ema_ms,
             "jitter_max_ms": self.jitter_max_ms,
             "underrun_count": self.underrun_count,
             "overrun_count": self.overrun_count,
@@ -441,7 +442,7 @@ class AudioStream:
             tx_packets_sent=self._tx_packets_sent,
             packets_lost=self._rx_packets_lost,
             packet_loss_percent=packet_loss_percent,
-            jitter_ms=self._rx_jitter_ema_packets * self._packet_duration_ms,
+            reorder_depth_ema_ms=self._rx_jitter_ema_packets * self._packet_duration_ms,
             jitter_max_ms=self._rx_jitter_max_packets * self._packet_duration_ms,
             underrun_count=self._rx_underruns,
             overrun_count=self._rx_overruns,
@@ -462,7 +463,9 @@ class AudioStream:
           packet counters (>= 0).
         - ``packets_lost``: inferred missing RX packets (>= 0).
         - ``packet_loss_percent``: percentage in [0.0, 100.0].
-        - ``jitter_ms`` / ``jitter_max_ms``: sequence-jitter estimates in ms (>= 0.0).
+        - ``reorder_depth_ema_ms`` / ``jitter_max_ms``: reorder-depth EMA and peak
+          deviation estimates in ms (>= 0.0). Despite the legacy ``jitter_max_ms``
+          name, both are reorder-depth metrics, not RFC 3550 jitter.
         - ``underrun_count`` / ``overrun_count``: jitter-buffer event counters (>= 0).
         - ``estimated_latency_ms``: current buffering latency estimate in ms (>= 0.0).
         - ``jitter_buffer_depth_packets`` / ``jitter_buffer_pending_packets``:

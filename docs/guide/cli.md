@@ -275,7 +275,7 @@ JSON output example:
     "active": false,
     "state": "idle",
     "packet_loss_percent": 0.0,
-    "jitter_ms": 0.0
+    "reorder_depth_ema_ms": 0.0
   }
 }
 ```

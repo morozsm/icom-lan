@@ -311,7 +311,7 @@ class TestPcmStatsE2E:
                 "tx_packets_sent": 0,
                 "packets_lost": 2,
                 "packet_loss_percent": 4.76,
-                "jitter_ms": 3.5,
+                "reorder_depth_ema_ms": 3.5,
                 "jitter_max_ms": 15.0,
                 "underrun_count": 1,
                 "overrun_count": 0,
@@ -327,4 +327,4 @@ class TestPcmStatsE2E:
         assert stats["active"] is True
         assert stats["rx_packets_received"] == 42
         assert stats["packets_lost"] == 2
-        assert stats["jitter_ms"] == 3.5
+        assert stats["reorder_depth_ema_ms"] == 3.5

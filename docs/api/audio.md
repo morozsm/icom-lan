@@ -26,7 +26,7 @@ snapshot of live stream quality metrics.
 
 ```python
 stats = radio.get_audio_stats()
-print(stats["packet_loss_percent"], stats["jitter_ms"])
+print(stats["packet_loss_percent"], stats["reorder_depth_ema_ms"])
 ```
 
 ### Metrics, Units, Bounds
@@ -40,8 +40,8 @@ print(stats["packet_loss_percent"], stats["jitter_ms"])
 | `tx_packets_sent` | packets | `>= 0` | TX packets sent |
 | `packets_lost` | packets | `>= 0` | Inferred missing RX packets |
 | `packet_loss_percent` | percent | `0.0..100.0` | `packets_lost / (delivered + lost)` |
-| `jitter_ms` | milliseconds | `>= 0.0` | Smoothed sequence-jitter estimate |
-| `jitter_max_ms` | milliseconds | `>= 0.0` | Peak observed jitter estimate |
+| `reorder_depth_ema_ms` | milliseconds | `>= 0.0` | EMA of reorder depth (not RFC 3550 jitter) |
+| `jitter_max_ms` | milliseconds | `>= 0.0` | Peak observed reorder-depth deviation |
 | `underrun_count` | events | `>= 0` | Jitter-buffer underrun events |
 | `overrun_count` | events | `>= 0` | Jitter-buffer overrun events |
 | `estimated_latency_ms` | milliseconds | `>= 0.0` | Estimated buffering delay |

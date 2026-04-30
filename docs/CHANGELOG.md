@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Type safety: removed `as any` casts in `command-bus.ts` (#1233).** The 14
   casts were replaced with precise types; any remaining cases (if any) are
   documented with `eslint-disable-next-line` and a rationale.
+- **`AudioStats.jitter_ms` renamed to `reorder_depth_ema_ms` (#1231).** The
+  field measures reorder-depth EMA, not RFC 3550 jitter. Internal field; no
+  back-compat alias.
 
 ### Deprecated
 
