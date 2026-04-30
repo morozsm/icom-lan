@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 12 — `cli`](https://github.com/morozsm/icom-lan/blob
 
 ## Pre-conditions
 
-Blocked by #__STEP11__ (Step 11: discovery to backends).
+Blocked by #1294 (Step 11: discovery to backends).
 
 ## Scope
 

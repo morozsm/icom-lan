@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 5 — `profiles`](https://github.com/morozsm/icom-lan/
 
 ## Pre-conditions
 
-Blocked by #__STEP4__ (Step 4: commands top-level).
+Blocked by #1287 (Step 4: commands top-level).
 
 ## Scope
 

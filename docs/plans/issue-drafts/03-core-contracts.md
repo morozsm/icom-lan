@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 3 — `core` contract trio + transport primitives](htt
 
 ## Pre-conditions
 
-Blocked by #__STEP2__ (Step 2: core foundationals).
+Blocked by #1285 (Step 2: core foundationals).
 
 ## Scope
 

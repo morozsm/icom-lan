@@ -2,7 +2,7 @@
 
 The internal-modularization effort (epic + 13 step issues) ships **silent re-export shims** at the old top-level paths so that the 43 private-internal-symbol imports across 15 test files keep working. That decision is correct for the migration itself (it isolates the move from the test rewrite), but it leaves technical debt: tests in this repo continue to import from `icom_lan._<private>` paths long after the canonical homes are settled.
 
-**This issue is post-modularization cleanup.** It MUST NOT start until the modularization epic (#__EPIC__) is closed.
+**This issue is post-modularization cleanup.** It MUST NOT start until the modularization epic (#1283) is closed.
 
 References:
 - Discovery doc §6 — [`docs/plans/2026-04-29-modularization-discovery.md` §6 Internal-symbol leaks](https://github.com/morozsm/icom-lan/blob/refactor/modularization-discovery/docs/plans/2026-04-29-modularization-discovery.md#internal-symbol-leaks-private-paths-used-by-external-code).

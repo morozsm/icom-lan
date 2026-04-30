@@ -6,7 +6,7 @@ Plan sections: [§4.1 Step 13 — `import-linter` integration + `LAZY_MAP` clean
 
 ## Pre-conditions
 
-Blocked by #__STEP12__ (Step 12: cli).
+Blocked by #1295 (Step 12: cli).
 
 ## Scope
 

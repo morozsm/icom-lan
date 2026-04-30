@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 4 — `commands` top-level](https://github.com/morozsm
 
 ## Pre-conditions
 
-Blocked by #__STEP3__ (Step 3: core contract trio).
+Blocked by #1286 (Step 3: core contract trio).
 
 ## Scope
 

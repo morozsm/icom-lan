@@ -15,7 +15,7 @@ References:
 - Plan doc §1.3 (deviations from the brief skeleton) — explains why this is provisional.
 - Plan doc §3.3 (named ignore exceptions).
 
-**This issue is post-modularization cleanup.** It MUST NOT start until the modularization epic (#__EPIC__) is closed.
+**This issue is post-modularization cleanup.** It MUST NOT start until the modularization epic (#1283) is closed.
 
 ## Scope
 

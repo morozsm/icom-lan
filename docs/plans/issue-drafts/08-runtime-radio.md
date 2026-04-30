@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 8 — `runtime` part 1 (radio + state)](https://github
 
 ## Pre-conditions
 
-Blocked by #__STEP7__ (Step 7: audio top-level).
+Blocked by #1290 (Step 7: audio top-level).
 
 ## Scope
 
@@ -83,5 +83,6 @@ stop and ask via PR comment. Do not guess.
 
 - Verify the shim header (plan §5.1 template, verbatim) is present in every shim file.
 - LAZY_MAP target tuples must be UNCHANGED.
-- **Confirm the 43 private-path leak shims (per discovery §6) at `_connection_state`, `_civ_rx`, `_poller_types` etc. are present.** (Note: these specific files actually move in Step 10 per plan §4.1; the reviewer note is here verbatim per the orchestrator brief — flag if the cross-step reference confuses execution.)
-- Confirm `radio.py`'s heavy import surface is preserved unchanged — many tests import from `icom_lan.radio` directly via the shim.
+- Confirm `radio.py`'s heavy import surface is preserved unchanged — many tests import from `icom_lan.radio` directly via the shim. The `radio.py` shim is the most-imported one in the suite; verify by `grep -rn 'from icom_lan.radio import' tests/ | wc -l` returning a number consistent with the existing test count.
+- Verify `_state_queries` shim is present (it is the one private-name file moving in this step that some test files may reach into directly).
+- The 22-occurrence `_connection_state` leak, the 8-occurrence `_civ_rx` leak, and the 4-occurrence `_poller_types` leak (per discovery §6) are NOT addressed by this step — those files move in Step 10. Reviewer of Step 10 must verify those shims; reviewer of Step 8 should NOT see those names move.

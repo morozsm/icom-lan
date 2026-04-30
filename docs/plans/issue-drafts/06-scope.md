@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 6 — `scope`](https://github.com/morozsm/icom-lan/blo
 
 ## Pre-conditions
 
-Blocked by #__STEP5__ (Step 5: profiles).
+Blocked by #1288 (Step 5: profiles).
 
 ## Scope
 

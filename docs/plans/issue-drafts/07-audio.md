@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 7 — `audio` top-level (likely split 7a/7b)](https://
 
 ## Pre-conditions
 
-Blocked by #__STEP6__ (Step 6: scope).
+Blocked by #1289 (Step 6: scope).
 
 ## Scope
 

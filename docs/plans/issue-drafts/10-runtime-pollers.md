@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 10 — `runtime` part 3 (pollers + control + sync + he
 
 ## Pre-conditions
 
-Blocked by #__STEP9__ (Step 9: runtime mixins).
+Blocked by #1292 (Step 9: runtime mixins).
 
 ## Scope
 

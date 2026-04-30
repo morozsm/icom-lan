@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 9 — `runtime` part 2 (mixins)](https://github.com/mo
 
 ## Pre-conditions
 
-Blocked by #__STEP8__ (Step 8: runtime part 1).
+Blocked by #1291 (Step 8: runtime part 1).
 
 ## Scope
 

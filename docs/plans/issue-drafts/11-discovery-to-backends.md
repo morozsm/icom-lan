@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 11 — `discovery → backends/`](https://github.com/m
 
 ## Pre-conditions
 
-Blocked by #__STEP10__ (Step 10: runtime part 3).
+Blocked by #1293 (Step 10: runtime part 3).
 
 ## Scope
 

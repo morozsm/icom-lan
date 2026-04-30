@@ -6,7 +6,7 @@ Plan section: [§4.1 Step 2 — `core` foundationals](https://github.com/morozsm
 
 ## Pre-conditions
 
-Blocked by #__STEP1__ (Step 1: skeleton).
+Blocked by #1284 (Step 1: skeleton).
 
 ## Scope
 
