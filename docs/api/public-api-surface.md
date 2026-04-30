@@ -113,7 +113,7 @@ available directly via `from icom_lan import …`.
 
 **Public types (from `icom_lan.types`)**
 
-- `Mode`, `AudioCodec`, `BreakInMode`, `Meter` (and the other symbols
+- `Mode`, `AudioCodec`, `BreakInMode` (and the other symbols
   currently re-exported from `icom_lan.types`)
 
 **Public state types**

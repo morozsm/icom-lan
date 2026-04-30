@@ -82,6 +82,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+- **Public-API surface regression test (#1273).** New
+  `tests/test_public_api_surface.py` asserts every tier-1 symbol from
+  `docs/api/public-api-surface.md` imports cleanly AND that tier-1 imports
+  do not transitively pull tier-3 modules into `sys.modules`. Closes the
+  missing acceptance criterion of `05-recommendations.md` PR 1.
 - **Golden-test fixtures for `_civ_rx._update_radio_state_from_frame` (#1256).**
   Added 72 synthetic frame fixtures (`tests/fixtures/civ_rx_frames.json`) and
   a parametrized dispatch test (`tests/test_civ_rx_dispatch_golden.py`).
@@ -108,6 +113,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   document their tier and breakage policy in their own docstrings, matching
   `docs/api/public-api-surface.md` (Tier 2 — Best-effort, lazily exposed via
   PEP 562 `__getattr__`). Closes `05-recommendations.md` PR 4.
+- **`docs/api/public-api-surface.md` Tier 1 list corrected (#1273).** Removed
+  `Meter` from the tier-1 public-types bullet — there is no `Meter` symbol
+  exported from `icom_lan` (only `MeterType`, which is tier-3). Discovered
+  while writing the tier-1 surface regression test.
 - **Panel → adapter migration plan (#1240).** Doc at
   `docs/plans/2026-04-29-panel-adapter-migration.md` inventories the 18
   remaining panels with direct `$lib/stores/*` imports, groups them into
