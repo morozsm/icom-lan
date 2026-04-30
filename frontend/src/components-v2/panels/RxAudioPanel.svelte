@@ -4,8 +4,6 @@
   import { deriveRxAudioProps, getRxAudioHandlers } from '$lib/runtime/adapters/audio-adapter';
   import { buildMonitorOptions, formatMonitorStatus } from './audio-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
-  import { isAudioConnected } from '$lib/stores/connection.svelte';
-  import { hasDualReceiver } from '$lib/stores/capabilities.svelte';
   import AudioRoutingControl from './AudioRoutingControl.svelte';
 
   const handlers = getRxAudioHandlers();
@@ -16,8 +14,9 @@
   const monitorShortcut = getShortcutHint('toggle_monitor');
   const afShortcut = getShortcutHint('adjust_af_level');
   let isMuted = $derived(props.monitorMode === 'mute');
-  let audioWsConnected = $derived(isAudioConnected());
-  let showDisconnected = $derived(props.hasLiveAudio && props.monitorMode === 'live' && !audioWsConnected);
+  let showDisconnected = $derived(
+    props.hasLiveAudio && props.monitorMode === 'live' && !props.isAudioConnected,
+  );
 </script>
 
 {#if props.hasLiveAudio}
@@ -53,7 +52,7 @@
       <div class="output-indicator" class:audio-disconnected={showDisconnected}>
         {#if showDisconnected}Audio link lost — reconnecting…{:else}{statusText}{/if}
       </div>
-      {#if hasDualReceiver()}
+      {#if props.hasDualReceiver}
         <AudioRoutingControl />
       {/if}
     </div>

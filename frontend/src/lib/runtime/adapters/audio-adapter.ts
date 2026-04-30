@@ -13,7 +13,10 @@ export function deriveRxAudioProps(): RxAudioProps {
   const state = runtime.state;
   const caps = runtime.caps;
   const audio = runtime.audio;
-  return toRxAudioProps(state, caps, audio);
+  // Audio-WS connection health — surfaced as a prop so RxAudioPanel
+  // doesn't have to import `$lib/stores/connection.svelte` directly.
+  const audioConnected = runtime.connectionAudio;
+  return toRxAudioProps(state, caps, audio, audioConnected);
 }
 
 // Stable handler object — delegates to existing command-bus logic.

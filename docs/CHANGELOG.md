@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `qsy-history-adapter.ts` plus an `amberScopeProps()` adapter migrate
   `LcdContrastControl`, `LcdDisplayModeControl`, `AmberMemoryStrip`, and
   `AmberScope` off direct `$lib/stores/*` imports. Tier 2 batch 4 of #1063.
+- **Batch 5 (finisher) of panel→adapter migration (#1248).** `AmberCockpit`
+  and `RxAudioPanel` migrated off direct `$lib/stores/*` imports. After this
+  batch, no non-test panel under `components-v2/panels/` imports from
+  `$lib/stores/*`. Tier 2 batch 5/5 of #1063 — unblocks #1241 (ESLint
+  lockdown).
 
 ### Docs
 

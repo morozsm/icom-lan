@@ -532,6 +532,10 @@ export interface RxAudioProps {
   monitorMode: 'local' | 'live' | 'mute';
   afLevel: number;
   hasLiveAudio: boolean;
+  /** Audio-WS connection health — used to render a "link lost" indicator. */
+  isAudioConnected: boolean;
+  /** Capability flag — gates the dual-receiver routing sub-control. */
+  hasDualReceiver: boolean;
 }
 
 export interface AudioUiState {
@@ -544,6 +548,7 @@ export function toRxAudioProps(
   state: ServerState | null,
   caps: Capabilities | null,
   audioState: AudioUiState,
+  audioConnected: boolean,
 ): RxAudioProps {
   const rx = state ? activeRx(state) : null;
   const hasLiveAudio = hasCap(caps, 'audio');
@@ -556,10 +561,13 @@ export function toRxAudioProps(
     monitorMode === 'live'
       ? Math.round((audioState.volume / 100) * 255)
       : (rx?.afLevel ?? 128);
+  const hasDualReceiver = caps?.capabilities?.includes('dual_rx') ?? false;
   return {
     monitorMode,
     afLevel,
     hasLiveAudio,
+    isAudioConnected: audioConnected,
+    hasDualReceiver,
   };
 }
 
