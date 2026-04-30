@@ -509,15 +509,92 @@ and states the per-step mitigation.
 
 | Risk (from discovery §9) | Mitigations baked into the plan |
 |---|---|
-| **R1** — PEP 562 lazy-loader invisible to linter | Step 13 rewrites LAZY_MAP. Every Phase 4 PR's acceptance criteria includes a *Tier 2 smoke check*: `python -c "import icom_lan; [getattr(icom_lan, n) for n in icom_lan._LAZY_MAP]"` (and the analogous for `icom_lan.audio`). |
+| **R1** — PEP 562 lazy-loader invisible to linter | Step 13 rewrites LAZY_MAP. Every Phase 4 PR's acceptance criteria includes a **lazy-resolution smoke test** (see §6.1 below) that asserts every Tier 1 + Tier 2 name resolves. The smoke test uses an explicit hard-coded name list, NOT runtime reflection of `_LAZY_MAP` — so a missing symbol fails by *name*, not by silent shape change. |
 | **R2** — 43 private-path test leaks | Each step that moves a file referenced by tests via private path adds a shim at the old path (the §5.1 template). The shim's `from … import *` re-exports the same names; tests imports work unchanged. Phase 3 follow-up issue tracks the test-side migration. |
-| **R3** — function-local imports as cycle workarounds | Step 5 (`profiles → rig_loader` at line 266) and Step 8/9 (`web.server → web_routing/startup` — out of scope of these steps but the import points are in `web/` which is untouched) preserve the deferred-import pattern verbatim. **Sub-agent guidance: if a `tests/` failure complains about ImportError on `rig_loader`, restore the function-local import; do not "fix" it.** |
+| **R3** — function-local imports as cycle workarounds | See §6.2 below for the explicit no-touch list with line numbers. Five function-local import sites are load-bearing cycle-breakers — preserved verbatim. **Sub-agent guidance: if a `tests/` failure complains about ImportError on `rig_loader` or any `web_routing`/`web_startup` name, restore the function-local import to its original location; do not "fix" it by hoisting to module level.** |
 | **R4** — 44 untested-by-direct-import modules | Every step's acceptance criteria runs the FULL pytest suite (per brief), not just module-targeted tests. This is non-negotiable. |
 | **R5** — Dynamic imports (`serial_civ_link.py:362`, `web/rtc.py:49`) | Step 13's import-linter contract has explicit `ignore_imports` for the resolved targets (verified in Phase 4 by reading the call sites). |
 | **R6** — Package-flat means no enforcement until structure is in place | Step 13 (NOT earlier) introduces import-linter to CI. Steps 1–12 run *without* boundary enforcement; their acceptance is pytest + mypy + ruff only. |
 | **R7** — `_optional_deps.py` foundation-tier | Step 2 places it in `core/`; pre-step verification confirms it has zero `from icom_lan` imports (already verified empirically — see §1.3 footnote). |
 | **R8** — `__main__.py` placement | Step 12 keeps it top-level (rationale in §4.1 Step 12). |
 | **R9** — `ARCHITECTURE.md` stale | Phase 5 work (this plan does not touch ARCHITECTURE.md). |
+
+### 6.1 Lazy-resolution smoke test (R1 mitigation, detailed)
+
+**What it is:** a pytest test file that asserts every Tier 1 and
+Tier 2 name in the existing `__all__` resolves through the top-level
+`icom_lan` package (and analogous for `icom_lan.audio`).
+
+**Why hard-coded names, not `_LAZY_MAP` reflection.** Reflecting on
+`icom_lan._LAZY_MAP` at runtime works *until* the migration step that
+either renames or restructures the loader — and then the smoke check
+becomes a tautology that asserts nothing useful. The whole point of
+the test is to detect a missing name; that requires the name list to
+live OUTSIDE the loader.
+
+**Location.** Extend `tests/test_public_api_surface.py` (which
+already enumerates the 48 Tier 1 names verbatim, see commit
+`15c54b94`). Add a parametrised test that walks the 28 Tier 2 names
+plus the audio Tier 2 names. This keeps everything in one
+public-API-surface file and runs as part of the standard pytest
+gate — no separate script invocation needed.
+
+> Note on path: the maintainer's review proposed
+> `scripts/smoke_check_lazy_imports.py`, but `scripts/` is
+> `.gitignore`'d in this repo (per `.gitignore:73`, "Dev scripts with
+> local credentials"). Putting the smoke check inside the test
+> suite is functionally equivalent (hard-coded names, fails by name)
+> and ergonomically superior (auto-runs in pytest). If a standalone
+> script is preferred, the natural location is
+> `tools/smoke_check_lazy_imports.py` with a corresponding
+> `.gitignore` exception, but the test-suite location is the
+> recommendation.
+
+**When committed.** Step 1 of Phase 4 (skeleton step) — adding a
+test that documents the *current* public surface costs nothing and
+locks the contract before any file moves.
+
+**Failure mode.** If a migration step accidentally drops a name,
+pytest reports something like
+`AssertionError: 'IcomCommander' is not importable from icom_lan`.
+The sub-agent has the exact missing symbol; resolution is to inspect
+the latest move's shim file or `_LAZY_MAP` entry.
+
+**Source list:**
+[`./discovery-artifacts/init-snapshot.md`](./discovery-artifacts/init-snapshot.md)
+holds the verbatim `__all__` for both `icom_lan/__init__.py` (60
+names) and `icom_lan/audio/__init__.py` (and contains the data the
+test enumerates). The Phase 4 Step 1 sub-agent transcribes these
+lists into the test file as Python literals.
+
+### 6.2 Function-local import preservation — explicit no-touch list
+
+These five function-local import sites are load-bearing cycle-breakers
+identified in Phase 1
+[`./discovery-artifacts/cycles-classified.md`](./discovery-artifacts/cycles-classified.md).
+**Each one must be preserved verbatim through every migration step.**
+Do not hoist to module level. Do not refactor "for clarity". They
+are the runtime reason the codebase does not have any true import
+cycles.
+
+| File | Line | Edge | Bound by step |
+|---|---:|---|---|
+| `src/icom_lan/profiles.py` | 266 | `profiles → rig_loader` | **Step 5** (moves both files into `profiles/`) |
+| `src/icom_lan/web/server.py` | 920 | `web.server → web.web_startup` | binding rule — `web/` is untouched in this effort, but this rule applies to any future PR (within this modularization or follow-ups) that touches `web/server.py` |
+| `src/icom_lan/web/server.py` | 989 | `web.server → web.web_startup` | same as above |
+| `src/icom_lan/web/server.py` | 1172 | `web.server → web.web_routing` | same as above |
+| `src/icom_lan/web/web_routing.py` | 50 | `web.web_routing → web.server` | same as above |
+
+(The TYPE_CHECKING-only edges between the same modules — `L26`, `L25`,
+etc. in `cycles-classified.md` — do not need preservation; they
+generate no runtime imports.)
+
+Sub-agent guidance for any step that touches any of these files:
+**before** committing, `grep -nE 'def |from \.' <file>` and confirm
+that the listed line still has a `from .<module> import …` inside a
+function body, not at module top-level. If unsure, the original
+location is in the line numbers above (resolved as of commit
+`d2d45933` which committed the cycles classifier output).
 
 ---
 
@@ -611,12 +688,45 @@ ignore_imports =
 Sibling-rank verification (none of these layers imports any of its
 siblings — verified via the discovery import graph):
 
-- `web` ⊥ `rigctld`: neither imports the other; an explicit
-  `independence` contract was used in Agent C's draft and may be
-  retained as a second contract for belt-and-braces.
+- `web` ⊥ `rigctld`: neither imports the other.
 - `profiles` ⊥ `audio`: no edges either direction.
 - `commands` ⊥ `scope` ⊥ `dsp`: pairwise independent (each depends
   only on `core`).
+
+A pure `layers` contract permits siblings to import each other (the
+`|` syntax declares same-rank). To enforce that siblings stay
+sibling-pure, Step 13 also commits **three explicit `independence`
+contracts** (belt-and-braces; otherwise a future `from icom_lan.scope
+import …` inside `commands/` would slip past the layers contract):
+
+```ini
+[importlinter:contract:independence-top]
+name = top siblings must not depend on each other
+type = independence
+modules =
+    icom_lan.web
+    icom_lan.rigctld
+
+[importlinter:contract:independence-mid]
+name = mid-tier siblings must not depend on each other
+type = independence
+modules =
+    icom_lan.profiles
+    icom_lan.audio
+
+[importlinter:contract:independence-low]
+name = low-tier siblings must not depend on each other
+type = independence
+modules =
+    icom_lan.commands
+    icom_lan.scope
+    icom_lan.dsp
+```
+
+Belt-and-braces is the right default for this work: enforcement is
+the whole point of bringing the tool in, and "siblings *should not*
+import each other" is an invariant we want the linter — not human
+review — to police.
 
 Required ordering rationale (each row depends only on layers below
 it):
