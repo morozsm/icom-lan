@@ -1,29 +1,11 @@
 <script lang="ts">
-  import { radio } from '$lib/stores/radio.svelte';
-  import { resolveFilterModeConfig } from '../../wiring/state-adapter';
-  import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import { runtime } from '$lib/runtime';
+  import { deriveAudioSpectrumProps } from '$lib/runtime/adapters/panel-adapters';
   import AudioSpectrumCanvas from './AudioSpectrumCanvas.svelte';
 
-  // ── Radio state extraction ──
+  // ── Radio state extraction (via runtime adapter) ──
 
-  let radioState = $derived(radio.current);
-  let rx = $derived(radioState?.active === 'SUB' ? radioState?.sub : radioState?.main);
-
-  let filterWidthHz = $derived(rx?.filterWidth ?? 2400);
-  let filterWidthMax = $derived.by(() => {
-    const caps = getCapabilities();
-    const config = resolveFilterModeConfig(caps, rx?.mode, rx?.dataMode);
-    if (config?.table?.length) return config.table[config.table.length - 1];
-    return config?.maxHz ?? caps?.filterWidthMax ?? 4000;
-  });
-
-  let pbtInner = $derived(rx?.pbtInner ?? 128);
-  let pbtOuter = $derived(rx?.pbtOuter ?? 128);
-  let manualNotchOn = $derived(rx?.manualNotch ?? false);
-  let notchFreqRaw = $derived(radioState?.notchFilter ?? 0);
-  let contourLevel = $derived(rx?.contour ?? 0);
-  let contourFreqRaw = $derived(128); // Default center; contourFreq not exposed in state yet
+  let p = $derived(deriveAudioSpectrumProps());
 
   // ── Scope WS connection ──
 
@@ -48,14 +30,14 @@
     data={fftPixels}
     onRegisterPush={(fn) => { fftPush = fn; }}
     bandwidth={fftBandwidth}
-    filterWidth={filterWidthHz}
-    filterWidthMax={filterWidthMax}
-    pbtInner={pbtInner}
-    pbtOuter={pbtOuter}
-    manualNotch={manualNotchOn}
-    notchFreq={notchFreqRaw}
-    contour={contourLevel}
-    contourFreq={contourFreqRaw}
+    filterWidth={p.filterWidth}
+    filterWidthMax={p.filterWidthMax}
+    pbtInner={p.pbtInner}
+    pbtOuter={p.pbtOuter}
+    manualNotch={p.manualNotch}
+    notchFreq={p.notchFreq}
+    contour={p.contour}
+    contourFreq={p.contourFreq}
   />
 </div>
 

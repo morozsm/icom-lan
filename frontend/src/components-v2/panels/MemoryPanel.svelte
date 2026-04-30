@@ -7,8 +7,10 @@
    * controls for recall, store, clear, and channel selection.
    */
   import { runtime } from '$lib/runtime';
-  import { radio } from '$lib/stores/radio.svelte';
+  import { deriveMemoryPanelProps } from '$lib/runtime/adapters/panel-adapters';
   import { formatFrequencyString } from '../display/frequency-format';
+
+  let p = $derived(deriveMemoryPanelProps());
 
   const STORAGE_KEY = 'icom-lan:memory-channels';
   const MAX_CHANNELS = 99;
@@ -60,10 +62,8 @@
   }
 
   function storeVfoToChannel(ch: number) {
-    const state = radio.current;
-    const rx = state?.active === 'SUB' ? state?.sub : state?.main;
-    const freq = rx?.freqHz ?? 0;
-    const mode = rx?.mode ?? '';
+    const freq = p.activeFreqHz;
+    const mode = p.activeMode;
 
     runtime.send('set_memory_mode', { channel: ch });
     runtime.send('memory_write', {});

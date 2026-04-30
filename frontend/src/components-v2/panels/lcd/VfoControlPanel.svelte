@@ -9,12 +9,11 @@
    * relocated here unchanged. Commands dispatched via the same
    * wiring/command-bus handlers as before.
    */
-  import { radio } from '$lib/stores/radio.svelte';
-  import { hasCapability } from '$lib/stores/capabilities.svelte';
   import {
-    toRitXitProps,
-    toVfoOpsProps,
-  } from '../../wiring/state-adapter';
+    deriveVfoControlProps,
+    deriveRitXitProps,
+  } from '$lib/runtime/adapters/panel-adapters';
+  import { deriveVfoOps } from '$lib/runtime/adapters/vfo-adapter';
   import {
     makeVfoHandlers,
     makeRitXitHandlers,
@@ -26,33 +25,29 @@
   const ritXitHandlers = makeRitXitHandlers();
   const cwHandlers = makeCwPanelHandlers();
 
-  let radioState = $derived(radio.current);
-  let ritXit = $derived(toRitXitProps(radioState, null));
-  let vfoOps = $derived(toVfoOpsProps(radioState, null));
-  let rx = $derived(radioState?.active === 'SUB' ? radioState?.sub : radioState?.main);
-  let mode = $derived(rx?.mode ?? '---');
-  let isCwMode = $derived(mode === 'CW' || mode === 'CW-R');
-  let breakInMode = $derived(radioState?.breakIn ?? 0);
+  let p = $derived(deriveVfoControlProps());
+  let ritXit = $derived(deriveRitXitProps());
+  let vfoOps = $derived(deriveVfoOps());
 </script>
 
 <div class="vfo-ctrl-panel">
   <button class="lcd-btn" onclick={vfoHandlers.onSwap}>A↔B</button>
   <button class="lcd-btn" onclick={vfoHandlers.onEqual}>A=B</button>
-  {#if hasCapability('dual_rx')}
+  {#if p.hasDualRx}
     <button class="lcd-btn" class:active={vfoOps.dualWatch} onclick={() => vfoHandlers.onDualWatchToggle(!vfoOps.dualWatch)}>DW</button>
   {/if}
-  {#if hasCapability('split')}
+  {#if p.hasSplit}
     <button class="lcd-btn" class:active={vfoOps.splitActive} onclick={vfoHandlers.onSplitToggle}>SPLIT</button>
   {/if}
-  {#if hasCapability('rit')}
+  {#if p.hasRit}
     <button class="lcd-btn" class:active={ritXit.xitActive} onclick={ritXitHandlers.onXitToggle}>XIT</button>
     <button class="lcd-btn" onclick={ritXitHandlers.onClear}>CLR</button>
   {/if}
-  {#if hasCapability('tuner')}
+  {#if p.hasTuner}
     <button class="lcd-btn" onclick={() => runtime.send('set_tuner_status', { value: 2 })}>TUNE</button>
   {/if}
-  {#if isCwMode && hasCapability('cw') && hasCapability('break_in')}
-    <button class="lcd-btn" class:active={breakInMode > 0} onclick={() => cwHandlers.onBreakInModeChange(breakInMode === 0 ? 1 : breakInMode === 1 ? 2 : 0)}>{breakInMode === 0 ? 'BK-OFF' : breakInMode === 1 ? 'SEMI' : 'FULL'}</button>
+  {#if p.isCwMode && p.hasCw && p.hasBreakIn}
+    <button class="lcd-btn" class:active={p.breakInMode > 0} onclick={() => cwHandlers.onBreakInModeChange(p.breakInMode === 0 ? 1 : p.breakInMode === 1 ? 2 : 0)}>{p.breakInMode === 0 ? 'BK-OFF' : p.breakInMode === 1 ? 'SEMI' : 'FULL'}</button>
   {/if}
 </div>
 

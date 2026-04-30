@@ -13,6 +13,8 @@ import {
   toRfFrontEndProps, toRitXitProps, toScanProps,
   toMeterProps, toCwProps, toDspProps, toTxProps,
   toFilterProps, toBandSelectorProps,
+  toAudioSpectrumProps, toMemoryPanelProps,
+  toAmberTelemetryProps, toVfoControlProps,
 } from '../props/panel-props';
 import {
   makeAgcHandlers, makeModeHandlers, makeAntennaHandlers,
@@ -28,6 +30,8 @@ export type {
   RfFrontEndProps, RitXitProps, ScanProps,
   MeterProps, CwProps, DspProps, TxProps,
   FilterProps, BandSelectorProps,
+  AudioSpectrumProps, MemoryPanelProps,
+  AmberTelemetryProps, VfoControlProps,
 } from '../props/panel-props';
 
 // ── AGC ──
@@ -115,3 +119,23 @@ const _bandHandlers = makeBandHandlers();
 export function getBandHandlers() { return _bandHandlers; }
 const _presetHandlers = makePresetHandlers();
 export function getPresetHandlers() { return _presetHandlers; }
+
+// ── Audio Spectrum ──
+export function deriveAudioSpectrumProps() {
+  return toAudioSpectrumProps(runtime.state, runtime.caps);
+}
+
+// ── Memory Panel ──
+export function deriveMemoryPanelProps() {
+  return toMemoryPanelProps(runtime.state);
+}
+
+// ── Amber Telemetry ──
+export function deriveAmberTelemetryProps() {
+  return toAmberTelemetryProps(runtime.state);
+}
+
+// ── VFO Control Panel ──
+export function deriveVfoControlProps() {
+  return toVfoControlProps(runtime.state, runtime.caps);
+}
