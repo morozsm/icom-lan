@@ -40,7 +40,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .audio import AudioPacket
+    from icom_lan.audio import AudioPacket
 
 logger = logging.getLogger(__name__)
 
