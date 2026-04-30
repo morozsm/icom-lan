@@ -748,7 +748,13 @@ class CivRuntime:
         self._update_radio_state_from_frame(frame)
 
     def _update_radio_state_from_frame(self, frame: CivFrame) -> None:
-        """Update RadioState from a CI-V frame (additive alongside StateCache)."""
+        """Update RadioState from a CI-V frame (additive alongside StateCache).
+
+        Top-level dispatch via ``_RADIO_STATE_HANDLERS`` (cmd-keyed). Each
+        handler is a small private method that performs the same mutations
+        as the original if/elif ladder. Behavior is fenced by the golden
+        tests in ``tests/test_civ_rx_dispatch_golden.py``.
+        """
         rs: "RadioState | None" = getattr(self._host, "_radio_state", None)
         if rs is None:
             return
@@ -758,8 +764,6 @@ class CivRuntime:
             else:
                 rx_name = rs.active
             rx = rs.receiver(rx_name)
-
-            cmd = frame.command
 
             # Per-slot override: when the poller is actively reading the
             # unselected VFO slot on a receiver (issue #715), it sets
@@ -773,371 +777,9 @@ class CivRuntime:
                 if _so in ("A", "B"):
                     slot_override = _so
 
-            if cmd in (0x03, 0x00):
-                freq = parse_frequency_response(frame)
-                if slot_override is not None:
-                    from dataclasses import replace as _replace
-
-                    tgt_slot = rx.vfo_b if slot_override == "B" else rx.vfo_a
-                    new_slot = _replace(tgt_slot, freq_hz=freq)
-                    if slot_override == "B":
-                        rx.vfo_b = new_slot
-                    else:
-                        rx.vfo_a = new_slot
-                else:
-                    rx.freq = freq
-
-            elif cmd in (0x04, 0x01):
-                from .types import Mode
-
-                mode_val, filt = parse_mode_response(frame)
-                if slot_override is not None:
-                    from dataclasses import replace as _replace
-
-                    tgt_slot = rx.vfo_b if slot_override == "B" else rx.vfo_a
-                    kw: dict[str, Any] = {"mode": mode_val.name}
-                    if filt is not None:
-                        kw["filter_num"] = filt
-                    new_slot = _replace(tgt_slot, **kw)
-                    if slot_override == "B":
-                        rx.vfo_b = new_slot
-                    else:
-                        rx.vfo_a = new_slot
-                else:
-                    rx.mode = mode_val.name
-                    if filt is not None:
-                        rx.filter = filt
-
-            elif cmd == 0x25:
-                if len(frame.data) >= 6:
-                    from .types import bcd_decode
-
-                    rcvr_byte = frame.data[0]
-                    which = "MAIN" if rcvr_byte == 0x00 else "SUB"
-                    rs.receiver(which).freq = bcd_decode(frame.data[1:6])
-
-            elif cmd == 0x26:
-                if len(frame.data) >= 2:
-                    from .types import Mode
-
-                    rcvr_byte = frame.data[0]
-                    which = "MAIN" if rcvr_byte == 0x00 else "SUB"
-                    tgt = rs.receiver(which)
-                    tgt.mode = Mode(frame.data[1]).name
-                    if len(frame.data) >= 3:
-                        tgt.data_mode = frame.data[2]
-                    if len(frame.data) >= 4:
-                        tgt.filter = frame.data[3]
-
-            elif cmd == 0x15:
-                if frame.sub == 0x01 and frame.data:
-                    rx.s_meter_sql_open = bool(frame.data[0])
-                elif frame.sub == 0x05 and frame.data:
-                    rx.s_meter_sql_open = bool(frame.data[0])
-                elif frame.sub == 0x07 and frame.data:
-                    rs.overflow = bool(frame.data[0])
-                elif len(frame.data) >= 2:
-                    b0, b1 = frame.data[0], frame.data[1]
-                    raw = (
-                        (b0 >> 4) * 1000
-                        + (b0 & 0x0F) * 100
-                        + (b1 >> 4) * 10
-                        + (b1 & 0x0F)
-                    )
-                    if frame.sub == 0x02:
-                        rs.receiver(rs.active).s_meter = raw
-                    elif frame.sub == 0x11:
-                        rs.power_meter = raw
-                    elif frame.sub == 0x12:
-                        rs.swr_meter = raw
-                    elif frame.sub == 0x13:
-                        rs.alc_meter = raw
-                    elif frame.sub == 0x14:
-                        rs.comp_meter = raw
-                    elif frame.sub == 0x15:
-                        rs.vd_meter = raw
-                    elif frame.sub == 0x16:
-                        rs.id_meter = raw
-
-            elif cmd == 0x14:
-                if len(frame.data) >= 2:
-                    b0, b1 = frame.data[0], frame.data[1]
-                    raw = (
-                        (b0 >> 4) * 1000
-                        + (b0 & 0x0F) * 100
-                        + (b1 >> 4) * 10
-                        + (b1 & 0x0F)
-                    )
-                    sub = frame.sub
-                    if sub in _CMD14_RECEIVER_LEVEL_FIELDS:
-                        setattr(rx, _CMD14_RECEIVER_LEVEL_FIELDS[sub], raw)
-                    elif sub == 0x0A:
-                        rs.power_level = raw
-                    elif sub == 0x09:
-                        rs.cw_pitch = int(
-                            round((((600.0 / 255.0) * raw) + 300) / 5.0) * 5.0
-                        )
-                    elif sub == 0x0C:
-                        rs.key_speed = round((raw / 6.071) + 6)
-                    elif sub in _CMD14_GLOBAL_LEVEL_FIELDS:
-                        setattr(rs, _CMD14_GLOBAL_LEVEL_FIELDS[sub], raw)
-
-            elif cmd == 0x11:
-                if frame.data:
-                    val = frame.data[0]
-                    rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
-
-            elif cmd == 0x12:
-                # CI-V 0x12: antenna selection
-                # Sub 0x00 → ANT1, 0x01 → ANT2
-                # Data byte: 0x00 = RX ANT OFF, 0x01 = RX ANT ON
-                sub12 = frame.sub
-                if sub12 in (0x00, 0x01):
-                    rs.tx_antenna = sub12 + 1  # 0x00→1, 0x01→2
-                    if frame.data:
-                        rx_ant_on = bool(frame.data[0])
-                        if sub12 == 0x00:
-                            rs.rx_antenna_1 = rx_ant_on
-                        else:
-                            rs.rx_antenna_2 = rx_ant_on
-
-            elif cmd == 0x16:
-                sub = frame.sub or 0
-                data = frame.data
-                if sub == 0 and len(data) >= 2:
-                    sub = data[0]
-                    data = data[1:]
-                if data:
-                    val = data[0]
-                    if sub == 0x02:
-                        rx.preamp = val
-                    elif sub in _CMD16_RECEIVER_BOOL_FIELDS:
-                        setattr(rx, _CMD16_RECEIVER_BOOL_FIELDS[sub], bool(val))
-                    elif sub in _CMD16_RECEIVER_VALUE_FIELDS:
-                        field, _ = _CMD16_RECEIVER_VALUE_FIELDS[sub]
-                        setattr(rx, field, ((val >> 4) & 0x0F) * 10 + (val & 0x0F))
-                    elif sub in _CMD16_GLOBAL_BOOL_FIELDS:
-                        setattr(rs, _CMD16_GLOBAL_BOOL_FIELDS[sub], bool(val))
-                    elif sub in _CMD16_GLOBAL_VALUE_FIELDS:
-                        field, _ = _CMD16_GLOBAL_VALUE_FIELDS[sub]
-                        setattr(rs, field, ((val >> 4) & 0x0F) * 10 + (val & 0x0F))
-                    event_name = _CMD16_NOTIFY_EVENTS.get(sub)
-                    if event_name is not None:
-                        if (
-                            sub in _CMD16_RECEIVER_BOOL_FIELDS
-                            or sub in _CMD16_GLOBAL_BOOL_FIELDS
-                        ):
-                            self._notify_change(event_name, {"on": bool(val)})
-                        elif (
-                            sub in _CMD16_RECEIVER_VALUE_FIELDS
-                            or sub in _CMD16_GLOBAL_VALUE_FIELDS
-                        ):
-                            decoded = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
-                            self._notify_change(event_name, {"value": decoded})
-
-            elif cmd == 0x27:
-                scope = rs.scope_controls
-                if frame.sub == 0x12:
-                    scope.receiver = parse_scope_main_sub_response(frame)
-                elif frame.sub == 0x13:
-                    scope.dual = parse_scope_single_dual_response(frame)
-                elif frame.sub == 0x14:
-                    receiver, mode = parse_scope_mode_response(frame)
-                    if receiver is not None:
-                        scope.receiver = receiver
-                    scope.mode = mode
-                elif frame.sub == 0x15:
-                    receiver, span = parse_scope_span_response(frame)
-                    if receiver is not None:
-                        scope.receiver = receiver
-                    scope.span = span
-                elif frame.sub == 0x16:
-                    receiver, edge = parse_scope_edge_response(frame)
-                    if receiver is not None:
-                        scope.receiver = receiver
-                    scope.edge = edge
-                elif frame.sub == 0x17:
-                    receiver, hold = parse_scope_hold_response(frame)
-                    if receiver is not None:
-                        scope.receiver = receiver
-                    scope.hold = hold
-                elif frame.sub == 0x19:
-                    receiver, ref_db = parse_scope_ref_response(frame)
-                    if receiver is not None:
-                        scope.receiver = receiver
-                    scope.ref_db = ref_db
-                elif frame.sub == 0x1A:
-                    receiver, speed = parse_scope_speed_response(frame)
-                    if receiver is not None:
-                        scope.receiver = receiver
-                    scope.speed = speed
-                elif frame.sub == 0x1B:
-                    scope.during_tx = parse_scope_during_tx_response(frame)
-                elif frame.sub == 0x1C:
-                    receiver, center_type = parse_scope_center_type_response(frame)
-                    if receiver is not None:
-                        scope.receiver = receiver
-                    scope.center_type = center_type
-                elif frame.sub == 0x1D:
-                    receiver, vbw_narrow = parse_scope_vbw_response(frame)
-                    if receiver is not None:
-                        scope.receiver = receiver
-                    scope.vbw_narrow = vbw_narrow
-                elif frame.sub == 0x1E:
-                    scope.fixed_edge = parse_scope_fixed_edge_response(frame)
-                    scope.edge = scope.fixed_edge.edge
-                elif frame.sub == 0x1F:
-                    receiver, rbw = parse_scope_rbw_response(frame)
-                    if receiver is not None:
-                        scope.receiver = receiver
-                    scope.rbw = rbw
-
-            elif cmd == 0x1A:
-                sub = frame.sub
-                if sub == 0x04:
-                    rx.agc_time_constant = parse_level_response(
-                        frame,
-                        command=0x1A,
-                        sub=0x04,
-                        bcd_bytes=1,
-                    )
-                if sub == 0x03 and frame.data:
-                    from .commands import _bcd_decode_value, filter_index_to_hz
-
-                    filter_index = _bcd_decode_value(frame.data)
-                    profile = getattr(self._host, "_profile", None)
-                    if (
-                        profile is not None
-                        and getattr(profile, "filter_width_encoding", None)
-                        == "segmented_bcd_index"
-                    ):
-                        rule = profile.resolve_filter_rule(
-                            rx.mode,
-                            data_mode=int(getattr(rx, "data_mode", 0) or 0),
-                        )
-                        if rule is not None and rule.segments:
-                            rx.filter_width = filter_index_to_hz(
-                                filter_index, segments=rule.segments
-                            )
-                        else:
-                            rx.filter_width = filter_index
-                    else:
-                        rx.filter_width = filter_index
-                elif sub == 0x05:
-                    for prefix, (
-                        field,
-                        bcd_bytes,
-                    ) in _CMD1A_CTL_MEM_LEVEL_FIELDS.items():
-                        if frame.data.startswith(prefix):
-                            setattr(
-                                rs,
-                                field,
-                                parse_level_response(
-                                    frame,
-                                    command=0x1A,
-                                    sub=0x05,
-                                    prefix=prefix,
-                                    bcd_bytes=bcd_bytes,
-                                ),
-                            )
-                            break
-                elif sub == 0x06 and frame.data:
-                    rx.data_mode = frame.data[0]
-                elif sub == 0x09:
-                    rx.af_mute = parse_bool_response(frame, command=0x1A, sub=0x09)
-
-            elif cmd == 0x1B:
-                if len(frame.data) >= 3:
-                    from .commands import _decode_tone_freq
-
-                    freq_hz = _decode_tone_freq(frame.data)
-                    freq_centihz = round(freq_hz * 100)
-                    if frame.sub == 0x00:
-                        rx.tone_freq = freq_centihz
-                    elif frame.sub == 0x01:
-                        rx.tsql_freq = freq_centihz
-
-            elif cmd == 0x1C and frame.sub == 0x00:
-                if frame.data:
-                    rs.ptt = bool(frame.data[0])
-
-            elif cmd == 0x1C and frame.sub == 0x01:
-                if frame.data:
-                    rs.tuner_status = frame.data[0]
-
-            elif cmd == 0x1C and frame.sub == 0x03:
-                if frame.data:
-                    rs.tx_freq_monitor = bool(frame.data[0])
-
-            elif cmd == 0x21:
-                if frame.sub == 0x00 and len(frame.data) >= 3:
-                    from .commands import parse_rit_frequency_response
-
-                    rs.rit_freq = parse_rit_frequency_response(frame.data)
-                elif frame.sub == 0x01 and frame.data:
-                    rs.rit_on = bool(frame.data[0])
-                elif frame.sub == 0x02 and frame.data:
-                    rs.rit_tx = bool(frame.data[0])
-
-            elif cmd == 0x12:
-                # Antenna select / RX-ANT state (cmd29 path)
-                # IC-7610: 0x12 0x00/0x01 with data byte controls RX ANT.
-                sub = frame.sub or 0
-                if frame.data:
-                    val = bool(frame.data[0])
-                    if sub == 0x00:
-                        rs.tx_antenna = 1
-                        rs.rx_antenna_1 = val
-                    elif sub == 0x01:
-                        rs.tx_antenna = 2
-                        rs.rx_antenna_2 = val
-
-            elif cmd == 0x0E:
-                if frame.data:
-                    sub_0e = frame.data[0]
-                    # 0xA1-0xA7 (ΔF span) and 0xD0-0xD3 (resume) are config-only
-                    if sub_0e <= 0x23:
-                        rs.scanning = bool(sub_0e)
-
-            elif cmd == 0x10:
-                if frame.data:
-                    b = frame.data[0]
-                    rs.tuning_step = ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
-
-            elif cmd == 0x0F:
-                if frame.data:
-                    rs.split = bool(frame.data[0])
-
-            elif cmd == 0x07:
-                if len(frame.data) >= 2:
-                    sub07 = frame.data[0]
-                    val07 = frame.data[1]
-                    if sub07 == 0xD2:
-                        new_active = "SUB" if val07 else "MAIN"
-                        if rs.active != new_active:
-                            rs.active = new_active
-                            logger.debug("civ-rx: active receiver → %s", new_active)
-                            self._notify_change(
-                                "active_receiver_changed", {"active": new_active}
-                            )
-                    elif sub07 == 0xC2:
-                        new_dw = bool(val07)
-                        if rs.dual_watch != new_dw:
-                            rs.dual_watch = new_dw
-                            logger.debug(
-                                "civ-rx: dual watch → %s", "ON" if new_dw else "OFF"
-                            )
-                            self._notify_change("dual_watch_changed", {"on": new_dw})
-
-            elif cmd == 0x1E:
-                if frame.sub == 0x01 and len(frame.data) >= 10:
-                    from .commands.tx_band import parse_tx_band_edge_response
-                    from .radio_state import TxBandEdge
-
-                    start_hz, end_hz = parse_tx_band_edge_response(frame.data)
-                    tx_edge = TxBandEdge(start_hz=start_hz, end_hz=end_hz)
-                    if tx_edge not in rs.tx_band_edges:
-                        rs.tx_band_edges.append(tx_edge)
+            handler = self._RADIO_STATE_HANDLERS.get(frame.command)
+            if handler is not None:
+                handler(self, frame, rx, rs, slot_override)
 
         except (ValueError, IndexError, KeyError, AttributeError, TypeError) as exc:
             logger.debug(
@@ -1148,6 +790,512 @@ class CivRuntime:
             )
         except Exception:
             logger.warning("civ-rx: unexpected error in state update", exc_info=True)
+
+    # ------------------------------------------------------------------
+    # Per-command handlers for _update_radio_state_from_frame.
+    #
+    # All handlers share the uniform signature
+    # ``(self, frame, rx, rs, slot_override)``. Some handlers ignore
+    # ``rx`` or ``slot_override``; the uniform shape keeps the dispatch
+    # site at ``_update_radio_state_from_frame`` clean.
+    # ------------------------------------------------------------------
+
+    def _handle_freq(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x03 (GET freq response) and 0x00 (unsolicited freq).
+        freq = parse_frequency_response(frame)
+        if slot_override is not None:
+            from dataclasses import replace as _replace
+
+            tgt_slot = rx.vfo_b if slot_override == "B" else rx.vfo_a
+            new_slot = _replace(tgt_slot, freq_hz=freq)
+            if slot_override == "B":
+                rx.vfo_b = new_slot
+            else:
+                rx.vfo_a = new_slot
+        else:
+            rx.freq = freq
+
+    def _handle_mode(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x04 (GET mode response) and 0x01 (unsolicited mode).
+        mode_val, filt = parse_mode_response(frame)
+        if slot_override is not None:
+            from dataclasses import replace as _replace
+
+            tgt_slot = rx.vfo_b if slot_override == "B" else rx.vfo_a
+            kw: dict[str, Any] = {"mode": mode_val.name}
+            if filt is not None:
+                kw["filter_num"] = filt
+            new_slot = _replace(tgt_slot, **kw)
+            if slot_override == "B":
+                rx.vfo_b = new_slot
+            else:
+                rx.vfo_a = new_slot
+        else:
+            rx.mode = mode_val.name
+            if filt is not None:
+                rx.filter = filt
+
+    def _handle_07(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x07: VFO/dual-watch sub-subs (0xD2 active, 0xC2 dual-watch).
+        if len(frame.data) >= 2:
+            sub07 = frame.data[0]
+            val07 = frame.data[1]
+            if sub07 == 0xD2:
+                new_active = "SUB" if val07 else "MAIN"
+                if rs.active != new_active:
+                    rs.active = new_active
+                    logger.debug("civ-rx: active receiver → %s", new_active)
+                    self._notify_change(
+                        "active_receiver_changed", {"active": new_active}
+                    )
+            elif sub07 == 0xC2:
+                new_dw = bool(val07)
+                if rs.dual_watch != new_dw:
+                    rs.dual_watch = new_dw
+                    logger.debug("civ-rx: dual watch → %s", "ON" if new_dw else "OFF")
+                    self._notify_change("dual_watch_changed", {"on": new_dw})
+
+    def _handle_0e(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x0E: scan state.
+        if frame.data:
+            sub_0e = frame.data[0]
+            # 0xA1-0xA7 (ΔF span) and 0xD0-0xD3 (resume) are config-only
+            if sub_0e <= 0x23:
+                rs.scanning = bool(sub_0e)
+
+    def _handle_0f(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x0F: split on/off.
+        if frame.data:
+            rs.split = bool(frame.data[0])
+
+    def _handle_10(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x10: tuning step (BCD nibble pair).
+        if frame.data:
+            b = frame.data[0]
+            rs.tuning_step = ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
+
+    def _handle_11(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x11: attenuator value (BCD nibbles → dB).
+        if frame.data:
+            val = frame.data[0]
+            rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
+
+    def _handle_12(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x12: antenna selection.
+        # Sub 0x00 → ANT1, 0x01 → ANT2.
+        # Data byte: 0x00 = RX ANT OFF, 0x01 = RX ANT ON.
+        sub12 = frame.sub
+        if sub12 in (0x00, 0x01):
+            rs.tx_antenna = sub12 + 1  # 0x00→1, 0x01→2
+            if frame.data:
+                rx_ant_on = bool(frame.data[0])
+                if sub12 == 0x00:
+                    rs.rx_antenna_1 = rx_ant_on
+                else:
+                    rs.rx_antenna_2 = rx_ant_on
+
+    def _handle_14(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x14: receiver/global levels (BCD pairs).
+        if len(frame.data) >= 2:
+            b0, b1 = frame.data[0], frame.data[1]
+            raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
+            sub = frame.sub
+            if sub in _CMD14_RECEIVER_LEVEL_FIELDS:
+                setattr(rx, _CMD14_RECEIVER_LEVEL_FIELDS[sub], raw)
+            elif sub == 0x0A:
+                rs.power_level = raw
+            elif sub == 0x09:
+                rs.cw_pitch = int(round((((600.0 / 255.0) * raw) + 300) / 5.0) * 5.0)
+            elif sub == 0x0C:
+                rs.key_speed = round((raw / 6.071) + 6)
+            elif sub in _CMD14_GLOBAL_LEVEL_FIELDS:
+                setattr(rs, _CMD14_GLOBAL_LEVEL_FIELDS[sub], raw)
+
+    def _handle_15(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x15: meter/SQL reads.
+        if frame.sub == 0x01 and frame.data:
+            rx.s_meter_sql_open = bool(frame.data[0])
+        elif frame.sub == 0x05 and frame.data:
+            rx.s_meter_sql_open = bool(frame.data[0])
+        elif frame.sub == 0x07 and frame.data:
+            rs.overflow = bool(frame.data[0])
+        elif len(frame.data) >= 2:
+            b0, b1 = frame.data[0], frame.data[1]
+            raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
+            if frame.sub == 0x02:
+                rs.receiver(rs.active).s_meter = raw
+            elif frame.sub == 0x11:
+                rs.power_meter = raw
+            elif frame.sub == 0x12:
+                rs.swr_meter = raw
+            elif frame.sub == 0x13:
+                rs.alc_meter = raw
+            elif frame.sub == 0x14:
+                rs.comp_meter = raw
+            elif frame.sub == 0x15:
+                rs.vd_meter = raw
+            elif frame.sub == 0x16:
+                rs.id_meter = raw
+
+    def _handle_16(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x16: function on/off + values (flags, BCD nibbles).
+        sub = frame.sub or 0
+        data = frame.data
+        if sub == 0 and len(data) >= 2:
+            sub = data[0]
+            data = data[1:]
+        if data:
+            val = data[0]
+            if sub == 0x02:
+                rx.preamp = val
+            elif sub in _CMD16_RECEIVER_BOOL_FIELDS:
+                setattr(rx, _CMD16_RECEIVER_BOOL_FIELDS[sub], bool(val))
+            elif sub in _CMD16_RECEIVER_VALUE_FIELDS:
+                field, _ = _CMD16_RECEIVER_VALUE_FIELDS[sub]
+                setattr(rx, field, ((val >> 4) & 0x0F) * 10 + (val & 0x0F))
+            elif sub in _CMD16_GLOBAL_BOOL_FIELDS:
+                setattr(rs, _CMD16_GLOBAL_BOOL_FIELDS[sub], bool(val))
+            elif sub in _CMD16_GLOBAL_VALUE_FIELDS:
+                field, _ = _CMD16_GLOBAL_VALUE_FIELDS[sub]
+                setattr(rs, field, ((val >> 4) & 0x0F) * 10 + (val & 0x0F))
+            event_name = _CMD16_NOTIFY_EVENTS.get(sub)
+            if event_name is not None:
+                if (
+                    sub in _CMD16_RECEIVER_BOOL_FIELDS
+                    or sub in _CMD16_GLOBAL_BOOL_FIELDS
+                ):
+                    self._notify_change(event_name, {"on": bool(val)})
+                elif (
+                    sub in _CMD16_RECEIVER_VALUE_FIELDS
+                    or sub in _CMD16_GLOBAL_VALUE_FIELDS
+                ):
+                    decoded = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
+                    self._notify_change(event_name, {"value": decoded})
+
+    def _handle_1a(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x1A: CTL mem levels + filter width + data mode + AF mute.
+        sub = frame.sub
+        if sub == 0x04:
+            rx.agc_time_constant = parse_level_response(
+                frame,
+                command=0x1A,
+                sub=0x04,
+                bcd_bytes=1,
+            )
+        if sub == 0x03 and frame.data:
+            from .commands import _bcd_decode_value, filter_index_to_hz
+
+            filter_index = _bcd_decode_value(frame.data)
+            profile = getattr(self._host, "_profile", None)
+            if (
+                profile is not None
+                and getattr(profile, "filter_width_encoding", None)
+                == "segmented_bcd_index"
+            ):
+                rule = profile.resolve_filter_rule(
+                    rx.mode,
+                    data_mode=int(getattr(rx, "data_mode", 0) or 0),
+                )
+                if rule is not None and rule.segments:
+                    rx.filter_width = filter_index_to_hz(
+                        filter_index, segments=rule.segments
+                    )
+                else:
+                    rx.filter_width = filter_index
+            else:
+                rx.filter_width = filter_index
+        elif sub == 0x05:
+            for prefix, (
+                field,
+                bcd_bytes,
+            ) in _CMD1A_CTL_MEM_LEVEL_FIELDS.items():
+                if frame.data.startswith(prefix):
+                    setattr(
+                        rs,
+                        field,
+                        parse_level_response(
+                            frame,
+                            command=0x1A,
+                            sub=0x05,
+                            prefix=prefix,
+                            bcd_bytes=bcd_bytes,
+                        ),
+                    )
+                    break
+        elif sub == 0x06 and frame.data:
+            rx.data_mode = frame.data[0]
+        elif sub == 0x09:
+            rx.af_mute = parse_bool_response(frame, command=0x1A, sub=0x09)
+
+    def _handle_1b(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x1B: tone/TSQL freq (frequency-encoded).
+        if len(frame.data) >= 3:
+            from .commands import _decode_tone_freq
+
+            freq_hz = _decode_tone_freq(frame.data)
+            freq_centihz = round(freq_hz * 100)
+            if frame.sub == 0x00:
+                rx.tone_freq = freq_centihz
+            elif frame.sub == 0x01:
+                rx.tsql_freq = freq_centihz
+
+    def _handle_1c(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x1C: PTT (sub 0x00), tuner status (0x01), tx-freq monitor (0x03).
+        if frame.sub == 0x00:
+            if frame.data:
+                rs.ptt = bool(frame.data[0])
+        elif frame.sub == 0x01:
+            if frame.data:
+                rs.tuner_status = frame.data[0]
+        elif frame.sub == 0x03:
+            if frame.data:
+                rs.tx_freq_monitor = bool(frame.data[0])
+
+    def _handle_1e(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x1E: TX band edge (sub 0x01, payload ≥ 10 bytes).
+        if frame.sub == 0x01 and len(frame.data) >= 10:
+            from .commands.tx_band import parse_tx_band_edge_response
+            from .radio_state import TxBandEdge
+
+            start_hz, end_hz = parse_tx_band_edge_response(frame.data)
+            tx_edge = TxBandEdge(start_hz=start_hz, end_hz=end_hz)
+            if tx_edge not in rs.tx_band_edges:
+                rs.tx_band_edges.append(tx_edge)
+
+    def _handle_21(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x21: RIT freq, on/off, tx status.
+        if frame.sub == 0x00 and len(frame.data) >= 3:
+            from .commands import parse_rit_frequency_response
+
+            rs.rit_freq = parse_rit_frequency_response(frame.data)
+        elif frame.sub == 0x01 and frame.data:
+            rs.rit_on = bool(frame.data[0])
+        elif frame.sub == 0x02 and frame.data:
+            rs.rit_tx = bool(frame.data[0])
+
+    def _handle_25(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x25: dual-RX freq by receiver ID.
+        if len(frame.data) >= 6:
+            from .types import bcd_decode
+
+            rcvr_byte = frame.data[0]
+            which = "MAIN" if rcvr_byte == 0x00 else "SUB"
+            rs.receiver(which).freq = bcd_decode(frame.data[1:6])
+
+    def _handle_26(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x26: dual-RX mode by receiver ID + optional data_mode + filter.
+        if len(frame.data) >= 2:
+            from .types import Mode
+
+            rcvr_byte = frame.data[0]
+            which = "MAIN" if rcvr_byte == 0x00 else "SUB"
+            tgt = rs.receiver(which)
+            tgt.mode = Mode(frame.data[1]).name
+            if len(frame.data) >= 3:
+                tgt.data_mode = frame.data[2]
+            if len(frame.data) >= 4:
+                tgt.filter = frame.data[3]
+
+    def _handle_27(
+        self,
+        frame: CivFrame,
+        rx: Any,
+        rs: "RadioState",
+        slot_override: str | None,
+    ) -> None:
+        # cmd 0x27: scope control (11 sub-subs).
+        scope = rs.scope_controls
+        if frame.sub == 0x12:
+            scope.receiver = parse_scope_main_sub_response(frame)
+        elif frame.sub == 0x13:
+            scope.dual = parse_scope_single_dual_response(frame)
+        elif frame.sub == 0x14:
+            receiver, mode = parse_scope_mode_response(frame)
+            if receiver is not None:
+                scope.receiver = receiver
+            scope.mode = mode
+        elif frame.sub == 0x15:
+            receiver, span = parse_scope_span_response(frame)
+            if receiver is not None:
+                scope.receiver = receiver
+            scope.span = span
+        elif frame.sub == 0x16:
+            receiver, edge = parse_scope_edge_response(frame)
+            if receiver is not None:
+                scope.receiver = receiver
+            scope.edge = edge
+        elif frame.sub == 0x17:
+            receiver, hold = parse_scope_hold_response(frame)
+            if receiver is not None:
+                scope.receiver = receiver
+            scope.hold = hold
+        elif frame.sub == 0x19:
+            receiver, ref_db = parse_scope_ref_response(frame)
+            if receiver is not None:
+                scope.receiver = receiver
+            scope.ref_db = ref_db
+        elif frame.sub == 0x1A:
+            receiver, speed = parse_scope_speed_response(frame)
+            if receiver is not None:
+                scope.receiver = receiver
+            scope.speed = speed
+        elif frame.sub == 0x1B:
+            scope.during_tx = parse_scope_during_tx_response(frame)
+        elif frame.sub == 0x1C:
+            receiver, center_type = parse_scope_center_type_response(frame)
+            if receiver is not None:
+                scope.receiver = receiver
+            scope.center_type = center_type
+        elif frame.sub == 0x1D:
+            receiver, vbw_narrow = parse_scope_vbw_response(frame)
+            if receiver is not None:
+                scope.receiver = receiver
+            scope.vbw_narrow = vbw_narrow
+        elif frame.sub == 0x1E:
+            scope.fixed_edge = parse_scope_fixed_edge_response(frame)
+            scope.edge = scope.fixed_edge.edge
+        elif frame.sub == 0x1F:
+            receiver, rbw = parse_scope_rbw_response(frame)
+            if receiver is not None:
+                scope.receiver = receiver
+            scope.rbw = rbw
+
+    # Top-level dispatch table for ``_update_radio_state_from_frame``.
+    # Keyed by ``frame.command``; sub-cmd dispatch lives inside each
+    # handler. 0x03/0x00 (freq) and 0x04/0x01 (mode) share handlers
+    # because the unsolicited transceive variants have identical state
+    # mutations as their GET-response counterparts.
+    _RADIO_STATE_HANDLERS: dict[int, Any] = {
+        0x00: _handle_freq,
+        0x01: _handle_mode,
+        0x03: _handle_freq,
+        0x04: _handle_mode,
+        0x07: _handle_07,
+        0x0E: _handle_0e,
+        0x0F: _handle_0f,
+        0x10: _handle_10,
+        0x11: _handle_11,
+        0x12: _handle_12,
+        0x14: _handle_14,
+        0x15: _handle_15,
+        0x16: _handle_16,
+        0x1A: _handle_1a,
+        0x1B: _handle_1b,
+        0x1C: _handle_1c,
+        0x1E: _handle_1e,
+        0x21: _handle_21,
+        0x25: _handle_25,
+        0x26: _handle_26,
+        0x27: _handle_27,
+    }
 
     def _notify_change(self, event_name: str, data: dict[str, Any]) -> None:
         """Notify server of state change (best-effort)."""
