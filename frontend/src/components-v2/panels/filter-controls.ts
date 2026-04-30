@@ -5,8 +5,12 @@ export const FILTER_WIDTH_MAX = 3600;
 export const FILTER_WIDTH_STEP = 50;
 
 // PBT raw <-> display conversion
-// Reads range from capabilities if available, falls back to IC-7610 defaults
-import { getControlRange } from '$lib/stores/capabilities.svelte';
+// Reads range from capabilities if available, falls back to IC-7610 defaults.
+// Routed through the runtime capabilities adapter (Tier 2 batch 2) so this
+// helper no longer reaches into `$lib/stores/*` directly. The adapter
+// returns `null` when capabilities haven't loaded; the try/catch keeps the
+// helper safe in tests where the runtime is absent.
+import { getControlRange } from '$lib/runtime/adapters/capabilities-adapter';
 
 // Default PBT range (IC-7610 / standard CI-V)
 const PBT_DEFAULTS = { rawCenter: 128, displayMin: -1200, displayMax: 1200 } as const;

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { makeAudioRoutingHandlers } from '../wiring/command-bus';
-  import { receiverLabel } from '$lib/stores/capabilities.svelte';
+  import { getReceiverLabel } from '$lib/runtime/adapters/capabilities-adapter';
 
   type AudioFocus = 'main' | 'sub' | 'both';
 
@@ -37,8 +37,8 @@
   }
 
   const FOCUS_OPTIONS: Array<{ value: AudioFocus; label: string }> = [
-    { value: 'main', label: receiverLabel('MAIN') },
-    { value: 'sub', label: receiverLabel('SUB') },
+    { value: 'main', label: getReceiverLabel('MAIN') },
+    { value: 'sub', label: getReceiverLabel('SUB') },
     { value: 'both', label: 'Both' },
   ];
 </script>
@@ -70,7 +70,7 @@
   </button>
 
   <label class="gain-row">
-    <span class="gain-label">{receiverLabel('MAIN')}</span>
+    <span class="gain-label">{getReceiverLabel('MAIN')}</span>
     <input
       type="range"
       min="-60"
@@ -84,7 +84,7 @@
   </label>
 
   <label class="gain-row">
-    <span class="gain-label">{receiverLabel('SUB')}</span>
+    <span class="gain-label">{getReceiverLabel('SUB')}</span>
     <input
       type="range"
       min="-60"

@@ -156,7 +156,7 @@ describe('getNeedleMarks POWER', () => {
 // MeterPanel component
 // ---------------------------------------------------------------------------
 
-vi.mock('$lib/stores/capabilities.svelte', () => ({
+vi.mock('$lib/runtime/adapters/capabilities-adapter', () => ({
   getMeterCalibration: vi.fn(() => null),
   getMeterRedline: vi.fn(() => null),
 }));

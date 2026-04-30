@@ -1,4 +1,12 @@
-import { getMeterCalibration, getMeterRedline } from '$lib/stores/capabilities.svelte';
+// Capability-derived calibration and redline data is routed through the
+// runtime adapter (Tier 2 batch 2) so this helper no longer reaches into
+// `$lib/stores/*` directly. The adapter returns `null` when capabilities
+// haven't loaded — formatters fall back to the hardcoded IC-7610 knots
+// defined below.
+import {
+  getMeterCalibration,
+  getMeterRedline,
+} from '$lib/runtime/adapters/capabilities-adapter';
 
 export type MeterSource = 'S' | 'SWR' | 'POWER' | 'po';
 

@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MeterPanel`, `TxPanel` no longer import from `$lib/stores/capabilities`
   directly; capability flags now flow via panel-props from the wiring layer.
   Tier 2 batch 1 of #1063.
+- **Batch 2 of panel→adapter migration (#1245).** New `capabilities-adapter.ts`
+  centralizes capability-derived state. `RfFrontEnd`, `AudioRoutingControl`,
+  and the `filter-controls.ts` / `meter-utils.ts` helpers no longer import
+  `$lib/stores/capabilities` directly. Tier 2 batch 2 of #1063.
 - **Batch 3 of panel→adapter migration (#1246).** `AudioSpectrumPanel`,
   `MemoryPanel`, `AmberTelemetryStrip`, `VfoControlPanel` no longer import
   from `$lib/stores/*` directly; live radio state now flows via per-panel

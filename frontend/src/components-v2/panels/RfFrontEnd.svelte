@@ -3,8 +3,7 @@
   import DualParamRenderer from '../controls/value-control/DualParamRenderer.svelte';
   import AttenuatorControl from '../controls/AttenuatorControl.svelte';
   import { HardwareButton } from '$lib/Button';
-  import { hasCapability, getAttValues, getAttLabels, getPreValues, getPreLabels } from '$lib/stores/capabilities.svelte';
-  import { buildPreOptions, shouldShowPanel } from './rf-frontend-utils';
+  import { shouldShowPanel } from './rf-frontend-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
 
   import { deriveRfFrontEndProps, getRfFrontEndHandlers } from '$lib/runtime/adapters/panel-adapters';
@@ -25,18 +24,18 @@
   const onDigiSelToggle = handlers.onDigiSelToggle;
   const onIpPlusToggle = handlers.onIpPlusToggle;
 
-  let showRfGain = $derived(hasCapability('rf_gain'));
-  let showSquelch = $derived(hasCapability('squelch'));
-  let showAtt = $derived(hasCapability('attenuator'));
-  let showPre = $derived(hasCapability('preamp'));
-  let showDigiSel = $derived(hasCapability('digisel'));
-  let showIpPlus = $derived(hasCapability('ip_plus'));
+  let showRfGain = $derived(p.showRfGain);
+  let showSquelch = $derived(p.showSquelch);
+  let showAtt = $derived(p.showAtt);
+  let showPre = $derived(p.showPre);
+  let showDigiSel = $derived(p.showDigiSel);
+  let showIpPlus = $derived(p.showIpPlus);
   let showRfSqlDual = $derived(showRfGain && showSquelch);
   let visible = $derived(shouldShowPanel(showRfGain, showAtt, showPre, showSquelch));
 
-  let attValues = $derived(getAttValues());
-  let attLabels = $derived(getAttLabels());
-  let preOptions = $derived(buildPreOptions(getPreValues(), getPreLabels()));
+  let attValues = $derived(p.attValues);
+  let attLabels = $derived(p.attLabels);
+  let preOptions = $derived(p.preOptions);
   const rfGainShortcut = getShortcutHint('adjust_rf_gain');
   const attShortcut = getShortcutHint('cycle_att');
   const preShortcut = getShortcutHint('cycle_preamp');

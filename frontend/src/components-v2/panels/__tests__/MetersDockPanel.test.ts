@@ -15,6 +15,8 @@ import {
 
 vi.mock('$lib/stores/capabilities.svelte', () => ({
   hasTx: vi.fn(() => true),
+}));
+vi.mock('$lib/runtime/adapters/capabilities-adapter', () => ({
   getMeterCalibration: vi.fn(() => null),
   getMeterRedline: vi.fn(() => null),
 }));

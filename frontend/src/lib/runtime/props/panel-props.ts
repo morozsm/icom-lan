@@ -132,6 +132,11 @@ export function toVfoOpsProps(
 
 /* ── RF Front End ────────────────────────────────────────────── */
 
+export interface PreOption {
+  value: number;
+  label: string;
+}
+
 export interface RfFrontEndProps {
   rfGain: number;
   squelch: number;
@@ -140,7 +145,21 @@ export interface RfFrontEndProps {
   digiSel: boolean;
   ipPlus: boolean;
   attValues: number[];
+  attLabels: Record<string, string>;
   preValues: number[];
+  preOptions: PreOption[];
+  showRfGain: boolean;
+  showSquelch: boolean;
+  showAtt: boolean;
+  showPre: boolean;
+  showDigiSel: boolean;
+  showIpPlus: boolean;
+}
+
+function formatPreLabel(level: number, labels: Record<string, string>): string {
+  const key = String(level);
+  if (key in labels) return labels[key];
+  return level === 0 ? 'OFF' : `P${level}`;
 }
 
 export function toRfFrontEndProps(
@@ -148,6 +167,10 @@ export function toRfFrontEndProps(
   caps: Capabilities | null,
 ): RfFrontEndProps {
   const rx = state ? activeRx(state) : null;
+  const attValues = caps?.attValues ?? [0, 6, 12, 18];
+  const attLabels = caps?.attLabels ?? {};
+  const preValues = caps?.preValues ?? [0, 1, 2];
+  const preLabels = caps?.preLabels ?? {};
   return {
     rfGain: rx?.rfGain ?? 255,
     squelch: rx?.squelch ?? 0,
@@ -155,8 +178,19 @@ export function toRfFrontEndProps(
     digiSel: rx?.digisel ?? false,
     ipPlus: rx?.ipplus ?? false,
     pre: rx?.preamp ?? 0,
-    attValues: caps?.attValues ?? [0, 6, 12, 18],
-    preValues: caps?.preValues ?? [0, 1, 2],
+    attValues,
+    attLabels,
+    preValues,
+    preOptions: preValues.map((value) => ({
+      value,
+      label: formatPreLabel(value, preLabels),
+    })),
+    showRfGain: hasCap(caps, 'rf_gain'),
+    showSquelch: hasCap(caps, 'squelch'),
+    showAtt: hasCap(caps, 'attenuator'),
+    showPre: hasCap(caps, 'preamp'),
+    showDigiSel: hasCap(caps, 'digisel'),
+    showIpPlus: hasCap(caps, 'ip_plus'),
   };
 }
 
