@@ -14,15 +14,19 @@ from collections.abc import Callable
 from enum import StrEnum
 from typing import ClassVar
 
-from ._bounded_queue import BoundedQueue
-from ._queue_pressure import PRESSURE_THRESHOLD
+from icom_lan._bounded_queue import BoundedQueue
+from icom_lan._queue_pressure import PRESSURE_THRESHOLD
 from .exceptions import TimeoutError as _TimeoutError
 from .types import HEADER_SIZE, PacketType
 
 __all__ = [
+    "BUFSIZE",
+    "CONTROL_SIZE",
     "ConnectionState",
     "IcomTransport",
+    "MAX_MISSING",
     "PACKET_QUEUE_MAXSIZE",
+    "PING_SIZE",
     "PRESSURE_THRESHOLD",
 ]
 
