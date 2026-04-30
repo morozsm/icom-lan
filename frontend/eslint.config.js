@@ -44,6 +44,50 @@ const FORBIDDEN_RUNTIME_IMPORTS = {
   ],
 };
 
+/**
+ * Panel-specific lockdown (Tier 2 — issue #1241).
+ *
+ * After all 18 panels migrated to adapters across batches 1-5
+ * (#1244, #1245, #1246, #1247, #1248), the boundary is enforced at lint time.
+ * Panels must route store reads through `lib/runtime/adapters/*` (state + commands).
+ *
+ * Note: this is panel-only on purpose. Other presentation layers (layout, display,
+ * meters, vfo, controls, skins) have their own Tier-N migrations tracked under #1063.
+ */
+const FORBIDDEN_PANEL_IMPORTS = {
+  patterns: [
+    {
+      group: ['$lib/stores/*', '$lib/stores', '**/lib/stores/*', '**/lib/stores'],
+      message:
+        'Panels must not import from $lib/stores/* — route via lib/runtime/adapters/* instead. ' +
+        'See docs/plans/2026-04-29-panel-adapter-migration.md and ADR 2026-04-12.',
+    },
+    {
+      group: ['$lib/transport/*', '**/lib/transport/*'],
+      message:
+        'Presentation components must not import transport modules (sendCommand, getChannel). ' +
+        'Use callback props from the adapter/wiring layer instead. ' +
+        'See ADR 2026-04-12.',
+    },
+    {
+      group: ['**/lib/audio/audio-manager'],
+      message:
+        'Presentation components must not import audioManager directly (relative paths included). ' +
+        'Use callback props from the adapter/wiring layer instead. ' +
+        'See ADR 2026-04-12.',
+    },
+  ],
+  paths: [
+    {
+      name: '$lib/audio/audio-manager',
+      message:
+        'Presentation components must not import audioManager directly. ' +
+        'Use callback props from the adapter/wiring layer instead. ' +
+        'See ADR 2026-04-12.',
+    },
+  ],
+};
+
 export default [
   // ── Global ignores ──
   {
@@ -115,6 +159,21 @@ export default [
     ],
     rules: {
       'no-restricted-imports': ['error', FORBIDDEN_RUNTIME_IMPORTS],
+    },
+  },
+
+  // ── Import boundary: panels (Tier 2 lockdown — issue #1241) ──
+  // Adds `$lib/stores/*` to the panel-specific ban list. All 18 panels were migrated
+  // to adapters across batches 1-5 (#1244, #1245, #1246, #1247, #1248); this block
+  // freezes the boundary so it cannot regress. Other presentation layers retain the
+  // looser FORBIDDEN_RUNTIME_IMPORTS rule until their own tier migrates (#1063).
+  {
+    files: [
+      'src/components-v2/panels/**/*.svelte',
+      'src/components-v2/panels/**/*.ts',
+    ],
+    rules: {
+      'no-restricted-imports': ['error', FORBIDDEN_PANEL_IMPORTS],
     },
   },
 
