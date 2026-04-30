@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`_fetch_initial_state` extracted to `radio_initial_state.py` (#1260).**
+  ~75 LOC moved out of `radio.py` god-object; `IcomRadio._fetch_initial_state`
+  is now a thin delegator. Public API unchanged. Final Tier 3 wave 3 sub-issue
+  of #1063.
 - **`_reconnect_loop` / `_watchdog_loop` extracted to `radio_reconnect.py`
   (#1259).** ~130 LOC moved out of `radio.py` god-object; `IcomRadio` methods
   remain as thin delegators. Public API unchanged. Tier 3 wave 3 of #1063.
