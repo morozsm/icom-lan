@@ -7,9 +7,9 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from .civ import CivEvent, CivEventType, iter_civ_frames, request_key_from_frame
-from .commander import IcomCommander, Priority
-from .commands import (
+from icom_lan.civ import CivEvent, CivEventType, iter_civ_frames, request_key_from_frame
+from icom_lan.commander import IcomCommander, Priority
+from icom_lan.commands import (
     CONTROLLER_ADDR,
     parse_bool_response,
     parse_civ_frame,
@@ -30,13 +30,13 @@ from .commands import (
     parse_scope_speed_response,
     parse_scope_vbw_response,
 )
-from .exceptions import ConnectionError, TimeoutError
-from .scope import ScopeFrame
-from .types import CivFrame
+from icom_lan.exceptions import ConnectionError, TimeoutError
+from icom_lan.scope import ScopeFrame
+from icom_lan.types import CivFrame
 
 if TYPE_CHECKING:
     from ._runtime_protocols import CivRuntimeHost
-    from .radio_state import RadioState
+    from icom_lan.radio_state import RadioState
 
 logger = logging.getLogger(__name__)
 
@@ -689,7 +689,7 @@ class CivRuntime:
                 and frame.data
                 and _rx is not None
             ):
-                from .commands import _bcd_decode_value, filter_index_to_hz
+                from icom_lan.commands import _bcd_decode_value, filter_index_to_hz
 
                 filter_index = _bcd_decode_value(frame.data)
                 profile = getattr(host, "_profile", None)
@@ -723,7 +723,7 @@ class CivRuntime:
                     self._notify_change("dual_watch_changed", {"on": bool(val07)})
             elif frame.command == 0x21:
                 if frame.sub == 0x00 and len(frame.data) >= 3:
-                    from .commands import parse_rit_frequency_response
+                    from icom_lan.commands import parse_rit_frequency_response
 
                     hz = parse_rit_frequency_response(frame.data)
                     self._notify_change("rit_freq_changed", {"hz": hz})
@@ -1055,7 +1055,7 @@ class CivRuntime:
                 bcd_bytes=1,
             )
         if sub == 0x03 and frame.data:
-            from .commands import _bcd_decode_value, filter_index_to_hz
+            from icom_lan.commands import _bcd_decode_value, filter_index_to_hz
 
             filter_index = _bcd_decode_value(frame.data)
             profile = getattr(self._host, "_profile", None)
@@ -1108,7 +1108,7 @@ class CivRuntime:
     ) -> None:
         # cmd 0x1B: tone/TSQL freq (frequency-encoded).
         if len(frame.data) >= 3:
-            from .commands import _decode_tone_freq
+            from icom_lan.commands import _decode_tone_freq
 
             freq_hz = _decode_tone_freq(frame.data)
             freq_centihz = round(freq_hz * 100)
@@ -1144,8 +1144,8 @@ class CivRuntime:
     ) -> None:
         # cmd 0x1E: TX band edge (sub 0x01, payload ≥ 10 bytes).
         if frame.sub == 0x01 and len(frame.data) >= 10:
-            from .commands.tx_band import parse_tx_band_edge_response
-            from .radio_state import TxBandEdge
+            from icom_lan.commands.tx_band import parse_tx_band_edge_response
+            from icom_lan.radio_state import TxBandEdge
 
             start_hz, end_hz = parse_tx_band_edge_response(frame.data)
             tx_edge = TxBandEdge(start_hz=start_hz, end_hz=end_hz)
@@ -1161,7 +1161,7 @@ class CivRuntime:
     ) -> None:
         # cmd 0x21: RIT freq, on/off, tx status.
         if frame.sub == 0x00 and len(frame.data) >= 3:
-            from .commands import parse_rit_frequency_response
+            from icom_lan.commands import parse_rit_frequency_response
 
             rs.rit_freq = parse_rit_frequency_response(frame.data)
         elif frame.sub == 0x01 and frame.data:
@@ -1178,7 +1178,7 @@ class CivRuntime:
     ) -> None:
         # cmd 0x25: dual-RX freq by receiver ID.
         if len(frame.data) >= 6:
-            from .types import bcd_decode
+            from icom_lan.types import bcd_decode
 
             rcvr_byte = frame.data[0]
             which = "MAIN" if rcvr_byte == 0x00 else "SUB"
@@ -1193,7 +1193,7 @@ class CivRuntime:
     ) -> None:
         # cmd 0x26: dual-RX mode by receiver ID + optional data_mode + filter.
         if len(frame.data) >= 2:
-            from .types import Mode
+            from icom_lan.types import Mode
 
             rcvr_byte = frame.data[0]
             which = "MAIN" if rcvr_byte == 0x00 else "SUB"
