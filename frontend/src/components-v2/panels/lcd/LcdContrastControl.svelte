@@ -7,7 +7,7 @@
     setLcdContrastPreset,
     stepLcdContrast,
     type LcdContrastPreset,
-  } from '$lib/stores/lcd-contrast.svelte';
+  } from '$lib/runtime/adapters/lcd-chrome-adapter';
 
   // LCD contrast control — extracted from AmberLcdDisplay per issue #861.
   // Presets + Shift+[/] keyboard shortcut preserved verbatim from #833.

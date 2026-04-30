@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MemoryPanel`, `AmberTelemetryStrip`, `VfoControlPanel` no longer import
   from `$lib/stores/*` directly; live radio state now flows via per-panel
   adapters in `panel-adapters.ts`. Tier 2 batch 3 of #1063.
+- **Batch 4 of panel→adapter migration (#1247).** New `lcd-chrome-adapter.ts`
+  and `qsy-history-adapter.ts` plus an `amberScopeProps()` adapter migrate
+  `LcdContrastControl`, `LcdDisplayModeControl`, `AmberMemoryStrip`, and
+  `AmberScope` off direct `$lib/stores/*` imports. Tier 2 batch 4 of #1063.
 
 ### Docs
 

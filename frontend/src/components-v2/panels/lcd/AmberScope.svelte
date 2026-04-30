@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { radio } from '$lib/stores/radio.svelte';
-  import { hasAudioFft, hasDualReceiver, getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
+  import { deriveAmberScopeProps } from '$lib/runtime/adapters/panel-adapters';
   import {
     toTxProps, toRitXitProps, toVfoOpsProps, toDspProps, toFilterProps,
   } from '../../wiring/state-adapter';
@@ -48,8 +47,10 @@
     return AGC_LABELS[agcMode] ?? `${agcMode}`;
   }
 
-  let radioState = $derived(radio.current);
-  let caps = $derived(getCapabilities());
+  let scopeProps = $derived(deriveAmberScopeProps());
+  let radioState = $derived(scopeProps.radioState);
+  let caps = $derived(scopeProps.caps);
+  let hasCap = $derived(scopeProps.hasCapability);
 
   let tx = $derived(toTxProps(radioState, null));
   let ritXit = $derived(toRitXitProps(radioState, null));
@@ -96,16 +97,16 @@
       id: 'tx', label: 'TX', active: tx.txActive,
       variant: tx.txActive ? 'tx' : undefined,
     },
-    ...(hasCapability('vox') ? [{ id: 'vox' as const, label: 'VOX', active: tx.voxActive }] : []),
-    ...(hasCapability('compressor') ? [{
+    ...(hasCap('vox') ? [{ id: 'vox' as const, label: 'VOX', active: tx.voxActive }] : []),
+    ...(hasCap('compressor') ? [{
       id: 'proc' as const,
       label: tx.compActive ? `PROC ${tx.compLevel}` : 'PROC',
       active: tx.compActive,
     }] : []),
-    ...(hasCapability('attenuator') ? [{
+    ...(hasCap('attenuator') ? [{
       id: 'att' as const, label: 'ATT', active: (rx?.att ?? 0) > 0,
     }] : []),
-    ...(hasCapability('preamp') ? [{
+    ...(hasCap('preamp') ? [{
       id: 'pre' as const,
       label: (rx?.preamp ?? 0) === 0 ? 'IPO'
            : (rx?.preamp ?? 0) === 1 ? 'AMP1' : 'AMP2',
@@ -115,23 +116,23 @@
 
   // dspTokens: RX processing (NB/NR/NOTCH/ANF/RFG)
   let dspTokens = $derived<IndToken[]>([
-    ...(hasCapability('nb') ? [{
+    ...(hasCap('nb') ? [{
       id: 'nb' as const,
       label: (rx?.nb ?? false) || (rx?.nbLevel ?? 0) > 0
         ? `NB ${rx?.nbLevel ?? 0}` : 'NB',
       active: (rx?.nb ?? false) || (rx?.nbLevel ?? 0) > 0,
     }] : []),
-    ...(hasCapability('nr') ? [{
+    ...(hasCap('nr') ? [{
       id: 'nr' as const,
       label: (rx?.nr ?? false) || (rx?.nrLevel ?? 0) > 0
         ? `NR ${rx?.nrLevel ?? 0}` : 'NR',
       active: (rx?.nr ?? false) || (rx?.nrLevel ?? 0) > 0,
     }] : []),
-    ...(hasCapability('notch') ? [
+    ...(hasCap('notch') ? [
       { id: 'notch' as const, label: 'NOTCH', active: rx?.manualNotch ?? false },
       { id: 'anf' as const, label: 'ANF', active: rx?.autoNotch ?? false },
     ] : []),
-    ...(hasCapability('rf_gain') ? [{
+    ...(hasCap('rf_gain') ? [{
       id: 'rfg' as const, label: 'RFG', active: (rx?.rfGain ?? 255) < 255,
     }] : []),
   ]);
@@ -139,12 +140,12 @@
   // globalTokens: AGC/SQL/LOCK/SPLIT/RIT
   let globalTokens = $derived<IndToken[]>([
     { id: 'agc' as const, label: `AGC ${agcLabelFor(rx?.agc ?? 2)}`, active: true },
-    ...(hasCapability('squelch') ? [{
+    ...(hasCap('squelch') ? [{
       id: 'sql' as const, label: 'SQL', active: (rx?.squelch ?? 0) > 0,
     }] : []),
-    ...(hasCapability('dial_lock') ? [{ id: 'lock' as const, label: 'LOCK', active: lockActive }] : []),
-    ...(hasCapability('split') ? [{ id: 'split' as const, label: 'SPLIT', active: vfoOps.splitActive }] : []),
-    ...(hasCapability('rit') ? [{
+    ...(hasCap('dial_lock') ? [{ id: 'lock' as const, label: 'LOCK', active: lockActive }] : []),
+    ...(hasCap('split') ? [{ id: 'split' as const, label: 'SPLIT', active: vfoOps.splitActive }] : []),
+    ...(hasCap('rit') ? [{
       id: 'rit' as const, label: 'RIT', active: ritXit.ritActive,
     }] : []),
   ]);
@@ -153,11 +154,11 @@
   let fftPixels = $state<Uint8Array | null>(null);
   let fftBandwidth = $state<number | undefined>(undefined);
   let fftPush: ((data: Uint8Array) => void) | null = null;
-  let showFft = $derived(hasAudioFft());
+  let showFft = $derived(scopeProps.hasAudioFft);
 
   // Scope subscription — delegates lifecycle to ScopeController (ADR INV-2, INV-5)
   $effect(() => {
-    if (!hasAudioFft()) return;
+    if (!scopeProps.hasAudioFft) return;
 
     return runtime.scope.subscribe((frame) => {
       fftPixels = frame.pixels;
@@ -199,7 +200,7 @@
       </div>
 
       <!-- VFO B row (sub receiver — compact, dual-RX only) -->
-      {#if hasDualReceiver()}
+      {#if scopeProps.hasDualReceiver}
         <div class="vfo-row vfo-row-b" class:inactive={!isBActive}>
           <span class="vfo-tag vfo-tag-sub">►B</span>
           <div class="vfo-freq">

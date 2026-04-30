@@ -14,7 +14,7 @@
     getLcdDisplayMode,
     setLcdDisplayMode,
     type LcdDisplayMode,
-  } from '$lib/stores/lcd-display-mode.svelte';
+  } from '$lib/runtime/adapters/lcd-chrome-adapter';
 
   let mode = $state<LcdDisplayMode>(getLcdDisplayMode());
 

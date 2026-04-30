@@ -23,6 +23,11 @@ import {
   makeTxHandlers, makeFilterHandlers, makeBandHandlers,
   makePresetHandlers,
 } from '../commands/panel-commands';
+import {
+  hasAudioFft, hasDualReceiver, hasCapability,
+} from '$lib/stores/capabilities.svelte';
+import type { ServerState } from '$lib/types/state';
+import type { Capabilities } from '$lib/types/capabilities';
 
 // Re-export types for panel imports
 export type {
@@ -138,4 +143,27 @@ export function deriveAmberTelemetryProps() {
 // ── VFO Control Panel ──
 export function deriveVfoControlProps() {
   return toVfoControlProps(runtime.state, runtime.caps);
+}
+
+// ── AmberScope (LCD skin) ──
+// Bundles radio.current + capabilities reads for the AmberScope panel
+// so it doesn't import `$lib/stores/*` directly. AmberScope has ~12
+// `hasCapability(name)` checks; we expose the function on props rather
+// than inflate the type with a dozen booleans. See audit Cluster B.
+export interface AmberScopeProps {
+  radioState: ServerState | null;
+  caps: Capabilities | null;
+  hasAudioFft: boolean;
+  hasDualReceiver: boolean;
+  hasCapability: (name: string) => boolean;
+}
+
+export function deriveAmberScopeProps(): AmberScopeProps {
+  return {
+    radioState: runtime.state,
+    caps: runtime.caps,
+    hasAudioFft: hasAudioFft(),
+    hasDualReceiver: hasDualReceiver(),
+    hasCapability,
+  };
 }

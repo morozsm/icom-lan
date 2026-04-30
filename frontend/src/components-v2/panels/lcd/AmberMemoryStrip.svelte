@@ -17,7 +17,7 @@
   Part of #836 / epic #818 LCD aux-row content.
 -->
 <script lang="ts">
-  import { qsyHistory } from '$lib/stores/qsy-history.svelte';
+  import { deriveQsyRecent } from '$lib/runtime/adapters/qsy-history-adapter';
 
   interface Props {
     /** Invoked when a recent-QSY chip is tapped. Parent routes to runtime. */
@@ -28,7 +28,7 @@
 
   // Show last 3 entries, newest-first.
   let recentQsy = $derived<{ freqHz: number; mode: string; at: number }[]>(
-    qsyHistory.recent.slice(-3).reverse() as { freqHz: number; mode: string; at: number }[],
+    deriveQsyRecent().slice(-3).reverse() as { freqHz: number; mode: string; at: number }[],
   );
 
   // Memory slots — placeholder until a store lands.
