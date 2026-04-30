@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`_civ_rx._update_radio_state_from_frame` decomposed into table-driven
+  dispatch (#1257).** The 400-line if/elif over CI-V commands now dispatches
+  via `_HANDLERS: dict[int, Callable]`; each branch is a small private
+  handler. Behavior preserved — verified by 72 golden-test fixtures (#1266).
+  Also collapsed dead code at lines 1082-1093 (second `elif cmd == 0x12`
+  block, shadowed by first occurrence). Tier 3 wave 2 of #1063.
 - **Method/path routing extracted from `web/server.py` into `web_routing.py`
   (#1262).** The route dispatch — previously inline in `WebServer` — now lives
   in a dedicated module; `WebServer` delegates. Public API unchanged. Tier 3
