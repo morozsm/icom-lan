@@ -294,14 +294,30 @@ The per-step prompt for each Phase 4 sub-agent will follow the
 template in the brief's §"Phase 4". Below: scope, dependencies, and
 the verification gate for each step.
 
-#### Step 1 — Skeleton
+#### Step 1 — Skeleton + lazy-resolution contract test
 
-- **Scope:** create empty packages `core/`, `profiles/`, `runtime/`,
-  `scope/`, `cli/`. Each gets a stub `__init__.py` with a docstring
-  pointing at the relevant `LAYER.md` (LAYER.md files come in
-  Phase 5; the docstring placeholder is fine).
-- **Acceptance:** `tests/` collect 5210; `mypy src/` clean; `ruff
-  check` clean. No imports change yet.
+- **Scope:**
+  1. Create empty packages `core/`, `profiles/`, `runtime/`,
+     `scope/`, `cli/`. Each gets a stub `__init__.py` with a
+     docstring pointing at the relevant `LAYER.md` (LAYER.md files
+     come in Phase 5; the docstring placeholder is fine).
+  2. Create `tests/contracts/test_lazy_imports.py` with three test
+     functions (`test_tier1_names_resolve`,
+     `test_tier2_lazy_names_resolve`, `test_audio_lazy_names_resolve`)
+     enumerating the hard-coded name lists transcribed from
+     `discovery-artifacts/init-snapshot.md`. Structure per §6.1.
+- **Acceptance:** `tests/` collect 5210 + N (where N = number of
+  contract tests added — should equal 3 if the test functions are
+  not parametrised, or 60 + 28 + audio-count if they are);
+  `mypy src/` clean; `ruff check` clean. The new contract test
+  passes against the *current* (pre-migration) layout — this locks
+  the public-API surface as a baseline before any file moves.
+
+The contract test file is the single source of truth for the
+public-API surface throughout the migration. Steps 2–13 each rely
+on it as part of their pytest gate; no separate `--smoke-check`
+invocation exists or should be added. Drift risk = zero by
+construction (one source, one runner).
 
 #### Step 2 — `core` foundationals
 
@@ -532,40 +548,109 @@ becomes a tautology that asserts nothing useful. The whole point of
 the test is to detect a missing name; that requires the name list to
 live OUTSIDE the loader.
 
-**Location.** Extend `tests/test_public_api_surface.py` (which
-already enumerates the 48 Tier 1 names verbatim, see commit
-`15c54b94`). Add a parametrised test that walks the 28 Tier 2 names
-plus the audio Tier 2 names. This keeps everything in one
-public-API-surface file and runs as part of the standard pytest
-gate — no separate script invocation needed.
+**Location.** A new file `tests/contracts/test_lazy_imports.py`
+under a new `tests/contracts/` package. Contract tests are a
+distinct category from the unit tests in `tests/` — what they
+guard is the *public API contract*, not implementation behaviour.
+Three test functions:
 
-> Note on path: the maintainer's review proposed
-> `scripts/smoke_check_lazy_imports.py`, but `scripts/` is
-> `.gitignore`'d in this repo (per `.gitignore:73`, "Dev scripts with
-> local credentials"). Putting the smoke check inside the test
-> suite is functionally equivalent (hard-coded names, fails by name)
-> and ergonomically superior (auto-runs in pytest). If a standalone
-> script is preferred, the natural location is
-> `tools/smoke_check_lazy_imports.py` with a corresponding
-> `.gitignore` exception, but the test-suite location is the
-> recommendation.
+```python
+# tests/contracts/test_lazy_imports.py
+"""
+Contract test: every public name in icom_lan's Tier 1 + Tier 2 lazy
+API must resolve via PEP 562 __getattr__.
 
-**When committed.** Step 1 of Phase 4 (skeleton step) — adding a
-test that documents the *current* public surface costs nothing and
-locks the contract before any file moves.
+This test is a hard acceptance gate during the modularization effort
+(see docs/plans/2026-04-29-modularization-plan.md §6 R1). It also
+serves as a permanent guard against accidental public API removal.
 
-**Failure mode.** If a migration step accidentally drops a name,
-pytest reports something like
-`AssertionError: 'IcomCommander' is not importable from icom_lan`.
-The sub-agent has the exact missing symbol; resolution is to inspect
+The name lists below are intentionally hardcoded — do NOT compute
+them from icom_lan._LAZY_MAP. The point of the test is to fail
+loudly when a name disappears, not to reflect the current state of
+the lazy map.
+
+Source of truth: docs/plans/discovery-artifacts/init-snapshot.md
+"""
+
+TIER1_NAMES = [
+    "Radio", "IcomRadio",
+    # ... full 60-name list verbatim from init-snapshot.md
+]
+
+TIER2_LAZY_NAMES = [
+    "IcomCommander", "Priority",
+    # ... full 28-name list verbatim from init-snapshot.md
+]
+
+AUDIO_LAZY_NAMES = [
+    # ... full list from icom_lan.audio's __all__ + LAZY_MAP, verbatim
+]
+
+
+def test_tier1_names_resolve():
+    import icom_lan
+    for name in TIER1_NAMES:
+        assert hasattr(icom_lan, name), (
+            f"Tier 1 public API regression: icom_lan.{name} no longer "
+            f"resolves. This is a breaking change to the public API. "
+            f"Check the migration plan and re-export shims."
+        )
+
+
+def test_tier2_lazy_names_resolve():
+    import icom_lan
+    for name in TIER2_LAZY_NAMES:
+        assert hasattr(icom_lan, name), (
+            f"Tier 2 lazy resolution regression: icom_lan.{name} "
+            f"failed to resolve via __getattr__. Either the LAZY_MAP "
+            f"target is wrong or the canonical module is missing."
+        )
+
+
+def test_audio_lazy_names_resolve():
+    import icom_lan.audio
+    for name in AUDIO_LAZY_NAMES:
+        assert hasattr(icom_lan.audio, name), (
+            f"icom_lan.audio.{name} failed to resolve. Check audio "
+            f"package _LAZY_MAP and re-export shims."
+        )
+```
+
+**Why a new file, not an extension of `tests/test_public_api_surface.py`.**
+The existing file (commit `15c54b94`) tests two things — that 48
+Tier 1 names import cleanly, AND that they don't transitively pull
+tier-3 modules. The transitive-import invariant uses
+`subprocess.run` to start a clean interpreter; bolting Tier 2 +
+audio onto that file would mix concerns and inflate its scope. A
+sibling under `tests/contracts/` keeps the contract-test category
+isolated and grep-able.
+
+**No standalone script.** A `tools/`- or `scripts/`-level Python
+script with the same hardcoded lists would be a parallel source of
+truth and drift risk; the rule is one source, one runner. Pytest
+already gates every PR; running `uv run pytest tests/contracts/
+-v` is a fast (sub-second) isolated invocation if a sub-agent
+needs spot verification mid-step.
+
+**When committed.** Step 1 of Phase 4 (the skeleton step) commits
+this file with the hardcoded lists as Python literals. From that
+point on, every subsequent step's pytest gate exercises it
+automatically — no extra wiring per step.
+
+**Failure mode.** A missing name causes a clear pytest assertion:
+`AssertionError: Tier 2 lazy resolution regression:
+icom_lan.IcomCommander failed to resolve via __getattr__. …`. The
+sub-agent has the exact missing symbol; resolution is to inspect
 the latest move's shim file or `_LAZY_MAP` entry.
 
-**Source list:**
+**Source list.**
 [`./discovery-artifacts/init-snapshot.md`](./discovery-artifacts/init-snapshot.md)
-holds the verbatim `__all__` for both `icom_lan/__init__.py` (60
-names) and `icom_lan/audio/__init__.py` (and contains the data the
-test enumerates). The Phase 4 Step 1 sub-agent transcribes these
-lists into the test file as Python literals.
+holds the verbatim `__all__` for both `icom_lan/__init__.py` and
+`icom_lan/audio/__init__.py`. The Step 1 sub-agent transcribes
+those lists into `TIER1_NAMES`, `TIER2_LAZY_NAMES`, and
+`AUDIO_LAZY_NAMES` as Python literals. The Tier 1 / Tier 2 split
+is read off the comments in `icom_lan/__init__.py` itself
+(`# === Tier 1 — eager` … `# === Tier 2 — lazy`).
 
 ### 6.2 Function-local import preservation — explicit no-touch list
 
