@@ -523,7 +523,7 @@ class TestWebServerDXBroadcast:
         )
         srv = WebServer(None, config)
 
-        with patch("icom_lan.web.server.DXClusterClient") as MockClient:
+        with patch("icom_lan.web.web_startup.DXClusterClient") as MockClient:
             mock_instance = MagicMock()
             mock_instance.start = AsyncMock()
             mock_instance.stop = AsyncMock()

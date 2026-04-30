@@ -50,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   18 panels migrated to adapters across batches 1-5, the boundary is now
   enforced at lint time. Tests remain exempt for mocking purposes. Closes
   Tier 2 of #1063.
+- **`WebServer.start()` / `stop()` orchestration extracted to `web_startup.py`
+  (#1261).** The 200+ LOC of startup/shutdown logic now lives in a dedicated
+  module; `WebServer.start()` / `stop()` are thin delegators. Public API
+  unchanged. Tier 3 wave 4 of #1063.
 
 ### Docs
 

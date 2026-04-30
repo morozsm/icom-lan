@@ -135,10 +135,10 @@ async def test_start_and_stop_with_radio_sets_callbacks() -> None:
     srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
     with (
         patch(
-            "icom_lan.web.server.asyncio.start_server",
+            "icom_lan.web.web_startup.asyncio.start_server",
             new=AsyncMock(return_value=fake_server),
         ),
-        patch("icom_lan.web.server.RadioPoller", return_value=fake_poller),
+        patch("icom_lan.web.web_startup.RadioPoller", return_value=fake_poller),
     ):
         await srv.start()
         assert srv.port == 4242
@@ -182,11 +182,11 @@ async def test_start_aborts_before_listening_when_radio_not_ready() -> None:
 
     with (
         patch(
-            "icom_lan.web.server.assert_radio_startup_ready",
+            "icom_lan.web.web_startup.assert_radio_startup_ready",
             side_effect=RuntimeError("web startup aborted"),
         ),
         patch(
-            "icom_lan.web.server.asyncio.start_server", new=AsyncMock()
+            "icom_lan.web.web_startup.asyncio.start_server", new=AsyncMock()
         ) as start_server,
     ):
         with pytest.raises(RuntimeError, match="web startup aborted"):

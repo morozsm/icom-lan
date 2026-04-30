@@ -29,7 +29,7 @@ import pathlib
 import urllib.parse
 from dataclasses import dataclass, field
 from collections.abc import Coroutine
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from .. import __version__
 from .._bounded_queue import BoundedQueue
@@ -39,7 +39,7 @@ from ..audio_analyzer import AudioAnalyzer
 from ..audio_fft_scope import AudioFftScope
 from ..startup_checks import assert_radio_startup_ready
 from ._delta_encoder import DeltaEncoder  # noqa: TID251
-from .discovery import DiscoveryResponder, RadioInfo  # noqa: TID251
+from .discovery import DiscoveryResponder  # noqa: TID251
 from .dx_cluster import DXClusterClient, SpotBuffer  # noqa: TID251
 from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, ScopeHandler  # noqa: TID251
 from .rtc import handle_rtc_offer, rtc_capability_info, webrtc_available  # noqa: TID251
@@ -917,129 +917,9 @@ class WebServer:
 
     async def start(self) -> None:
         """Start the HTTP/WS listener and RadioPoller (if radio is connected)."""
-        # Load band plan TOML files
-        # Try project-level band-plans/ directory first, then package fallback
-        from pathlib import Path
+        from .web_startup import start_web_server  # noqa: TID251
 
-        project_bp = Path(__file__).resolve().parents[3] / "band-plans"
-        if project_bp.is_dir():
-            self._band_plan.load(project_bp)
-        else:
-            logger.info("band-plan: no band-plans/ directory found")
-
-        # Load EiBi cache if available (non-blocking)
-        try:
-            result = await self._eibi.load_cache()
-            if result.get("status") == "ok":
-                logger.info(
-                    "eibi: loaded %d stations from cache (season %s)",
-                    self._eibi.station_count,
-                    self._eibi.season,
-                )
-        except Exception:
-            logger.debug("eibi: no cache to load at startup")
-
-        ssl_ctx = None
-        if self._config.tls:
-            from .tls import build_ssl_context  # noqa: TID251
-
-            ssl_ctx = build_ssl_context(
-                cert_path=self._config.tls_cert or None,
-                key_path=self._config.tls_key or None,
-            )
-
-        assert_radio_startup_ready(self._radio, component="web startup")
-
-        self._server = await asyncio.start_server(
-            self._accept_client,
-            host=self._config.host,
-            port=self._config.port,
-            ssl=ssl_ctx,
-            reuse_address=True,
-            reuse_port=True,
-        )
-        addr = self._server.sockets[0].getsockname()
-        scheme = "https" if ssl_ctx else "http"
-        logger.info("web server listening on %s://%s:%d", scheme, addr[0], addr[1])
-        if self._radio is not None:
-            from ..radio_protocol import StateNotifyCapable
-
-            # --- Yaesu CAT backend: use YaesuCatPoller (request-response) ---
-            _is_yaesu = getattr(self._radio, "backend_id", None) == "yaesu_cat"
-
-            if _is_yaesu:
-                from ..backends.yaesu_cat.poller import YaesuCatPoller
-
-                def _yaesu_state_cb(state: "RadioState") -> None:
-                    self._radio_state = state
-                    self._broadcast_state_update()
-
-                from ..backends.yaesu_cat.radio import YaesuCatRadio as _YaesuCatRadio
-
-                self._yaesu_poller = YaesuCatPoller(
-                    cast(_YaesuCatRadio, self._radio),
-                    callback=_yaesu_state_cb,
-                    command_queue=self._command_queue,
-                )
-                self._spawn(self._yaesu_poller.start())
-                logger.info("Yaesu CAT poller started")
-            else:
-                # --- Icom CI-V backend: fire-and-forget RadioPoller ---
-                if isinstance(self._radio, StateNotifyCapable):
-                    # Register callback so CI-V RX stream can notify us of state changes.
-                    self._radio.set_state_change_callback(self._on_radio_state_change)
-                    # Re-enable scope after soft_reconnect (CI-V stream reset loses scope state)
-                    self._radio.set_reconnect_callback(self._on_radio_reconnect)
-                self._radio_poller = RadioPoller(
-                    self._radio,
-                    self._command_queue,
-                    on_state_event=self._on_poller_state_event,
-                    radio_state=self._radio_state,
-                )
-                self._radio_poller.start()
-            if _supports_scope(self._radio):
-                self._scope_health_task = asyncio.get_running_loop().create_task(
-                    self._scope_health_monitor(), name="scope-health"
-                )
-        self._zombie_reaper_task = asyncio.get_running_loop().create_task(
-            self._zombie_reaper(), name="zombie-reaper"
-        )
-        if self._config.dx_cluster_host:
-            self._dx_client = DXClusterClient(
-                self._config.dx_cluster_host,
-                self._config.dx_cluster_port,
-                self._config.dx_callsign,
-                on_spot=self._broadcast_dx_spot,
-            )
-            self._dx_client_task = asyncio.get_running_loop().create_task(
-                self._dx_client.start(), name="dx-cluster"
-            )
-            logger.info(
-                "dx-cluster: connecting to %s:%d as %s",
-                self._config.dx_cluster_host,
-                self._config.dx_cluster_port,
-                self._config.dx_callsign,
-            )
-
-        # Start UDP discovery responder
-        if self._config.discovery:
-            radio = self._radio
-
-            def _radio_provider() -> RadioInfo | None:
-                if radio is None:
-                    return None
-                return RadioInfo(
-                    model=getattr(radio, "model", None) or self._config.radio_model,
-                    connected=bool(getattr(radio, "connected", False)),
-                )
-
-            self._discovery = DiscoveryResponder(
-                web_port=self._config.port,
-                tls=self._config.tls,
-                radio_provider=_radio_provider,
-                discovery_port=self._config.discovery_port,
-            )
-            await self._discovery.start()
+        await start_web_server(self)
 
     # ------------------------------------------------------------------
     # Audio Bridge (virtual device integration)
@@ -1106,83 +986,9 @@ class WebServer:
 
     async def stop(self) -> None:
         """Close the listener, stop RadioPoller, disconnect radio, cancel tasks."""
-        # 1. Stop poller first (no more CI-V queries)
-        if self._radio_poller is not None:
-            self._radio_poller.stop()
-            self._radio_poller = None
-        if self._yaesu_poller is not None:
-            try:
-                await asyncio.wait_for(self._yaesu_poller.stop(), timeout=2.0)
-            except TimeoutError:
-                logger.warning("yaesu poller stop timed out")
-            self._yaesu_poller = None
+        from .web_startup import stop_web_server  # noqa: TID251
 
-        # 2. Stop audio relay (stops AudioBus subscription → stop_audio_rx_opus)
-        try:
-            await asyncio.wait_for(self._audio_broadcaster._stop_relay(), timeout=2.0)
-        except (TimeoutError, Exception) as exc:
-            logger.warning("audio relay stop: %s", exc)
-        if self._audio_bridge is not None:
-            await self.stop_audio_bridge()
-
-        # 3. Stop discovery responder
-        if self._discovery is not None:
-            await self._discovery.stop()
-            self._discovery = None
-
-        # 4. Stop DX cluster
-        if self._dx_client is not None:
-            await self._dx_client.stop()
-            self._dx_client = None
-        if self._dx_client_task is not None:
-            self._dx_client_task.cancel()
-            try:
-                await self._dx_client_task
-            except asyncio.CancelledError:
-                pass
-            self._dx_client_task = None
-
-        # 5. Cancel housekeeping tasks
-        for task in (
-            self._zombie_reaper_task,
-            self._scope_health_task,
-            self._scope_reenable_task,
-        ):
-            if task is not None:
-                task.cancel()
-        self._zombie_reaper_task = None
-        self._scope_health_task = None
-        self._scope_reenable_task = None
-
-        # 6. Cancel all background + client tasks first
-        all_tasks = list(self._bg_tasks) + list(self._client_tasks)
-        for task in all_tasks:
-            task.cancel()
-
-        # 7. Close TCP listener (now that client tasks are cancelled,
-        #    wait_closed() won't block on open connections)
-        if self._server is not None:
-            self._server.close()
-            try:
-                await asyncio.wait_for(self._server.wait_closed(), timeout=2.0)
-            except TimeoutError:
-                logger.warning("server.wait_closed() timed out after 2s")
-            self._server = None
-
-        # 8. Wait for cancelled tasks to finish (with timeout)
-        if all_tasks:
-            try:
-                await asyncio.wait_for(
-                    asyncio.gather(*all_tasks, return_exceptions=True),
-                    timeout=3.0,
-                )
-            except TimeoutError:
-                logger.warning("tasks did not finish in 3s, continuing shutdown")
-        self._bg_tasks.clear()
-
-        # Radio disconnect is handled by the caller's context manager
-        # (async with radio: in _run). Do NOT disconnect here.
-        logger.info("web server stopped")
+        await stop_web_server(self)
 
     async def serve_forever(self) -> None:
         """Start and block until cancelled.  Handles SIGTERM/SIGINT gracefully."""
