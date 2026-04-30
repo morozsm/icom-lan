@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import { initBatteryMonitor } from './lib/utils/battery';
   import RadioLayoutV2 from './components-v2/layout/RadioLayout.svelte';
-  import ControlButtonDemo from './components-v2/controls/ControlButtonDemo.svelte';
   import LocalExtensionsHost from './lib/local-extensions/LocalExtensionsHost.svelte';
   import { initMediaSession, destroyMediaSession } from './lib/media/media-session';
   import { runtime } from './lib/runtime/frontend-runtime';
@@ -73,7 +72,9 @@
 </script>
 
 {#if demoMode === 'control-buttons'}
-  <ControlButtonDemo />
+  {#await import('./components-v2/controls/ControlButtonDemo.svelte') then mod}
+    <mod.default />
+  {/await}
 {:else if backendError}
   <div class="error-overlay" role="alert" aria-live="assertive">
     <div class="error-box">
