@@ -98,6 +98,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and functions from `frontend/src/lib/local-extensions/{host-api,manifest}.ts`
   with breakage policy. Closes the contract-visibility gap identified
   during the strategic-context analysis.
+- **New `docs/architecture/open-core-policy.md` (#1276).** Codifies hard
+  constraints on icom-lan as the open-core half of a planned commercial
+  product: no telemetry, headless sacred, no hollowing out, Radio protocol
+  + `local-extensions/` as the Pro boundary, frontend WebKitGTK-floor
+  compatibility. CLAUDE.md gains a one-line cross-link.
 - **Panel → adapter migration plan (#1240).** Doc at
   `docs/plans/2026-04-29-panel-adapter-migration.md` inventories the 18
   remaining panels with direct `$lib/stores/*` imports, groups them into

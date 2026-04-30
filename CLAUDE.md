@@ -42,6 +42,8 @@ Never bare `python` or `pytest`. Worktrees: `uv sync --all-extras` first.
 - eslint `no-restricted-imports` enforces: panels/layouts cannot import `$lib/transport/*` or `$lib/audio/audio-manager`
 - ADR: `docs/plans/2026-04-12-target-frontend-architecture.md`
 
+**Open-core constraints:** see `docs/architecture/open-core-policy.md` — no telemetry, headless sacred, no hollowing out, Pro boundary at Radio protocol + `local-extensions/`.
+
 ---
 
 ## Testing
