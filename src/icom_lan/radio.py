@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
     from ._runtime_protocols import ControlPhaseHost
 
+from . import radio_reconnect as _reconnect
 from . import radio_state_snapshot as _state_snapshot
 from ._audio_recovery import AudioRecoveryRuntime, AudioRecoveryState
 from ._audio_runtime_mixin import AudioRuntimeMixin
@@ -261,7 +262,7 @@ from .commands import set_repeater_tsql as _set_repeater_tsql_cmd
 from .commands import set_tone_freq as _set_tone_freq_cmd
 from .commands import set_tsql_freq as _set_tsql_freq_cmd
 from .commands import set_vfo as _select_vfo_cmd
-from .exceptions import AuthenticationError, CommandError, TimeoutError
+from .exceptions import CommandError, TimeoutError
 from .meter_cal import interpolate_swr
 from .profiles import RadioProfile, resolve_radio_profile
 from .radio_state import RadioState
@@ -1224,134 +1225,12 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     # ------------------------------------------------------------------
 
     async def _watchdog_loop(self) -> None:
-        """Monitor connection health via transport packet queue activity.
-
-        If no packets are received for ``watchdog_timeout`` seconds,
-        triggers a reconnect attempt.
-
-        Reference: wfview icomudpaudio.cpp watchdog() — 30s timeout.
-        """
-        last_activity = time.monotonic()
-        last_health_log = time.monotonic()
-        last_rx_count = self._ctrl_transport.rx_packet_count
-        last_civ_count = (
-            self._civ_transport.rx_packet_count if self._civ_transport else 0
-        )
-        try:
-            while self._connected:
-                await asyncio.sleep(self.WATCHDOG_CHECK_INTERVAL)
-                if not self._connected:
-                    break
-
-                # Check if any transport has received new packets since last check
-                ctrl_count = self._ctrl_transport.rx_packet_count
-                civ_count = (
-                    self._civ_transport.rx_packet_count if self._civ_transport else 0
-                )
-                if ctrl_count != last_rx_count or civ_count != last_civ_count:
-                    last_activity = time.monotonic()
-                    last_rx_count = ctrl_count
-                    last_civ_count = civ_count
-
-                now = time.monotonic()
-                idle = now - last_activity
-
-                # Periodic health status log
-                if now - last_health_log >= self._WATCHDOG_HEALTH_LOG_INTERVAL:
-                    logger.info(
-                        "Transport health: ctrl_rx=%d civ_rx=%d idle=%.1fs",
-                        ctrl_count,
-                        civ_count,
-                        idle,
-                    )
-                    last_health_log = now
-
-                if idle > self._watchdog_timeout:
-                    logger.warning(
-                        "Watchdog: no activity for %.1fs, triggering reconnect",
-                        idle,
-                    )
-                    self._conn_state = RadioConnectionState.RECONNECTING
-                    self._civ_runtime.advance_generation("watchdog-timeout")
-                    self._reconnect_task = asyncio.create_task(self._reconnect_loop())
-                    return
-        except asyncio.CancelledError:
-            pass
+        """Monitor connection health (delegates to ``radio_reconnect``)."""
+        await _reconnect.watchdog_loop(self)
 
     async def _reconnect_loop(self) -> None:
-        """Attempt to reconnect with exponential backoff."""
-        delay = self._reconnect_delay
-        attempt = 0
-        try:
-            while self._conn_state != RadioConnectionState.DISCONNECTED:
-                attempt += 1
-                logger.info("Reconnect attempt %d (delay=%.1fs)", attempt, delay)
-                try:
-                    self._civ_runtime.advance_generation("reconnect-attempt")
-                    # Capture audio state for auto-recovery.
-                    audio_snapshot = self._audio_runtime.capture_snapshot()
-                    # Clean up old transports
-                    self._stop_token_renewal()
-                    if self._audio_stream is not None:
-                        try:
-                            await self._audio_stream.stop_rx()
-                            await self._audio_stream.stop_tx()
-                        except Exception:
-                            logger.debug(
-                                "reconnect: audio_stream stop failed", exc_info=True
-                            )
-                        self._audio_stream = None
-                    if self._audio_transport is not None:
-                        try:
-                            await self._audio_transport.disconnect()
-                        except Exception:
-                            logger.debug(
-                                "reconnect: audio_transport disconnect failed",
-                                exc_info=True,
-                            )
-                        self._audio_transport = None
-                    if self._civ_transport is not None:
-                        try:
-                            await self._civ_transport.disconnect()
-                        except Exception:
-                            logger.debug(
-                                "reconnect: civ_transport disconnect failed",
-                                exc_info=True,
-                            )
-                        self._civ_transport = None
-                    try:
-                        await self._send_token(0x01)
-                    except Exception:
-                        logger.debug("reconnect: token remove failed", exc_info=True)
-                    try:
-                        await self._ctrl_transport.disconnect()
-                    except Exception:
-                        logger.debug(
-                            "reconnect: ctrl_transport disconnect failed", exc_info=True
-                        )
-
-                    # Re-initialize transport
-                    self._ctrl_transport = IcomTransport()
-                    await self.connect()
-                    logger.info("Reconnected successfully after %d attempts", attempt)
-                    if self._auto_recover_audio and audio_snapshot is not None:
-                        await self._audio_runtime.recover(audio_snapshot)
-                    return
-                except (AuthenticationError, ValueError, TypeError) as exc:
-                    logger.error(
-                        "Reconnect aborted — permanent error after %d attempt(s): %s",
-                        attempt,
-                        exc,
-                    )
-                    self._conn_state = RadioConnectionState.DISCONNECTED
-                    return
-                except Exception as exc:
-                    self._conn_state = RadioConnectionState.RECONNECTING
-                    logger.warning("Reconnect attempt %d failed: %s", attempt, exc)
-                    await asyncio.sleep(delay)
-                    delay = min(delay * 2, self._reconnect_max_delay)
-        except asyncio.CancelledError:
-            logger.info("Reconnect cancelled")
+        """Attempt to reconnect with exponential backoff (delegates)."""
+        await _reconnect.reconnect_loop(self)
 
     # ------------------------------------------------------------------
     # Public CI-V API
