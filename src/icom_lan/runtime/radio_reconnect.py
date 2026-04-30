@@ -18,14 +18,14 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from ._connection_state import RadioConnectionState
-from .exceptions import AuthenticationError
-from .transport import IcomTransport
+from icom_lan._connection_state import RadioConnectionState
+from icom_lan.exceptions import AuthenticationError
+from icom_lan.transport import IcomTransport
 
 if TYPE_CHECKING:
     # Internal implementation module for IcomRadio — the TID251 ban targets
     # external consumers (web/, rigctld/), not radio.py's own helpers.
-    from .radio import IcomRadio  # type: ignore[attr-defined]  # noqa: TID251
+    from icom_lan.radio import IcomRadio  # type: ignore[attr-defined]  # noqa: TID251
 
 logger = logging.getLogger(__name__)
 

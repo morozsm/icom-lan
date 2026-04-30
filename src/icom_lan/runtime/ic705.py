@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .profiles_runtime import OperatingProfile, apply_profile
-from .types import ScopeCompletionPolicy
+from icom_lan.profiles_runtime import OperatingProfile, apply_profile
+from icom_lan.types import ScopeCompletionPolicy
 
 
 async def prepare_ic705_data_profile(

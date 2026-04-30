@@ -18,12 +18,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, cast
 
-from .types import Mode
+from icom_lan.types import Mode
 
 if TYPE_CHECKING:
     # Internal implementation module for IcomRadio — the TID251 ban targets
     # external consumers (web/, rigctld/), not radio.py's own helpers.
-    from .radio import IcomRadio  # type: ignore[attr-defined]  # noqa: TID251
+    from icom_lan.radio import IcomRadio  # type: ignore[attr-defined]  # noqa: TID251
 
 logger = logging.getLogger(__name__)
 
