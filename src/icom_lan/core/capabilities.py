@@ -10,6 +10,7 @@ __all__ = [
     "CAP_AUDIO",
     "CAP_DUAL_RX",
     "CAP_DUAL_WATCH",
+    "CAP_LAN_DUAL_RX_AUDIO_ROUTING",
     "CAP_AF_LEVEL",
     "CAP_RF_GAIN",
     "CAP_SQUELCH",
