@@ -1,0 +1,600 @@
+[
+  {
+    "name": "cmd03_freq_main_with_slot_override_B",
+    "comment": "0x03 freq response routed to vfo_b when host._vfo_slot_override[MAIN]='B'",
+    "host_setup": {"vfo_slot_override": {"MAIN": "B"}},
+    "frame": {"command": 3, "sub": null, "data": "0004581400"},
+    "expected_state": {
+      "main.vfo_b.freq_hz": 14580400,
+      "main.vfo_a.freq_hz": 0
+    }
+  },
+  {
+    "name": "cmd03_freq_main_with_slot_override_A",
+    "comment": "0x03 freq response routed to vfo_a explicitly when override='A'",
+    "host_setup": {"vfo_slot_override": {"MAIN": "A"}},
+    "frame": {"command": 3, "sub": null, "data": "0000952100"},
+    "expected_state": {
+      "main.vfo_a.freq_hz": 21950000,
+      "main.vfo_b.freq_hz": 0
+    }
+  },
+  {
+    "name": "cmd04_mode_with_slot_override_B_full",
+    "comment": "0x04 mode+filter routed to vfo_b under slot override; covers filter branch (line 800)",
+    "host_setup": {"vfo_slot_override": {"MAIN": "B"}},
+    "frame": {"command": 4, "sub": null, "data": "0302"},
+    "expected_state": {
+      "main.vfo_b.mode": "CW",
+      "main.vfo_b.filter_num": 2,
+      "main.vfo_a.mode": "USB"
+    }
+  },
+  {
+    "name": "cmd04_mode_with_slot_override_A_no_filter",
+    "comment": "0x04 mode-only (1-byte data) routed to vfo_a under override; filt is None",
+    "host_setup": {"vfo_slot_override": {"MAIN": "A"}},
+    "frame": {"command": 4, "sub": null, "data": "05"},
+    "expected_state": {
+      "main.vfo_a.mode": "FM",
+      "main.vfo_a.filter_num": null
+    }
+  },
+  {
+    "name": "cmd04_invalid_mode_byte_swallowed",
+    "comment": "0x04 with invalid Mode byte raises ValueError inside dispatch — caught by inner except (line 1143)",
+    "frame": {"command": 4, "sub": null, "data": "ff"},
+    "expected_state": {
+      "main.mode": "USB"
+    }
+  },
+  {
+    "name": "cmd15_sub05_sql_open_active_main",
+    "comment": "0x15/0x05 SQL open flag (alternate sub for s_meter_sql_open)",
+    "frame": {"command": 21, "sub": 5, "data": "01"},
+    "expected_state": {
+      "main.s_meter_sql_open": true
+    }
+  },
+  {
+    "name": "cmd15_sub11_power_meter",
+    "comment": "0x15/0x11 power meter raw value (BCD pair → 0..9999)",
+    "frame": {"command": 21, "sub": 17, "data": "0150"},
+    "expected_state": {
+      "power_meter": 150
+    }
+  },
+  {
+    "name": "cmd15_sub13_alc_meter",
+    "comment": "0x15/0x13 ALC meter raw value",
+    "frame": {"command": 21, "sub": 19, "data": "0080"},
+    "expected_state": {
+      "alc_meter": 80
+    }
+  },
+  {
+    "name": "cmd15_sub14_comp_meter",
+    "comment": "0x15/0x14 compressor meter raw value",
+    "frame": {"command": 21, "sub": 20, "data": "0123"},
+    "expected_state": {
+      "comp_meter": 123
+    }
+  },
+  {
+    "name": "cmd15_sub15_vd_meter",
+    "comment": "0x15/0x15 supply voltage meter",
+    "frame": {"command": 21, "sub": 21, "data": "0241"},
+    "expected_state": {
+      "vd_meter": 241
+    }
+  },
+  {
+    "name": "cmd15_sub16_id_meter",
+    "comment": "0x15/0x16 drain current meter",
+    "frame": {"command": 21, "sub": 22, "data": "0089"},
+    "expected_state": {
+      "id_meter": 89
+    }
+  },
+  {
+    "name": "cmd14_sub09_cw_pitch",
+    "comment": "0x14/0x09 CW pitch (computed from raw via 600/255 mapping then snapped to 5 Hz)",
+    "frame": {"command": 20, "sub": 9, "data": "0128"},
+    "expected_state": {
+      "cw_pitch": 600
+    }
+  },
+  {
+    "name": "cmd14_sub0c_key_speed",
+    "comment": "0x14/0x0C key speed (WPM derived from raw/6.071 + 6, rounded)",
+    "frame": {"command": 20, "sub": 12, "data": "0128"},
+    "expected_state": {
+      "key_speed": 27
+    }
+  },
+  {
+    "name": "cmd16_sub40_nr_on_with_notify",
+    "comment": "0x16/0x40 NR receiver-bool field (notify path also exercised)",
+    "frame": {"command": 22, "sub": 64, "data": "01"},
+    "expected_state": {
+      "main.nr": true
+    }
+  },
+  {
+    "name": "cmd16_sub44_compressor_global_bool",
+    "comment": "0x16/0x44 global compressor_on (covers _CMD16_GLOBAL_BOOL_FIELDS branch)",
+    "frame": {"command": 22, "sub": 68, "data": "01"},
+    "expected_state": {
+      "compressor_on": true
+    }
+  },
+  {
+    "name": "cmd16_sub47_break_in_global_value",
+    "comment": "0x16/0x47 global value (break_in 0..2)",
+    "frame": {"command": 22, "sub": 71, "data": "02"},
+    "expected_state": {
+      "break_in": 2
+    }
+  },
+  {
+    "name": "cmd1A_sub03_filter_width_no_profile",
+    "comment": "0x1A/0x03 filter index → raw filter_width when host has no segmented profile (lines 1023-1025)",
+    "host_setup": {"clear_profile": true},
+    "frame": {"command": 26, "sub": 3, "data": "21"},
+    "expected_state": {
+      "main.filter_width": 21
+    }
+  },
+  {
+    "name": "cmd1A_sub03_filter_width_segmented_profile",
+    "comment": "0x1A/0x03 filter index → resolved Hz via IC-7610 segmented profile (USB rule). Covers lines 1009-1022.",
+    "frame": {"command": 26, "sub": 3, "data": "21"},
+    "expected_state": {
+      "main.filter_width": 1700
+    }
+  },
+  {
+    "name": "cmd1B_sub00_tone_freq_centihz",
+    "comment": "0x1B/0x00 repeater tone freq → centihz (88.5 Hz → 8850)",
+    "frame": {"command": 27, "sub": 0, "data": "008805"},
+    "expected_state": {
+      "main.tone_freq": 8850
+    }
+  },
+  {
+    "name": "cmd1B_sub01_tsql_freq_centihz",
+    "comment": "0x1B/0x01 TSQL freq → centihz (123.0 Hz → 12300)",
+    "frame": {"command": 27, "sub": 1, "data": "012300"},
+    "expected_state": {
+      "main.tsql_freq": 12300
+    }
+  },
+  {
+    "name": "cmd1C_sub01_tuner_status",
+    "comment": "0x1C/0x01 tuner status byte",
+    "frame": {"command": 28, "sub": 1, "data": "02"},
+    "expected_state": {
+      "tuner_status": 2
+    }
+  },
+  {
+    "name": "cmd1C_sub03_tx_freq_monitor",
+    "comment": "0x1C/0x03 TX-frequency-monitor flag",
+    "frame": {"command": 28, "sub": 3, "data": "01"},
+    "expected_state": {
+      "tx_freq_monitor": true
+    }
+  },
+  {
+    "name": "cmd21_sub00_rit_freq_positive",
+    "comment": "0x21/0x00 RIT freq +50 Hz",
+    "frame": {"command": 33, "sub": 0, "data": "500000"},
+    "expected_state": {
+      "rit_freq": 50
+    }
+  },
+  {
+    "name": "cmd21_sub00_rit_freq_negative",
+    "comment": "0x21/0x00 RIT freq -123 Hz (sign byte = 0x01)",
+    "frame": {"command": 33, "sub": 0, "data": "230101"},
+    "expected_state": {
+      "rit_freq": -123
+    }
+  },
+  {
+    "name": "cmd21_sub01_rit_on",
+    "comment": "0x21/0x01 RIT enable",
+    "frame": {"command": 33, "sub": 1, "data": "01"},
+    "expected_state": {
+      "rit_on": true
+    }
+  },
+  {
+    "name": "cmd21_sub02_rit_tx",
+    "comment": "0x21/0x02 RIT-during-TX flag",
+    "frame": {"command": 33, "sub": 2, "data": "01"},
+    "expected_state": {
+      "rit_tx": true
+    }
+  },
+  {
+    "name": "cmd0E_scan_running",
+    "comment": "0x0E with sub-byte ≤ 0x23 → scanning=on",
+    "frame": {"command": 14, "sub": null, "data": "23"},
+    "expected_state": {
+      "scanning": true
+    }
+  },
+  {
+    "name": "cmd0E_scan_stopped",
+    "comment": "0x0E with sub-byte 0x00 → scanning=off",
+    "frame": {"command": 14, "sub": null, "data": "00"},
+    "expected_state": {
+      "scanning": false
+    }
+  },
+  {
+    "name": "cmd0E_config_only_above_0x23",
+    "comment": "0x0E with sub-byte > 0x23 (e.g. 0xA1 ΔF span) is config-only — scanning unchanged",
+    "frame": {"command": 14, "sub": null, "data": "a1"},
+    "expected_state": {
+      "scanning": false
+    }
+  },
+  {
+    "name": "cmd10_tuning_step",
+    "comment": "0x10 tuning step decoded from BCD nibble pair",
+    "frame": {"command": 16, "sub": null, "data": "12"},
+    "expected_state": {
+      "tuning_step": 12
+    }
+  },
+  {
+    "name": "cmd1E_sub01_tx_band_edge_appended",
+    "comment": "0x1E/0x01 appends a TxBandEdge to rs.tx_band_edges (5+5 BCD)",
+    "frame": {"command": 30, "sub": 1, "data": "00000014000000504300"},
+    "expected_state": {
+      "tx_band_edges.0.start_hz": 14000000,
+      "tx_band_edges.0.end_hz": 43500000
+    }
+  },
+  {
+    "name": "cmd14_short_data_no_op",
+    "comment": "0x14 with <2 bytes is a no-op (negative branch on len check, line 863).",
+    "frame": {"command": 20, "sub": 1, "data": "00"},
+    "expected_state": {
+      "main.af_level": 0
+    }
+  },
+  {
+    "name": "cmd11_no_data_no_op",
+    "comment": "0x11 with empty data is a no-op (line 886 negative branch).",
+    "frame": {"command": 17, "sub": null, "data": ""},
+    "expected_state": {
+      "main.att": 0
+    }
+  },
+  {
+    "name": "cmd16_sub00_short_data_no_op",
+    "comment": "0x16 wrapper with sub==0 and <2-byte data leaves sub=0; no fields modified (line 910).",
+    "frame": {"command": 22, "sub": 0, "data": ""},
+    "expected_state": {
+      "main.preamp": 0
+    }
+  },
+  {
+    "name": "cmd0F_no_data_no_op",
+    "comment": "0x0F split with empty data is a no-op (line 1108 negative branch).",
+    "frame": {"command": 15, "sub": null, "data": ""},
+    "expected_state": {
+      "split": false
+    }
+  },
+  {
+    "name": "cmd07_short_data_no_op",
+    "comment": "0x07 with <2 bytes does not change active/dual_watch (line 1112 negative).",
+    "frame": {"command": 7, "sub": null, "data": "d2"},
+    "expected_state": {
+      "active": "MAIN",
+      "dual_watch": false
+    }
+  },
+  {
+    "name": "cmd1B_short_data_no_op",
+    "comment": "0x1B with <3 bytes does not write tone freq.",
+    "frame": {"command": 27, "sub": 0, "data": "0088"},
+    "expected_state": {
+      "main.tone_freq": 0
+    }
+  },
+  {
+    "name": "cmd1B_unknown_sub_no_op",
+    "comment": "0x1B with sub not in (0x00, 0x01) — falls through both inner conditionals.",
+    "frame": {"command": 27, "sub": 2, "data": "008805"},
+    "expected_state": {
+      "main.tone_freq": 0,
+      "main.tsql_freq": 0
+    }
+  },
+  {
+    "name": "cmd1C_sub00_no_data_no_op",
+    "comment": "0x1C/0x00 PTT with empty data is a no-op.",
+    "frame": {"command": 28, "sub": 0, "data": ""},
+    "expected_state": {
+      "ptt": false
+    }
+  },
+  {
+    "name": "cmd1C_sub01_no_data_no_op",
+    "comment": "0x1C/0x01 tuner-status with empty data is a no-op.",
+    "frame": {"command": 28, "sub": 1, "data": ""},
+    "expected_state": {
+      "tuner_status": 0
+    }
+  },
+  {
+    "name": "cmd21_unknown_sub_no_op",
+    "comment": "0x21 with sub not 0/1/2 — no field touched.",
+    "frame": {"command": 33, "sub": 3, "data": "01"},
+    "expected_state": {
+      "rit_freq": 0,
+      "rit_on": false,
+      "rit_tx": false
+    }
+  },
+  {
+    "name": "cmd0E_no_data_no_op",
+    "comment": "0x0E with empty data is a no-op.",
+    "frame": {"command": 14, "sub": null, "data": ""},
+    "expected_state": {
+      "scanning": false
+    }
+  },
+  {
+    "name": "cmd10_no_data_no_op",
+    "comment": "0x10 tuning step with empty data is a no-op.",
+    "frame": {"command": 16, "sub": null, "data": ""},
+    "expected_state": {
+      "tuning_step": 0
+    }
+  },
+  {
+    "name": "cmd07_unknown_sub07_byte_no_op",
+    "comment": "0x07 with sub-byte not 0xD2/0xC2 leaves state unchanged.",
+    "frame": {"command": 7, "sub": null, "data": "0001"},
+    "expected_state": {
+      "active": "MAIN",
+      "dual_watch": false
+    }
+  },
+  {
+    "name": "cmd1E_unknown_sub_no_op",
+    "comment": "0x1E with sub != 0x01 is ignored.",
+    "frame": {"command": 30, "sub": 2, "data": "00000014000000504300"},
+    "expected_state": {
+      "tx_band_edges": []
+    }
+  },
+  {
+    "name": "cmd1E_sub01_short_data_no_op",
+    "comment": "0x1E/0x01 with <10 bytes does not append a TxBandEdge (line 1133 negative).",
+    "frame": {"command": 30, "sub": 1, "data": "0000001400"},
+    "expected_state": {
+      "tx_band_edges": []
+    }
+  },
+  {
+    "name": "cmd03_freq_invalid_slot_override_value",
+    "comment": "host._vfo_slot_override with a value other than 'A'/'B' is ignored — covers branch 773→776.",
+    "host_setup": {"vfo_slot_override": {"MAIN": "X"}},
+    "frame": {"command": 3, "sub": null, "data": "0040071400"},
+    "expected_state": {
+      "main.freq": 14074000,
+      "main.vfo_b.freq_hz": 0
+    }
+  },
+  {
+    "name": "cmd1E_sub01_duplicate_edge_not_re_appended",
+    "comment": "0x1E/0x01 — appending an existing TxBandEdge is suppressed (line 1139 negative).",
+    "frame": {"command": 30, "sub": 1, "data": "00000014000000504300"},
+    "host_setup": {"preexisting_tx_band_edge": {"start_hz": 14000000, "end_hz": 43500000}},
+    "expected_state": {
+      "tx_band_edges.0.start_hz": 14000000,
+      "tx_band_edges.0.end_hz": 43500000
+    }
+  },
+  {
+    "name": "cmd04_no_override_one_byte_no_filter",
+    "comment": "0x04 mode-only without slot override — covers `if filt is not None` false branch (line 808).",
+    "frame": {"command": 4, "sub": null, "data": "03"},
+    "expected_state": {
+      "main.mode": "CW",
+      "main.filter": null
+    }
+  },
+  {
+    "name": "cmd26_short_data_no_op",
+    "comment": "0x26 dual-RX mode with <2 bytes is a no-op — covers `len(frame.data) >= 2` false (line 820).",
+    "frame": {"command": 38, "sub": null, "data": "00"},
+    "expected_state": {
+      "main.mode": "USB"
+    }
+  },
+  {
+    "name": "cmd14_unknown_sub_no_op",
+    "comment": "0x14 with sub=0x1F is in none of the field dicts — covers final elif fall-through (line 882).",
+    "frame": {"command": 20, "sub": 31, "data": "0123"},
+    "expected_state": {
+      "main.af_level": 0
+    }
+  },
+  {
+    "name": "cmd12_unknown_sub_no_op",
+    "comment": "0x12 with sub=0x05 is not 0/1 — covers `sub12 in (0x00, 0x01)` false (line 895). RadioState default tx_antenna=1 is preserved.",
+    "frame": {"command": 18, "sub": 5, "data": "01"},
+    "expected_state": {
+      "tx_antenna": 1,
+      "rx_antenna_1": false,
+      "rx_antenna_2": false
+    }
+  },
+  {
+    "name": "cmd12_sub00_no_data",
+    "comment": "0x12/0x00 with empty data — covers `if frame.data` false (line 897); tx_antenna still set.",
+    "frame": {"command": 18, "sub": 0, "data": ""},
+    "expected_state": {
+      "tx_antenna": 1,
+      "rx_antenna_1": false
+    }
+  },
+  {
+    "name": "cmd16_sub12_agc_value_with_notify",
+    "comment": "0x16/0x12 AGC value-field + agc_changed notify — covers value-notify branch (line 931).",
+    "frame": {"command": 22, "sub": 18, "data": "02"},
+    "expected_state": {
+      "main.agc": 2
+    }
+  },
+  {
+    "name": "cmd16_unknown_sub_no_op",
+    "comment": "0x16 with sub=0x10 not in any dict — covers full elif-chain fall-through (line 921+).",
+    "frame": {"command": 22, "sub": 16, "data": "01"},
+    "expected_state": {
+      "main.preamp": 0
+    }
+  },
+  {
+    "name": "cmd1A_sub05_ref_adjust",
+    "comment": "0x1A/0x05 with prefix 00 70 → ref_adjust BCD 2-byte — covers CTL mem prefix loop (line 1027 true).",
+    "frame": {"command": 26, "sub": 5, "data": "00700123"},
+    "expected_state": {
+      "ref_adjust": 123
+    }
+  },
+  {
+    "name": "cmd07_active_already_sub_unchanged",
+    "comment": "0x07 sub-byte 0xD2 with val=1 (SUB) but rs.active already 'SUB' — covers `if rs.active != new_active` false (line 1117).",
+    "host_setup": {"active": "SUB"},
+    "frame": {"command": 7, "sub": null, "data": "d201"},
+    "expected_state": {
+      "active": "SUB"
+    }
+  },
+  {
+    "name": "cmd07_dual_watch_already_on_unchanged",
+    "comment": "0x07 sub-byte 0xC2 with val=1 but rs.dual_watch already True — covers `if rs.dual_watch != new_dw` false (line 1125).",
+    "host_setup": {"dual_watch": true},
+    "frame": {"command": 7, "sub": null, "data": "c201"},
+    "expected_state": {
+      "dual_watch": true
+    }
+  },
+  {
+    "name": "cmd27_unknown_sub_no_op",
+    "comment": "0x27 with unhandled sub=0x20 — exercises last-elif fall-through in scope dispatch.",
+    "frame": {"command": 39, "sub": 32, "data": "00"},
+    "expected_state": {
+      "scope_controls.mode": 0
+    }
+  },
+  {
+    "name": "cmd27_sub14_mode_no_receiver_byte",
+    "comment": "0x27/0x14 scope mode response without receiver prefix — covers `if receiver is not None` false (line 946).",
+    "frame": {"command": 39, "sub": 20, "data": "01"},
+    "expected_state": {
+      "scope_controls.mode": 1
+    }
+  },
+  {
+    "name": "cmd27_sub15_span_no_receiver_byte",
+    "comment": "0x27/0x15 span without receiver prefix — covers line 951 false branch.",
+    "frame": {"command": 39, "sub": 21, "data": "01"},
+    "expected_state": {
+      "scope_controls.span": 1
+    }
+  },
+  {
+    "name": "cmd27_sub16_edge_no_receiver_byte",
+    "comment": "0x27/0x16 edge without receiver prefix — covers line 956 false branch.",
+    "frame": {"command": 39, "sub": 22, "data": "01"},
+    "expected_state": {
+      "scope_controls.edge": 1
+    }
+  },
+  {
+    "name": "cmd27_sub17_hold_no_receiver_byte",
+    "comment": "0x27/0x17 hold without receiver prefix — covers line 961 false branch.",
+    "frame": {"command": 39, "sub": 23, "data": "01"},
+    "expected_state": {
+      "scope_controls.hold": true
+    }
+  },
+  {
+    "name": "cmd27_sub19_ref_no_receiver_byte",
+    "comment": "0x27/0x19 ref_db without receiver prefix — covers line 966 false branch.",
+    "frame": {"command": 39, "sub": 25, "data": "001000"},
+    "expected_state": {
+      "scope_controls.ref_db": 0.1
+    }
+  },
+  {
+    "name": "cmd27_sub1A_speed_no_receiver_byte",
+    "comment": "0x27/0x1A speed without receiver prefix — covers line 971 false branch.",
+    "frame": {"command": 39, "sub": 26, "data": "01"},
+    "expected_state": {
+      "scope_controls.speed": 1
+    }
+  },
+  {
+    "name": "cmd27_sub1C_center_type_no_receiver_byte",
+    "comment": "0x27/0x1C center_type without receiver prefix — covers line 978 false branch.",
+    "frame": {"command": 39, "sub": 28, "data": "01"},
+    "expected_state": {
+      "scope_controls.center_type": 1
+    }
+  },
+  {
+    "name": "cmd27_sub1D_vbw_no_receiver_byte",
+    "comment": "0x27/0x1D vbw_narrow without receiver prefix — covers line 983 false branch.",
+    "frame": {"command": 39, "sub": 29, "data": "01"},
+    "expected_state": {
+      "scope_controls.vbw_narrow": true
+    }
+  },
+  {
+    "name": "cmd27_sub1F_rbw_no_receiver_byte",
+    "comment": "0x27/0x1F rbw without receiver prefix — covers line 991 false branch.",
+    "frame": {"command": 39, "sub": 31, "data": "01"},
+    "expected_state": {
+      "scope_controls.rbw": 1
+    }
+  },
+  {
+    "name": "cmd1A_sub05_no_matching_prefix",
+    "comment": "0x1A/0x05 with data not starting with any known CTL mem prefix — covers `for prefix in …` exit-without-match (line 1027 false).",
+    "frame": {"command": 26, "sub": 5, "data": "ffff0000"},
+    "expected_state": {
+      "ref_adjust": 0,
+      "dash_ratio": 0,
+      "nb_depth": 0
+    }
+  },
+  {
+    "name": "cmd15_unknown_sub_short_data_no_op",
+    "comment": "0x15 with unhandled sub and <2 bytes — covers `len(frame.data) >= 2` false (line 839).",
+    "frame": {"command": 21, "sub": 16, "data": "01"},
+    "expected_state": {
+      "main.s_meter": 0,
+      "power_meter": 0
+    }
+  },
+  {
+    "name": "cmd15_unknown_sub_with_data_no_op",
+    "comment": "0x15 with unhandled sub=0x10 and 2-byte data — covers full inner elif fall-through (line 859 false).",
+    "frame": {"command": 21, "sub": 16, "data": "0150"},
+    "expected_state": {
+      "main.s_meter": 0,
+      "power_meter": 0
+    }
+  }
+]

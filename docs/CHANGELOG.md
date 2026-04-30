@@ -60,6 +60,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   module; `WebServer.start()` / `stop()` are thin delegators. Public API
   unchanged. Tier 3 wave 4 of #1063.
 
+### Tests
+
+- **Golden-test fixtures for `_civ_rx._update_radio_state_from_frame` (#1256).**
+  Added ~20 synthetic frame fixtures and a parametrized dispatch test reaching
+  ~95% branch coverage. Tier 3 wave 1 of #1063 — fences the upcoming
+  table-driven dispatch refactor (#1257).
+
 ### Docs
 
 - **Panel → adapter migration plan (#1240).** Doc at
