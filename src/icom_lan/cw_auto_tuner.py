@@ -31,14 +31,12 @@ _NOISE_FLOOR_DB = -50.0
 
 def _import_numpy() -> Any:
     """Lazy-import numpy to avoid hard dependency at module level."""
-    try:
-        import numpy as np
+    from ._optional_deps import _require_numpy
 
-        return np
-    except ImportError:
-        raise ImportError(
-            "CwAutoTuner requires numpy. Install with: pip install numpy"
-        ) from None
+    _require_numpy()
+    import numpy as np
+
+    return np
 
 
 class CwAutoTuner:

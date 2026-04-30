@@ -17,6 +17,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
+from ._optional_deps import _require_pillow
+
 if TYPE_CHECKING:
     from PIL.Image import Image as PILImage
     from .scope import ScopeFrame
@@ -102,17 +104,6 @@ THEMES: dict[str, _ThemeSpec] = {
         "colormap": _build_colormap(_GRAYSCALE_ANCHORS),
     },
 }
-
-
-def _require_pillow() -> None:
-    """Raise ImportError with install instructions if Pillow is missing."""
-    try:
-        import PIL  # noqa: F401
-    except ImportError:
-        raise ImportError(
-            "Pillow is required for scope rendering. "
-            "Install with: pip install icom-lan[scope]"
-        )
 
 
 # ---------------------------------------------------------------------------

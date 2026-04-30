@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`_require_*()` helpers for optional deps (#1274).** New
+  `src/icom_lan/_optional_deps.py` provides `_require_numpy`,
+  `_require_sounddevice`, `_require_opuslib`, `_require_pillow` (and
+  others where applicable). Ad-hoc `try/except ImportError` blocks across
+  the codebase now share uniform error messages. Closes
+  `05-recommendations.md` PR 3 (Form A enforcement).
 - **`_fetch_initial_state` extracted to `radio_initial_state.py` (#1260).**
   ~75 LOC moved out of `radio.py` god-object; `IcomRadio._fetch_initial_state`
   is now a thin delegator. Public API unchanged. Final Tier 3 wave 3 sub-issue

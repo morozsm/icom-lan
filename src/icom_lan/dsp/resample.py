@@ -20,12 +20,12 @@ __all__ = ["resample_if_needed"]
 
 
 def _import_numpy() -> Any:
-    try:
-        import numpy as _np  # noqa: TID251
+    from .._optional_deps import _require_numpy
 
-        return _np
-    except ImportError as exc:
-        raise ImportError("resample_if_needed requires numpy") from exc
+    _require_numpy()
+    import numpy as _np  # noqa: TID251
+
+    return _np
 
 
 def resample_if_needed(

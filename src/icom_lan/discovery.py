@@ -184,15 +184,12 @@ async def _try_baud(
 
 def _default_open_serial() -> _OpenSerial:
     """Return the real serial_asyncio opener, or raise ImportError with hint."""
-    try:
-        import serial_asyncio  # type: ignore[import-untyped]
+    from ._optional_deps import _require_pyserial_asyncio
 
-        return serial_asyncio.open_serial_connection  # type: ignore[no-any-return]
-    except ImportError as exc:
-        raise ImportError(
-            "CI-V probing requires pyserial-asyncio. "
-            "Install with: pip install icom-lan[serial]"
-        ) from exc
+    _require_pyserial_asyncio()
+    import serial_asyncio  # type: ignore[import-untyped]
+
+    return serial_asyncio.open_serial_connection  # type: ignore[no-any-return]
 
 
 def _parse_probe_response(port: str, baud: int, data: bytes) -> CivProbeResult | None:

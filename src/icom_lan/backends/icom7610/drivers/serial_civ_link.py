@@ -15,10 +15,6 @@ logger = logging.getLogger(__name__)
 _SOF = b"\xfe\xfe"
 _EOF = 0xFD
 _ABORT = 0xFC
-_DEPENDENCY_HINT = (
-    "Serial backend requires optional dependencies pyserial and pyserial-asyncio. "
-    "Install with: pip install icom-lan[serial]"
-)
 
 
 class SerialFrameError(RuntimeError):
@@ -375,11 +371,10 @@ class SerialCivLink:
         return _open
 
     def _ensure_serial_dependencies(self) -> None:
-        try:
-            importlib.import_module("serial")
-            importlib.import_module("serial_asyncio")
-        except ImportError as exc:
-            raise ImportError(_DEPENDENCY_HINT) from exc
+        from icom_lan._optional_deps import _require_pyserial_asyncio
+
+        # pyserial-asyncio depends on pyserial, so a single check covers both.
+        _require_pyserial_asyncio()
 
     def _reset_session_buffers(self) -> None:
         """Drop buffered RX/TX data between sessions."""

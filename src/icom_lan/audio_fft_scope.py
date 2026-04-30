@@ -41,14 +41,12 @@ _DB_CEIL = -15.0  # clipping level dB
 
 def _import_numpy() -> Any:
     """Lazy-import numpy to avoid hard dependency at module level."""
-    try:
-        import numpy as np
+    from ._optional_deps import _require_numpy
 
-        return np
-    except ImportError:
-        raise ImportError(
-            "Audio FFT scope requires numpy. Install with: pip install numpy"
-        ) from None
+    _require_numpy()
+    import numpy as np
+
+    return np
 
 
 class AudioFftScope:

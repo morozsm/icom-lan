@@ -40,6 +40,7 @@ import math
 
 from ._bridge_metrics import BridgeMetrics
 from ._bridge_state import BridgeState, BridgeStateChange
+from ._optional_deps import _require_opuslib, _require_sounddevice
 from .audio.backend import (
     AudioBackend,
     AudioDeviceInfo,
@@ -142,13 +143,8 @@ def find_loopback_device(name: str | None = None) -> dict[str, Any] | None:
         Use :class:`AudioBridge` with an :class:`AudioBackend` instead.
         This function is kept for backward compatibility.
     """
-    try:
-        import sounddevice as sd  # noqa: F401
-    except ImportError:
-        raise ImportError(
-            "sounddevice is required for audio bridge. "
-            "Install with: pip install icom-lan[bridge]"
-        ) from None
+    _require_sounddevice()
+    import sounddevice as sd
 
     devices = sd.query_devices()
     search_names = [name] if name else list(_LOOPBACK_CANDIDATES)
@@ -163,12 +159,8 @@ def find_loopback_device(name: str | None = None) -> dict[str, Any] | None:
 
 def list_audio_devices() -> list[dict[str, Any]]:
     """List all available audio devices."""
-    try:
-        import sounddevice as sd  # noqa: F401
-    except ImportError:
-        raise ImportError(
-            "sounddevice is required. Install with: pip install icom-lan[bridge]"
-        ) from None
+    _require_sounddevice()
+    import sounddevice as sd
 
     return list(sd.query_devices())
 
@@ -415,13 +407,9 @@ class AudioBridge:
         )
 
         if self._is_opus:
-            try:
-                import opuslib
-            except ImportError:
-                raise ImportError(
-                    "opuslib is required for audio bridge with Opus codec. "
-                    "Install with: pip install icom-lan[bridge]"
-                ) from None
+            _require_opuslib()
+            import opuslib
+
             self._decoder = opuslib.Decoder(self._sample_rate, self._channels)
         else:
             self._decoder = None
