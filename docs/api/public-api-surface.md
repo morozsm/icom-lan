@@ -120,6 +120,47 @@ available directly via `from icom_lan import …`.
 
 - `RadioState`, `RadioProfile`, `VfoSlotState`, `YaesuStateExtension`
 
+**Frontend extension host API (Pro-facing)**
+
+The `frontend/src/lib/local-extensions/` module exposes a versioned host API
+that downstream products (notably icom-lan-pro) inject UI extensions through.
+It is a stable Pro-facing contract — treat it as tier 1 in this document.
+
+From `frontend/src/lib/local-extensions/host-api.ts`:
+
+- `LOCAL_EXTENSION_HOST_API_VERSION` (numeric constant, currently `1`)
+- `RadioStateSubscriber` (type)
+- `LocalExtensionHostApiV1` (interface)
+- `LocalExtensionHostDependencies` (interface)
+- `LocalExtensionRegistration` (interface)
+- `LocalExtensionHostWindow` (interface)
+- `createLocalExtensionHostApi` (function)
+- `createDefaultLocalExtensionHostApi` (function)
+- `installLocalExtensionHostApi` (function)
+
+From `frontend/src/lib/local-extensions/manifest.ts`:
+
+- `LOCAL_EXTENSION_MANIFEST_URL` (constant)
+- `LOCAL_EXTENSION_MANIFEST_VERSION` (numeric constant)
+- `LOCAL_EXTENSION_HOST_API_VERSION` (string version, e.g. `"1.0"`,
+  mirrors the numeric constant in `host-api.ts`)
+- `LocalExtensionMount` (type)
+- `LocalExtensionDescriptor` (interface)
+- `LocalExtensionManifest` (interface)
+- `LoadManifestOptions` (interface)
+- `parseLocalExtensionManifest` (function)
+- `loadLocalExtensionManifest` (function)
+
+**Breakage policy.** Additive changes only between major versions. Bump
+`LOCAL_EXTENSION_HOST_API_VERSION` (numeric, in `host-api.ts`) on any
+breaking change to a function signature or interface shape. The string
+version in `manifest.ts` mirrors this and is bumped together. Pro relies
+on this contract — coordinate breaking changes through the icom-lan
+issue tracker before merging.
+
+See also `docs/architecture/open-core-policy.md` (when published as part
+of #1276) for the policy framing.
+
 Example (valid):
 
 ```python

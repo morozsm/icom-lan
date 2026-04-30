@@ -93,6 +93,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs
 
+- **`local-extensions/` host API documented as Tier 1 Pro-facing contract
+  (#1277).** `docs/api/public-api-surface.md` now lists the exported types
+  and functions from `frontend/src/lib/local-extensions/{host-api,manifest}.ts`
+  with breakage policy. Closes the contract-visibility gap identified
+  during the strategic-context analysis.
 - **Panel → adapter migration plan (#1240).** Doc at
   `docs/plans/2026-04-29-panel-adapter-migration.md` inventories the 18
   remaining panels with direct `$lib/stores/*` imports, groups them into
