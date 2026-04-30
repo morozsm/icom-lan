@@ -63,9 +63,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 
 - **Golden-test fixtures for `_civ_rx._update_radio_state_from_frame` (#1256).**
-  Added ~20 synthetic frame fixtures and a parametrized dispatch test reaching
-  ~95% branch coverage. Tier 3 wave 1 of #1063 — fences the upcoming
-  table-driven dispatch refactor (#1257).
+  Added 72 synthetic frame fixtures (`tests/fixtures/civ_rx_frames.json`) and
+  a parametrized dispatch test (`tests/test_civ_rx_dispatch_golden.py`).
+  Combined with the existing `test_civ_rx_coverage.py`, branch coverage of
+  the dispatch ladder (lines 750-1150 of `_civ_rx.py`) reaches 95.4% raw /
+  98.3% excluding the unreachable cmd 0x12 duplicate block at lines 1082-1093.
+  Tier 3 wave 1 of #1063 — fences the upcoming table-driven dispatch refactor
+  (#1257).
 
 ### Docs
 
