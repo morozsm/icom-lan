@@ -585,3 +585,106 @@ export function toScanProps(state: ServerState | null): ScanProps {
     scanResumeMode: (state?.scanResumeMode ?? 0) & 0x0f,
   };
 }
+
+/* ── Audio Spectrum Panel ────────────────────────────────────── */
+
+export interface AudioSpectrumProps {
+  filterWidth: number;
+  filterWidthMax: number;
+  pbtInner: number;
+  pbtOuter: number;
+  manualNotch: boolean;
+  notchFreq: number;
+  contour: number;
+  contourFreq: number;
+}
+
+export function toAudioSpectrumProps(
+  state: ServerState | null,
+  caps: Capabilities | null,
+): AudioSpectrumProps {
+  const rx = state ? activeRx(state) : null;
+  const filterConfig = resolveFilterModeConfig(caps, rx?.mode, rx?.dataMode);
+  const filterWidthMax = filterConfig?.table?.length
+    ? filterConfig.table[filterConfig.table.length - 1]
+    : (filterConfig?.maxHz ?? caps?.filterWidthMax ?? 4000);
+
+  return {
+    filterWidth: rx?.filterWidth ?? 2400,
+    filterWidthMax,
+    pbtInner: rx?.pbtInner ?? 128,
+    pbtOuter: rx?.pbtOuter ?? 128,
+    manualNotch: rx?.manualNotch ?? false,
+    notchFreq: state?.notchFilter ?? 0,
+    contour: rx?.contour ?? 0,
+    // contourFreq is not yet exposed in ServerState; default to centre.
+    contourFreq: 128,
+  };
+}
+
+/* ── Memory Panel ────────────────────────────────────────────── */
+
+export interface MemoryPanelProps {
+  /** Active receiver frequency (Hz) — used by "store VFO → channel". */
+  activeFreqHz: number;
+  /** Active receiver mode — used by "store VFO → channel". */
+  activeMode: string;
+}
+
+export function toMemoryPanelProps(state: ServerState | null): MemoryPanelProps {
+  const rx = state ? activeRx(state) : null;
+  return {
+    activeFreqHz: rx?.freqHz ?? 0,
+    activeMode: rx?.mode ?? '',
+  };
+}
+
+/* ── Amber Telemetry Strip ───────────────────────────────────── */
+
+export interface AmberTelemetryProps {
+  vdRaw: number | null;
+  idRaw: number | null;
+  tempRaw: number | null;
+}
+
+export function toAmberTelemetryProps(state: ServerState | null): AmberTelemetryProps {
+  return {
+    vdRaw: state?.vdMeter ?? null,
+    idRaw: state?.idMeter ?? null,
+    // tempMeter isn't yet on ServerState; read defensively for forward compat.
+    tempRaw: (state as { tempMeter?: number } | null)?.tempMeter ?? null,
+  };
+}
+
+/* ── VFO Control Panel ───────────────────────────────────────── */
+
+export interface VfoControlProps {
+  mode: string;
+  isCwMode: boolean;
+  breakInMode: number;
+  hasDualRx: boolean;
+  hasSplit: boolean;
+  hasRit: boolean;
+  hasTuner: boolean;
+  hasCw: boolean;
+  hasBreakIn: boolean;
+}
+
+export function toVfoControlProps(
+  state: ServerState | null,
+  caps: Capabilities | null,
+): VfoControlProps {
+  const rx = state ? activeRx(state) : null;
+  const mode = rx?.mode ?? '---';
+  return {
+    mode,
+    isCwMode: mode === 'CW' || mode === 'CW-R',
+    breakInMode: state?.breakIn ?? 0,
+    hasDualRx: hasCap(caps, 'dual_rx'),
+    hasSplit: hasCap(caps, 'split'),
+    hasRit: hasCap(caps, 'rit'),
+    hasTuner: hasCap(caps, 'tuner'),
+    hasCw: hasCap(caps, 'cw'),
+    hasBreakIn: hasCap(caps, 'break_in'),
+  };
+}

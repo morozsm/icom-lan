@@ -15,7 +15,7 @@
   Part of #837 / epic #818 LCD telemetry strip.
 -->
 <script lang="ts">
-  import { radio } from '$lib/stores/radio.svelte';
+  import { deriveAmberTelemetryProps } from '$lib/runtime/adapters/panel-adapters';
   import AmberSparkline from './AmberSparkline.svelte';
 
   const BUFFER_SIZE = 30;
@@ -26,15 +26,12 @@
   // the incoming stream so every frame doesn't push through.
   const PUSH_MIN_INTERVAL_MS = 1000;
 
-  let radioState = $derived(radio.current);
+  let p = $derived(deriveAmberTelemetryProps());
 
   // Raw readings (nullable — backend may not provide all three).
-  let vdRaw = $derived<number | null>(radioState?.vdMeter ?? null);
-  let idRaw = $derived<number | null>(radioState?.idMeter ?? null);
-  // TEMP isn't yet on ServerState; read defensively for forward compat.
-  let tempRaw = $derived<number | null>(
-    (radioState as { tempMeter?: number } | null)?.tempMeter ?? null,
-  );
+  let vdRaw = $derived<number | null>(p.vdRaw);
+  let idRaw = $derived<number | null>(p.idRaw);
+  let tempRaw = $derived<number | null>(p.tempRaw);
 
   // Local ring buffers — $state so Svelte tracks them as arrays.
   let vdHistory = $state<number[]>([]);
