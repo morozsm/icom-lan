@@ -23,6 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now share a single bounded-queue implementation. No behavior change; drop
   policies preserved per callsite.
 
+### Docs
+
+- **Panel → adapter migration plan (#1240).** Doc at
+  `docs/plans/2026-04-29-panel-adapter-migration.md` inventories the 18
+  remaining panels with direct `$lib/stores/*` imports, groups them into
+  clusters with proposed adapters, and breaks migration into ≤4-panel
+  batches. Concrete batch sub-issues will open from this plan. (Relocated
+  from `frontend/docs/` — that path is gitignored as "Frontend internal
+  docs"; this doc sits beside the target-frontend-architecture ADR
+  instead.)
+
 ### Deprecated
 
 - **Web UI v1 layout shell (#874, #1220).** The legacy `AppShell` /
