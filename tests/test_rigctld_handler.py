@@ -155,7 +155,7 @@ async def test_set_freq_calls_radio(
 ) -> None:
     resp = await handler.execute(set_cmd("set_freq", "14074000"))
     assert resp.ok
-    mock_radio.set_freq.assert_awaited_once_with(14_074_000)
+    mock_radio.set_freq.assert_awaited_once_with(14_074_000, receiver=0)
 
 
 @pytest.mark.asyncio
