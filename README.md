@@ -56,8 +56,6 @@ Full guides: [getting started](https://morozsm.github.io/icom-lan/guide/quicksta
 | **Yaesu FTX-1**    | USB CAT            | Stable              | 17 modes, VHF/UHF, C4FM, audio FFT scope |
 | Icom IC-705        | LAN (WiFi)         | Community-validated | CI-V `0xA4`                            |
 | Icom IC-9700       | LAN, USB CI-V      | Profile only        | VHF/UHF/SHF                            |
-| Icom IC-7851       | LAN                | Profile only        | CI-V `0x8E`                            |
-| Icom IC-R8600      | LAN                | Profile only        | RX only                                |
 | Xiegu X6100        | USB CI-V           | Profile only        | IC-705 compatible, QRP                 |
 | Lab599 TX-500      | USB Kenwood CAT    | Profile only        | QRP, minimal CAT                       |
 
@@ -86,26 +84,28 @@ supported: CI-V (Icom binary), Kenwood CAT (text), Yaesu CAT (text). See
 
 ## Web UI
 
-`icom-lan web` boots a self-contained server with three first-class skins:
+`icom-lan web` boots a self-contained HTTP + WebSocket server. The frontend
+is a Svelte 5 single-page app served from the same process; no native
+shell, no Electron, no Tauri — just a browser tab.
 
-- **Desktop v2** — primary skin, full dual-RX VFO, scope + waterfall,
-  meters dock, control panels.
-- **Standard** — alternative desktop layout with retro analog-dial VFO
-  readouts and the same scope + meters dock.
-- **Amber LCD** — single-RX or dual-cockpit variants with vintage-LCD
-  typography, telemetry strip, AmberScope.
+Four user-facing skins resolve from `frontend/src/skins/registry.ts`:
+
+- **Desktop v2** — default skin: dual-RX VFO, scope + waterfall, meters
+  dock, control panels.
+- **LCD Scope** — alternative dual-RX layout with vintage-LCD typography
+  and the same scope + meters dock.
+- **LCD Cockpit** — single-RX or dual-cockpit variants with retro LCD
+  styling, telemetry strip, AmberScope (also resolves under the legacy
+  `amber-lcd` alias).
 - **Mobile** — chip-scroll IA, persistent guarded PTT FAB, container-query
   responsive layout.
 
 <p align="center">
-  <img src="docs/screenshots/standard-skin.png" alt="Standard skin with retro analog-dial VFO" width="49%">
-  <img src="docs/screenshots/amber-lcd.png" alt="Amber LCD skin with vintage-LCD typography and AmberScope" width="49%">
+  <img src="docs/screenshots/lcd-scope.png" alt="LCD Scope skin — dual-RX with vintage-LCD typography and scope panel" width="49%">
+  <img src="docs/screenshots/amber-lcd.png" alt="LCD Cockpit (amber) skin with vintage-LCD typography and AmberScope" width="49%">
 </p>
 
 <!-- SCREENSHOT: Mobile skin — ESSENTIALS panel + PTT FAB (TBD, pending device) -->
-
-The frontend renders identically in browsers and embedded WebViews
-(macOS WKWebView, Windows WebView2, Linux WebKitGTK).
 
 ## Architecture
 
@@ -141,9 +141,13 @@ scopes into the open-core shell.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Protocol knowledge based on independent
-clean-room study of the Icom proprietary LAN protocol; not affiliated with
-or endorsed by Icom Incorporated.
+MIT — see [LICENSE](LICENSE). Protocol knowledge derived from the
+[wfview](https://wfview.org/) project's reverse-engineering work; this is
+an independent clean-room implementation, not a derivative of wfview's
+GPLv3 code. Icom™ and IC-* product names are registered trademarks of
+[Icom Incorporated](https://www.icomjapan.com/), used here for nominative
+fair-use compatibility identification only — this project is not affiliated
+with, endorsed by, or sponsored by Icom.
 
 icom-lan is the **open-core** half of a planned product split. A
 proprietary commercial layer (`icom-lan-pro`) is under development and
