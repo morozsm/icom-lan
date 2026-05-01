@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-05-01
+
+Docs build + internal-import canonicalization patch. **No runtime behaviour
+changes**, no public API changes — `pip install --upgrade icom-lan` from
+1.0.0 is mechanical.
+
+### Fixed
+
+- **Docs build:** mkdocstrings autorefs in `docs/api/{radios,audio,commander,sync,types}.md` resolve cleanly (#1338). Previously `icom_lan.<shim>.X` references could not be traversed by griffe through `sys.modules`-alias shims, breaking the `docs.yml` workflow.
+- **Docs build:** `[Followup]` markdown brackets in `docs/plans/issue-drafts/00-epic.md` are backtick-quoted so `mkdocs_autorefs` stops trying to resolve them as cross-reference targets under `--strict`.
+
+### Internal
+
+- **Canonicalised 60 in-package imports off shim paths (#1338).** Files in `src/icom_lan/<layer>/*.py` now import siblings via canonical paths (e.g. `icom_lan.commands.commander` instead of the top-level `icom_lan.commander` shim). Public API shims are preserved verbatim — downstream `from icom_lan.commander import …` keeps working.
+- **Canonicalised 13 mkdocstrings refs in `docs/api/*.md` (#1338).** Tutorial code examples in `docs/guide/*.md` and `docs/radio-protocol.md` deliberately keep using public-stable shim paths.
+- Tagged release artefact (`RELEASE_NOTES.md`) removed from the repo per the post-release housekeeping convention; the GitHub release body remains canonical.
+
 ## [1.0.0] — 2026-05-01
 
 **Public API stability commitment.** The Tier 1 surface documented in
@@ -1034,7 +1051,8 @@ These deprecation closures were announced in v0.19 and dropped on schedule.
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/morozsm/icom-lan/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/morozsm/icom-lan/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/morozsm/icom-lan/compare/v0.19.0...v1.0.0
 [0.19.0]: https://github.com/morozsm/icom-lan/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/morozsm/icom-lan/compare/v0.17.0...v0.18.0
