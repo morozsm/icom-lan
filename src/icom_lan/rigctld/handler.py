@@ -17,7 +17,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from ..commands import build_civ_frame
 from ..exceptions import ConnectionError, TimeoutError
@@ -445,6 +445,20 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_freq(self, cmd: RigctldCommand) -> RigctldResponse:
+        try:
+            target = self._resolve_target_vfo(cmd.vfo_arg)
+        except ValueError:
+            return _err(HamlibError.EVFO)
+
+        # Per-VFO routing for VFOB on dual-RX: read SUB receiver state directly.
+        # Skip pending/cache (those track MAIN only — see _PendingRigState).
+        if target == "VFOB":
+            state = self._radio_state()
+            if state is not None:
+                return RigctldResponse(values=[str(state.sub.freq)])
+            # No state available — fall through to bare get_freq() for MAIN
+            # rather than fabricate a SUB read path. Legacy behaviour.
+
         main_state = self._main_receiver_state()
         pending_freq = self._effective_pending_freq(main_state)
         if pending_freq is not None:
@@ -466,9 +480,18 @@ class RigctldHandler:
             freq = int(float(cmd.args[0]))
         except ValueError:
             return _err(HamlibError.EINVAL)
-        await self._radio.set_freq(freq)
-        self._pending.freq = freq
-        self._cache.update_freq(freq)
+        try:
+            target = self._resolve_target_vfo(cmd.vfo_arg)
+        except ValueError:
+            return _err(HamlibError.EVFO)
+
+        receiver = 1 if target == "VFOB" else 0
+        await self._radio.set_freq(freq, receiver=receiver)
+        # Pending/cache track MAIN only — only update on the MAIN path so
+        # subsequent ``f VFOA`` reads coalesce against the just-written value.
+        if target == "VFOA":
+            self._pending.freq = freq
+            self._cache.update_freq(freq)
         return _ok()
 
     # ------------------------------------------------------------------
@@ -476,6 +499,30 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_mode(self, cmd: RigctldCommand) -> RigctldResponse:
+        try:
+            target = self._resolve_target_vfo(cmd.vfo_arg)
+        except ValueError:
+            return _err(HamlibError.EVFO)
+
+        # Per-VFO routing for VFOB on dual-RX: read SUB receiver state directly.
+        # Skip pending/cache (those track MAIN only — see _PendingRigState).
+        if target == "VFOB":
+            state = self._radio_state()
+            if state is not None:
+                sub = state.sub
+                mode_str = sub.mode.upper()
+                passband = _filter_to_passband(sub.filter)
+                data_mode = sub.data_mode
+                if data_mode:
+                    if mode_str == "USB":
+                        mode_str = "PKTUSB"
+                    elif mode_str == "LSB":
+                        mode_str = "PKTLSB"
+                    elif mode_str == "RTTY":
+                        mode_str = "PKTRTTY"
+                return RigctldResponse(values=[mode_str, str(passband)])
+            # No state available — fall through to legacy MAIN read path.
+
         main_state = self._main_receiver_state()
         pending_mode = self._effective_pending_mode(main_state)
         if pending_mode is not None:
@@ -539,6 +586,23 @@ class RigctldHandler:
         filter_width = _passband_to_filter(passband_hz)
         packet_modes = {"PKTUSB", "PKTLSB", "PKTRTTY"}
 
+        try:
+            target = self._resolve_target_vfo(cmd.vfo_arg)
+        except ValueError:
+            return _err(HamlibError.EVFO)
+
+        # Per-VFO routing for VFOB on dual-RX: dispatch to SUB receiver and
+        # skip the MAIN-only pending/cache + read-back sync (those track MAIN).
+        if target == "VFOB":
+            await self._radio.set_mode(
+                base_mode_str, filter_width=filter_width, receiver=1
+            )
+            if requested_mode in packet_modes:
+                set_data_mode = getattr(self._radio, "set_data_mode", None)
+                if set_data_mode is not None:
+                    await set_data_mode(True, receiver=1)
+            return _ok()
+
         await self._radio.set_mode(base_mode_str, filter_width=filter_width)
 
         # Only set DATA mode explicitly for packet modes.
@@ -589,6 +653,16 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_ptt(self, cmd: RigctldCommand) -> RigctldResponse:
+        # Validate VFO arg (rejects ``t VFOB`` on single-RX, unknown labels).
+        # The Icom radio exposes a single global PTT state — there is no
+        # per-VFO PTT register — so the answer is the same for VFOA / VFOB
+        # / currVFO once the request is accepted. (See PR #1349 / issue
+        # #1344 for the rationale.)
+        try:
+            self._resolve_target_vfo(cmd.vfo_arg)
+        except ValueError:
+            return _err(HamlibError.EVFO)
+
         state = self._radio_state()
         if state is not None:
             self._cache.update_ptt(state.ptt)
@@ -607,6 +681,12 @@ class RigctldHandler:
             on = bool(int(cmd.args[0]))
         except ValueError:
             return _err(HamlibError.EINVAL)
+        # Validate VFO arg — radio PTT is global so the VFO label is honoured
+        # only insofar as it must name a receiver this profile actually has.
+        try:
+            self._resolve_target_vfo(cmd.vfo_arg)
+        except ValueError:
+            return _err(HamlibError.EVFO)
         await self._radio.set_ptt(on)
         self._ptt_state = on
         self._cache.update_ptt(on)
@@ -647,6 +727,35 @@ class RigctldHandler:
         if rc >= 2:
             return "VFOB" if state.active == "SUB" else "VFOA"
         return "VFOB" if state.main.active_slot == "B" else "VFOA"
+
+    def _resolve_target_vfo(self, vfo_arg: str | None) -> Literal["VFOA", "VFOB"]:
+        """Map a Hamlib VFO arg to the canonical VFO name for routing.
+
+        Used by handlers that need per-VFO routing (freq, mode, PTT) when
+        the client sends a leading VFO token under ``chk_vfo=1``.
+
+        Returns:
+            ``"VFOA"`` if the request targets MAIN (or no arg / ``currVFO``
+            and the active receiver is MAIN). ``"VFOB"`` if the request
+            targets SUB.
+
+        Raises:
+            ValueError: ``vfo_arg`` is unrecognised, OR ``"VFOB"`` was
+                requested on a single-receiver profile. Callers map this
+                to ``HamlibError.EVFO``.
+        """
+        if vfo_arg is None or vfo_arg == "currVFO":
+            return cast(Literal["VFOA", "VFOB"], self._active_vfo_name())
+        if vfo_arg == "VFOA":
+            return "VFOA"
+        if vfo_arg == "VFOB":
+            info = self._profile_vfo_info()
+            if info is None or info[0] < 2:
+                raise ValueError(
+                    f"VFOB requested on single-receiver profile (info={info!r})"
+                )
+            return "VFOB"
+        raise ValueError(f"Unknown VFO arg: {vfo_arg!r}")
 
     async def _cmd_get_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
         return RigctldResponse(values=[self._active_vfo_name()])
