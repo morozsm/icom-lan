@@ -67,8 +67,9 @@ describe('fetchState', () => {
 
     const { fetchState } = await import('../http-client');
     const result = await fetchState();
-    expect(result.revision).toBe(1);
-    expect(result.main.freqHz).toBe(14074000);
+    expect(result).not.toBeNull();
+    expect(result!.revision).toBe(1);
+    expect(result!.main.freqHz).toBe(14074000);
   });
 
   it('throws on non-ok response', async () => {
@@ -301,7 +302,7 @@ describe('startPolling', () => {
 
     globalThis.fetch = vi.fn().mockImplementation(() => {
       callCount++;
-      return new Promise<{ ok: boolean; json: () => Promise<ServerState> }>((resolve) => {
+      return new Promise((resolve) => {
         resolvePending = () =>
           resolve({ ok: true, status: 200, headers: { get: () => '"' + callCount + '"' }, json: () => Promise.resolve(makeState(callCount)) });
       });
