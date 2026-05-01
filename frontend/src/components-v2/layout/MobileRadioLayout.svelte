@@ -676,81 +676,31 @@
     {:else if activeChipId === 'band'}
       <section class="m-section" id="m-chip-panel-band" role="tabpanel">
         <CollapsiblePanel title="BAND" panelId="m-band" collapsible={false}>
-          <BandSelector
-            currentFreq={band.currentFreq}
-            onBandSelect={bandHandlers.onBandSelect}
-            onPresetSelect={presetHandlers.onPresetSelect}
-          />
+          <BandSelector />
         </CollapsiblePanel>
       </section>
     {:else if activeChipId === 'scan'}
       <section class="m-section" id="m-chip-panel-scan" role="tabpanel">
         <CollapsiblePanel title="SCAN" panelId="m-scan" collapsible={false}>
-          <ScanPanel
-            scanning={scan.scanning}
-            scanType={scan.scanType}
-            scanResumeMode={scan.scanResumeMode}
-            onScanStart={scanHandlers.onScanStart}
-            onScanStop={scanHandlers.onScanStop}
-            onDfSpanChange={scanHandlers.onDfSpanChange}
-            onResumeChange={scanHandlers.onResumeChange}
-          />
+          <ScanPanel />
         </CollapsiblePanel>
       </section>
     {:else if activeChipId === 'rf'}
       <section class="m-section" id="m-chip-panel-rf" role="tabpanel">
         <CollapsiblePanel title="RF" panelId="m-rf-quick" collapsible={false}>
-          <RfFrontEnd
-            rfGain={rfFrontEnd.rfGain}
-            squelch={rfFrontEnd.squelch}
-            att={rfFrontEnd.att}
-            pre={rfFrontEnd.pre}
-            digiSel={rfFrontEnd.digiSel}
-            ipPlus={rfFrontEnd.ipPlus}
-            onRfGainChange={rfHandlers.onRfGainChange}
-            onSquelchChange={rfHandlers.onSquelchChange}
-            onAttChange={rfHandlers.onAttChange}
-            onPreChange={rfHandlers.onPreChange}
-            onDigiSelToggle={rfHandlers.onDigiSelToggle}
-            onIpPlusToggle={rfHandlers.onIpPlusToggle}
-          />
+          <RfFrontEnd />
         </CollapsiblePanel>
       </section>
     {:else if activeChipId === 'dsp'}
       <section class="m-section" id="m-chip-panel-dsp" role="tabpanel">
         <CollapsiblePanel title="DSP" panelId="m-dsp-chip" collapsible={false}>
-          <DspPanel
-            nrMode={dsp.nrMode}
-            nrLevel={dsp.nrLevel}
-            nbActive={dsp.nbActive}
-            nbLevel={dsp.nbLevel}
-            notchMode={dsp.notchMode}
-            notchFreq={dsp.notchFreq}
-            onNrModeChange={dspHandlers.onNrModeChange}
-            onNrLevelChange={dspHandlers.onNrLevelChange}
-            onNbToggle={dspHandlers.onNbToggle}
-            onNbLevelChange={dspHandlers.onNbLevelChange}
-            onNotchModeChange={dspHandlers.onNotchModeChange}
-            onNotchFreqChange={dspHandlers.onNotchFreqChange}
-          />
+          <DspPanel />
         </CollapsiblePanel>
       </section>
     {:else if activeChipId === 'rit'}
       <section class="m-section" id="m-chip-panel-rit" role="tabpanel">
         <CollapsiblePanel title="RIT / XIT" panelId="m-rit-chip" collapsible={false}>
-          <RitXitPanel
-            ritActive={ritXit.ritActive}
-            ritOffset={ritXit.ritOffset}
-            xitActive={ritXit.xitActive}
-            xitOffset={ritXit.xitOffset}
-            hasRit={ritXit.hasRit}
-            hasXit={ritXit.hasXit}
-            onRitToggle={ritXitHandlers.onRitToggle}
-            onXitToggle={ritXitHandlers.onXitToggle}
-            onRitOffsetChange={ritXitHandlers.onRitOffsetChange}
-            onXitOffsetChange={ritXitHandlers.onXitOffsetChange}
-            onClear={ritXitHandlers.onClear}
-          />
+          <RitXitPanel />
         </CollapsiblePanel>
       </section>
     {:else if activeChipId === 'tx' && txCapable}
@@ -860,41 +810,18 @@
                in ESSENTIALS. -->
 
           <CollapsiblePanel title="AGC" panelId="m-agc">
-            <AgcPanel
-              agcMode={agc.agcMode}
-              onAgcModeChange={agcHandlers.onAgcModeChange}
-            />
+            <AgcPanel />
           </CollapsiblePanel>
 
           <!-- RF FRONT END panel removed (#841) — lives in the "rf" chip. -->
 
           <CollapsiblePanel title="RIT / XIT" panelId="m-rit">
-            <RitXitPanel
-              ritActive={ritXit.ritActive}
-              ritOffset={ritXit.ritOffset}
-              xitActive={ritXit.xitActive}
-              xitOffset={ritXit.xitOffset}
-              hasRit={ritXit.hasRit}
-              hasXit={ritXit.hasXit}
-              onRitToggle={ritXitHandlers.onRitToggle}
-              onXitToggle={ritXitHandlers.onXitToggle}
-              onRitOffsetChange={ritXitHandlers.onRitOffsetChange}
-              onXitOffsetChange={ritXitHandlers.onXitOffsetChange}
-              onClear={ritXitHandlers.onClear}
-            />
+            <RitXitPanel />
           </CollapsiblePanel>
 
           {#if antenna.antennaCount > 1}
             <CollapsiblePanel title="ANTENNA" panelId="m-antenna">
-              <AntennaPanel
-                txAntenna={antenna.txAntenna}
-                rxAnt={antenna.rxAnt}
-                antennaCount={antenna.antennaCount}
-                hasRxAntenna={antenna.hasRxAntenna}
-                onSelectAnt1={antennaHandlers.onSelectAnt1}
-                onSelectAnt2={antennaHandlers.onSelectAnt2}
-                onToggleRxAnt={antennaHandlers.onToggleRxAnt}
-              />
+              <AntennaPanel />
             </CollapsiblePanel>
           {/if}
 
@@ -903,23 +830,7 @@
             panelId="m-cw"
             autoCollapseWhen={mode.currentMode !== 'CW' && mode.currentMode !== 'CW-R'}
           >
-            <CwPanel
-              wpm={cw.wpm}
-              breakInActive={cw.breakInActive}
-              breakInDelay={cw.breakInDelay}
-              sidetonePitch={cw.sidetonePitch}
-              sidetoneLevel={cw.sidetoneLevel}
-              reversePaddle={cw.reversePaddle}
-              keyerType={cw.keyerType}
-              hasCw={cw.hasCw}
-              onWpmChange={cwHandlers.onWpmChange}
-              onBreakInToggle={cwHandlers.onBreakInToggle}
-              onBreakInDelayChange={cwHandlers.onBreakInDelayChange}
-              onSidetonePitchChange={cwHandlers.onSidetonePitchChange}
-              onSidetoneLevelChange={cwHandlers.onSidetoneLevelChange}
-              onReversePaddleToggle={cwHandlers.onReversePaddleToggle}
-              onKeyerTypeChange={cwHandlers.onKeyerTypeChange}
-            />
+            <CwPanel />
           </CollapsiblePanel>
   </BottomSheet>
 
@@ -956,29 +867,7 @@
 
   <!-- ═══ FILTER MODAL ═══ -->
   <BottomSheet bind:open={filterModalOpen} title="FILTER SETTINGS">
-          <FilterPanel
-            currentMode={filter.currentMode}
-            currentFilter={filter.currentFilter}
-            filterShape={filter.filterShape}
-            filterLabels={filter.filterLabels}
-            filterWidth={filter.filterWidth}
-            filterWidthMin={filter.filterWidthMin}
-            filterWidthMax={filter.filterWidthMax}
-            filterConfig={filter.filterConfig}
-            ifShift={filter.ifShift}
-            hasPbt={filter.hasPbt}
-            pbtInner={filter.pbtInner}
-            pbtOuter={filter.pbtOuter}
-            onFilterChange={filterHandlers.onFilterChange}
-            onFilterWidthChange={filterHandlers.onFilterWidthChange}
-            onFilterShapeChange={filterHandlers.onFilterShapeChange}
-            onFilterPresetChange={filterHandlers.onFilterPresetChange}
-            onFilterDefaults={filterHandlers.onFilterDefaults}
-            onIfShiftChange={filterHandlers.onIfShiftChange}
-            onPbtInnerChange={filterHandlers.onPbtInnerChange}
-            onPbtOuterChange={filterHandlers.onPbtOuterChange}
-            onPbtReset={filterHandlers.onPbtReset}
-          />
+          <FilterPanel />
   </BottomSheet>
 
   <!-- ═══ POWER MODAL ═══ -->
@@ -999,29 +888,7 @@
 
   <!-- ═══ TX SETTINGS MODAL ═══ -->
   <BottomSheet bind:open={txSettingsOpen} title="TX SETTINGS">
-          <TxPanel
-            txActive={tx.txActive}
-            rfPower={tx.rfPower}
-            micGain={tx.micGain}
-            atuActive={tx.atuActive}
-            atuTuning={tx.atuTuning}
-            voxActive={tx.voxActive}
-            compActive={tx.compActive}
-            compLevel={tx.compLevel}
-            monActive={tx.monActive}
-            monLevel={tx.monLevel}
-            driveGain={tx.driveGain}
-            onRfPowerChange={txHandlers.onRfPowerChange}
-            onMicGainChange={txHandlers.onMicGainChange}
-            onAtuToggle={txHandlers.onAtuToggle}
-            onAtuTune={txHandlers.onAtuTune}
-            onVoxToggle={txHandlers.onVoxToggle}
-            onCompToggle={txHandlers.onCompToggle}
-            onCompLevelChange={txHandlers.onCompLevelChange}
-            onMonToggle={txHandlers.onMonToggle}
-            onMonLevelChange={txHandlers.onMonLevelChange}
-            onDriveGainChange={txHandlers.onDriveGainChange}
-          />
+          <TxPanel />
   </BottomSheet>
 </div>
 {/if}

@@ -366,68 +366,23 @@
               A=B
             </HardwareButton>
           </div>
-          <BandSelector
-            currentFreq={band.currentFreq}
-            onBandSelect={bandHandlers.onBandSelect}
-            onPresetSelect={presetHandlers.onPresetSelect}
-          />
+          <BandSelector />
         </CollapsiblePanel>
 
         <CollapsiblePanel title="DSP" panelId="desktop-dsp">
-          <DspPanel
-            nrMode={dsp.nrMode}
-            nrLevel={dsp.nrLevel}
-            nbActive={dsp.nbActive}
-            nbLevel={dsp.nbLevel}
-            notchMode={dsp.notchMode}
-            notchFreq={dsp.notchFreq}
-            onNrModeChange={dspHandlers.onNrModeChange}
-            onNrLevelChange={dspHandlers.onNrLevelChange}
-            onNbToggle={dspHandlers.onNbToggle}
-            onNbLevelChange={dspHandlers.onNbLevelChange}
-            onNotchModeChange={dspHandlers.onNotchModeChange}
-            onNotchFreqChange={dspHandlers.onNotchFreqChange}
-          />
+          <DspPanel />
         </CollapsiblePanel>
 
         <CollapsiblePanel title="AGC" panelId="desktop-agc">
-          <AgcPanel
-            agcMode={agc.agcMode}
-            onAgcModeChange={agcHandlers.onAgcModeChange}
-          />
+          <AgcPanel />
         </CollapsiblePanel>
 
         <CollapsiblePanel title="RF FRONT END" panelId="desktop-rf">
-          <RfFrontEnd
-            rfGain={rfFrontEnd.rfGain}
-            squelch={rfFrontEnd.squelch}
-            att={rfFrontEnd.att}
-            pre={rfFrontEnd.pre}
-            digiSel={rfFrontEnd.digiSel}
-            ipPlus={rfFrontEnd.ipPlus}
-            onRfGainChange={rfHandlers.onRfGainChange}
-            onSquelchChange={rfHandlers.onSquelchChange}
-            onAttChange={rfHandlers.onAttChange}
-            onPreChange={rfHandlers.onPreChange}
-            onDigiSelToggle={rfHandlers.onDigiSelToggle}
-            onIpPlusToggle={rfHandlers.onIpPlusToggle}
-          />
+          <RfFrontEnd />
         </CollapsiblePanel>
 
         <CollapsiblePanel title="RIT / XIT" panelId="desktop-rit">
-          <RitXitPanel
-            ritActive={ritXit.ritActive}
-            ritOffset={ritXit.ritOffset}
-            xitActive={ritXit.xitActive}
-            xitOffset={ritXit.xitOffset}
-            hasRit={ritXit.hasRit}
-            hasXit={ritXit.hasXit}
-            onRitToggle={ritXitHandlers.onRitToggle}
-            onXitToggle={ritXitHandlers.onXitToggle}
-            onRitOffsetChange={ritXitHandlers.onRitOffsetChange}
-            onXitOffsetChange={ritXitHandlers.onXitOffsetChange}
-            onClear={ritXitHandlers.onClear}
-          />
+          <RitXitPanel />
         </CollapsiblePanel>
 
         <CollapsiblePanel
@@ -435,19 +390,7 @@
           panelId="desktop-cw"
           autoCollapseWhen={activeMode !== 'CW' && activeMode !== 'CW-R'}
         >
-          <CwPanel
-            cwPitch={cw.cwPitch}
-            keySpeed={cw.keySpeed}
-            breakIn={cw.breakIn}
-            apfMode={cw.apfMode}
-            twinPeak={cw.twinPeak}
-            currentMode={radioState?.active === 'SUB' ? (radioState?.sub?.mode ?? '') : (radioState?.main?.mode ?? '')}
-            onCwPitchChange={cwHandlers.onCwPitchChange}
-            onKeySpeedChange={cwHandlers.onKeySpeedChange}
-            onBreakInToggle={cwHandlers.onBreakInToggle}
-            onApfChange={cwHandlers.onApfChange}
-            onTwinPeakToggle={cwHandlers.onTwinPeakToggle}
-          />
+          <CwPanel />
         </CollapsiblePanel>
       </div>
     </div>
