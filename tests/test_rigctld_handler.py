@@ -2345,17 +2345,20 @@ def single_rx_handler(
 
 
 @pytest.mark.asyncio
-async def test_chk_vfo_dual_rx_returns_1(dual_rx_handler: RigctldHandler) -> None:
-    resp = await dual_rx_handler.execute(get_cmd("chk_vfo"))
-    assert resp.ok
-    assert resp.values == ["1"]
-
-
-@pytest.mark.asyncio
-async def test_chk_vfo_single_rx_returns_0(
-    single_rx_handler: RigctldHandler,
+@pytest.mark.parametrize("handler_fixture", ["single_rx_handler", "dual_rx_handler"])
+async def test_chk_vfo_returns_0_unconditionally(
+    handler_fixture: str, request: pytest.FixtureRequest
 ) -> None:
-    resp = await single_rx_handler.execute(get_cmd("chk_vfo"))
+    """``chk_vfo`` returns ``"0"`` for every profile (issue #1319).
+
+    The dual-RX ``"1"`` advertising introduced in v0.17.0 (#722) was rolled
+    back in v0.19.1 because Hamlib's ``vfo_opt`` mode prefixes every command
+    with a VFO token that the rigctld parser/handlers do not yet support —
+    breaking WSJT-X / fldigi / JS8Call on IC-7610, IC-9700, and FTX-1. Will
+    be re-enabled to ``"1"`` once full ``vfo_opt`` support lands.
+    """
+    handler: RigctldHandler = request.getfixturevalue(handler_fixture)
+    resp = await handler.execute(get_cmd("chk_vfo"))
     assert resp.ok
     assert resp.values == ["0"]
 
