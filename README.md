@@ -104,8 +104,8 @@ supported: CI-V (Icom binary), Kenwood CAT (text), Yaesu CAT (text). See
 
 <!-- SCREENSHOT: Mobile skin — ESSENTIALS panel + PTT FAB (TBD, pending device) -->
 
-The frontend renders identically in browsers, macOS WKWebView, Windows
-WebView2, and Linux WebKitGTK — Tauri-friendly by design.
+The frontend renders identically in browsers and embedded WebViews
+(macOS WKWebView, Windows WebView2, Linux WebKitGTK).
 
 ## Architecture
 
