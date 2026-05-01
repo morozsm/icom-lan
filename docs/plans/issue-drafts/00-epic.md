@@ -35,8 +35,8 @@ Restructure `src/icom_lan/` from a flat-with-some-subdirs layout into a strictly
 
 ## Followup issues
 
-- [ ] [Followup] Migrate tests off private internal imports
-- [ ] [Followup] Refactor `web_startup` to use `backends.factory`
+- [ ] `[Followup]` Migrate tests off private internal imports
+- [ ] `[Followup]` Refactor `web_startup` to use `backends.factory`
 
 ## Definition of done — the whole effort
 
