@@ -79,8 +79,8 @@ describe('ScopeController', () => {
   });
 
   it('both subscribers receive parsed frames', () => {
-    const h1 = vi.fn<[ScopeFrame], void>();
-    const h2 = vi.fn<[ScopeFrame], void>();
+    const h1 = vi.fn<(frame: ScopeFrame) => void>();
+    const h2 = vi.fn<(frame: ScopeFrame) => void>();
 
     ctrl.subscribe(h1);
     ctrl.subscribe(h2);
@@ -131,7 +131,7 @@ describe('ScopeController', () => {
   });
 
   it('counts subscriptions: same handler reference subscribed twice requires two unsubscribes', () => {
-    const handler = vi.fn<[ScopeFrame], void>();
+    const handler = vi.fn<(frame: ScopeFrame) => void>();
 
     const unsub1 = ctrl.subscribe(handler);
     const unsub2 = ctrl.subscribe(handler);
