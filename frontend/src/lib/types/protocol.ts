@@ -29,11 +29,12 @@ export type WsIncoming =
   | { type: 'hello'; proto: number; server: string; version: string; radio: string; connected: boolean; capabilities: string[] }
   | { type: 'state'; data: Record<string, unknown> }
   | { type: 'state_update'; data: Record<string, unknown> }
+  | { type: 'companion_state'; tuning_step_hz?: number; [key: string]: unknown }
   | { type: 'event'; name?: string; event?: string; data?: Record<string, unknown>; connected?: boolean; radio_ready?: boolean };
 
 // Incoming: server → client (base interface for typed sub-interfaces)
 export interface WsMessage {
-  type: 'dx_spot' | 'dx_spots' | 'notification' | 'ack' | 'error' | 'response' | 'hello' | 'state' | 'state_update' | 'event';
+  type: 'dx_spot' | 'dx_spots' | 'notification' | 'ack' | 'error' | 'response' | 'hello' | 'state' | 'state_update' | 'companion_state' | 'event';
   [key: string]: unknown;
 }
 

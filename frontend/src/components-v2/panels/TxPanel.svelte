@@ -116,18 +116,16 @@
       {txActive ? '● TX' : '○ RX'}
     </div>
 
-    {#if onPttOn}
-      <button
-        class="ptt-button"
-        class:ptt-held={pttMode === 'held'}
-        class:ptt-latched={pttMode === 'latched'}
-        onpointerdown={(e) => { e.preventDefault(); pttDown(); }}
-        onpointerup={(e) => { e.preventDefault(); pttUp(); }}
-        onpointerleave={() => { if (pttMode === 'held') pttUp(); }}
-      >
-        {pttMode === 'latched' ? 'TX 🔒' : pttMode === 'held' ? 'TX' : 'PTT'}
-      </button>
-    {/if}
+    <button
+      class="ptt-button"
+      class:ptt-held={pttMode === 'held'}
+      class:ptt-latched={pttMode === 'latched'}
+      onpointerdown={(e) => { e.preventDefault(); pttDown(); }}
+      onpointerup={(e) => { e.preventDefault(); pttUp(); }}
+      onpointerleave={() => { if (pttMode === 'held') pttUp(); }}
+    >
+      {pttMode === 'latched' ? 'TX 🔒' : pttMode === 'held' ? 'TX' : 'PTT'}
+    </button>
 
     <div class="tx-button-grid">
       {#if showTuner}
