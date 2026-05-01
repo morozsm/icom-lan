@@ -14,7 +14,9 @@ network bridge across IC-7610, IC-7300, FTX-1, and any future backend that
 honours the public `Radio` protocol. Tested in production against WSJT-X,
 fldigi, and JS8Call.
 
-<!-- SCREENSHOT: Web UI hero — IC-7610 dual-RX desktop layout with scope + waterfall -->
+<p align="center">
+  <img src="docs/screenshots/hero.png" alt="icom-lan Web UI — IC-7610 dual-RX desktop with scope and waterfall" width="100%">
+</p>
 
 ## Quickstart
 
@@ -88,14 +90,19 @@ supported: CI-V (Icom binary), Kenwood CAT (text), Yaesu CAT (text). See
 
 - **Desktop v2** — primary skin, full dual-RX VFO, scope + waterfall,
   meters dock, control panels.
+- **Standard** — alternative desktop layout with retro analog-dial VFO
+  readouts and the same scope + meters dock.
 - **Amber LCD** — single-RX or dual-cockpit variants with vintage-LCD
   typography, telemetry strip, AmberScope.
 - **Mobile** — chip-scroll IA, persistent guarded PTT FAB, container-query
   responsive layout.
 
-<!-- SCREENSHOT: Amber LCD skin — single-RX cockpit with AmberScope -->
+<p align="center">
+  <img src="docs/screenshots/standard-skin.png" alt="Standard skin with retro analog-dial VFO" width="49%">
+  <img src="docs/screenshots/amber-lcd.png" alt="Amber LCD skin with vintage-LCD typography and AmberScope" width="49%">
+</p>
 
-<!-- SCREENSHOT: Mobile skin — ESSENTIALS panel + PTT FAB -->
+<!-- SCREENSHOT: Mobile skin — ESSENTIALS panel + PTT FAB (TBD, pending device) -->
 
 The frontend renders identically in browsers, macOS WKWebView, Windows
 WebView2, and Linux WebKitGTK — Tauri-friendly by design.
