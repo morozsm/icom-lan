@@ -77,5 +77,5 @@ export function resolvePersistedSkinId(id: PersistedSkinId): SkinId {
 }
 
 export async function loadSkin(id: SkinId): Promise<Component> {
-  return (await SKIN_LOADERS[id]).default;
+  return (await SKIN_LOADERS[id]()).default;
 }

@@ -183,9 +183,8 @@ describe('media-session', () => {
 
     // All handlers should be cleared (set to null)
     const setHandler = navigator.mediaSession.setActionHandler as ReturnType<typeof vi.fn>;
-    const nullCalls = setHandler.mock.calls.filter(
-      (call: [string, MediaSessionActionHandler | null]) => call[1] === null,
-    );
+    const calls = setHandler.mock.calls as Array<[string, MediaSessionActionHandler | null]>;
+    const nullCalls = calls.filter((call) => call[1] === null);
     expect(nullCalls.length).toBe(4);
     expect(mockAudio.oscillator.stop).toHaveBeenCalled();
     expect(mockAudio.ctx.close).toHaveBeenCalled();

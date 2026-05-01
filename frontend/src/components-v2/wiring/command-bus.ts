@@ -85,8 +85,8 @@ export function makeVfoHandlers() {
         const mainSnap: Partial<ReceiverState> = {};
         const subSnap: Partial<ReceiverState> = {};
         for (const f of _MAIN_SUB_EQUALIZE_FIELDS) {
-          mainSnap[f] = s.sub[f];
-          subSnap[f] = s.main[f];
+          Object.assign(mainSnap, { [f]: s.sub[f] });
+          Object.assign(subSnap, { [f]: s.main[f] });
         }
         patchReceiver(0, mainSnap);
         patchReceiver(1, subSnap);
@@ -102,7 +102,7 @@ export function makeVfoHandlers() {
       if (s?.main) {
         const snap: Partial<ReceiverState> = {};
         for (const f of _MAIN_SUB_EQUALIZE_FIELDS) {
-          snap[f] = s.main[f];
+          Object.assign(snap, { [f]: s.main[f] });
         }
         patchReceiver(1, snap);
       }

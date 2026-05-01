@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mount, unmount, flushSync } from 'svelte';
+import { mount, unmount, flushSync, type Snippet } from 'svelte';
 import BottomSheet from '../BottomSheet.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
@@ -17,7 +17,7 @@ function mountSheet(props: {
     target,
     props: {
       ...props,
-      children: (anchor: any) => {
+      children: ((anchor: any) => {
         const div = document.createElement('div');
         div.className = 'test-child';
         div.textContent = 'Sheet content';
@@ -26,7 +26,7 @@ function mountSheet(props: {
           update: () => {},
           destroy: () => div.remove(),
         };
-      },
+      }) as unknown as Snippet,
     },
   });
   flushSync();
