@@ -385,6 +385,24 @@ Use `rigplane --list-audio-devices` to find the correct indices.
 2. Check PTT is active before transmitting audio
 3. Verify `--tx-device` matches the USB audio device name
 
+### TX appears dirty / multiple peaks on waterfall during the first seconds
+
+**Symptom**: When transmitting from WSJT-X / JS8Call / fldigi via the USB Audio CODEC, the first 5–10 seconds of TX show on the waterfall (or a second receiver) as a "fat" carrier centred ~1500 Hz, or as several spurs spread across the audio passband. The signal then either settles into a clean tone, or never settles if the level is too high.
+
+**Cause**: IC-7610's USB audio input has less internal headroom before ALC compression than IC-7300 / FTX-1. With the WSJT-X power slider (the vertical slider on the right of the main window) at 100%, the FT8/JS8 tone clips inside the radio, producing IM3-style intermodulation products until ALC finds its working point. This is a hardware/firmware property of the IC-7610 USB CODEC — it occurs regardless of which CAT path (LAN, serial, direct rigctl) is used to control the radio, since the audio itself flows OS-level (WSJT-X → CoreAudio → USB Audio CODEC → radio) and never passes through icom-lan.
+
+**Fix**:
+
+1. **WSJT-X → main window → right-side TX power slider** → drop to **~20-25%**.
+2. Optionally also reduce **Menu → Set → Connectors → MOD Level** on the radio to ~30%.
+3. PTT into FT8 / JS8 and verify on the waterfall: a single clean carrier at the FT8 audio centre, no spread peaks during the first seconds.
+
+!!! note "IC-7610 specific"
+    IC-7300 and FTX-1 tolerate the WSJT-X slider at 100% without this effect because their USB audio paths have more headroom. Don't apply this attenuation to those radios — it just costs you SNR.
+
+!!! tip "Verifying with a second receiver"
+    The cleanest way to confirm the fix is to monitor your TX on a second receiver (or a public web SDR — kiwisdr.com, websdr.org). Compare the waterfall during the first 10 seconds of TX at 100% slider vs 25% slider — the difference is unmistakable.
+
 ## Environment Variables
 
 For convenience, set these in your shell profile:
