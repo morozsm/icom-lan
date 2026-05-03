@@ -9,12 +9,24 @@ from icom_lan.diagnostics._logging import (
     configure_diagnostic_logging,
 )
 from icom_lan.diagnostics.contributor import BundleContext, DiagnosticContributor
+from icom_lan.diagnostics.redaction import (
+    REDACTORS,
+    redact_credentials,
+    redact_ips,
+    redact_paths,
+    redact_tokens,
+)
 
 __all__ = [
+    "REDACTORS",
     "BundleContext",
     "DiagnosticContributor",
     "SafeRotatingFileHandler",
     "configure_diagnostic_logging",
     "discover",
+    "redact_credentials",
+    "redact_ips",
+    "redact_paths",
+    "redact_tokens",
     "register",
 ]
