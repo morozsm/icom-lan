@@ -12,7 +12,6 @@ from ..._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
 from ...dsp.tap_registry import TapHandle, TapRegistry
 from ...env_config import (
     get_audio_broadcaster_high_watermark,
-    get_audio_client_high_watermark,
 )
 from ...types import AudioCodec
 from ..protocol import (  # noqa: TID251
@@ -477,24 +476,19 @@ class AudioHandler:
         radio: Radio protocol instance (may be None).
     """
 
-    HIGH_WATERMARK: int = 10  # max queued audio frames before dropping
-
     def __init__(
         self,
         ws: WebSocketConnection,
         radio: "Radio | None",
         broadcaster: "AudioBroadcaster | None" = None,
     ) -> None:
-        self.HIGH_WATERMARK = get_audio_client_high_watermark()
         self._ws = ws
         self._radio = radio
         self._broadcaster = broadcaster
         self._rx_active = False
         self._tx_active = False
         self._seq: int = 0
-        self._frame_queue: asyncio.Queue[bytes] = asyncio.Queue(
-            maxsize=self.HIGH_WATERMARK,
-        )
+        self._frame_queue: asyncio.Queue[bytes] = asyncio.Queue()
         self._done = asyncio.Event()
         # Opus decoder for TX when radio uses PCM codec.
         # Created lazily on TX start so we pass the radio's negotiated sample rate

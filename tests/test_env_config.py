@@ -80,37 +80,6 @@ class TestGetAudioBroadcasterHighWatermark:
         assert result == 10
 
 
-class TestGetAudioClientHighWatermark:
-    def test_default_when_unset(self, monkeypatch):
-        monkeypatch.delenv("ICOM_AUDIO_CLIENT_HIGH_WATERMARK", raising=False)
-        from icom_lan.env_config import get_audio_client_high_watermark
-
-        assert get_audio_client_high_watermark() == 10
-
-    def test_valid_override(self, monkeypatch):
-        monkeypatch.setenv("ICOM_AUDIO_CLIENT_HIGH_WATERMARK", "25")
-        from icom_lan.env_config import get_audio_client_high_watermark
-
-        assert get_audio_client_high_watermark() == 25
-
-    def test_invalid_falls_back(self, monkeypatch, caplog):
-        monkeypatch.setenv("ICOM_AUDIO_CLIENT_HIGH_WATERMARK", "??")
-        from icom_lan.env_config import get_audio_client_high_watermark
-
-        with caplog.at_level(logging.WARNING, logger="icom_lan.core.env_config"):
-            result = get_audio_client_high_watermark()
-        assert result == 10
-        assert "ICOM_AUDIO_CLIENT_HIGH_WATERMARK" in caplog.text
-
-    def test_zero_falls_back(self, monkeypatch, caplog):
-        monkeypatch.setenv("ICOM_AUDIO_CLIENT_HIGH_WATERMARK", "0")
-        from icom_lan.env_config import get_audio_client_high_watermark
-
-        with caplog.at_level(logging.WARNING, logger="icom_lan.core.env_config"):
-            result = get_audio_client_high_watermark()
-        assert result == 10
-
-
 class TestGetAudioRxJitterBounds:
     def test_floor_default_when_unset(self, monkeypatch):
         monkeypatch.delenv("ICOM_AUDIO_RX_JITTER_FLOOR_MS", raising=False)
@@ -303,20 +272,3 @@ class TestHandlerIntegration:
         broadcaster = AudioBroadcaster(radio=None)
         assert broadcaster.HIGH_WATERMARK == 10
 
-    def test_audio_handler_uses_env_watermark(self, monkeypatch):
-        monkeypatch.setenv("ICOM_AUDIO_CLIENT_HIGH_WATERMARK", "30")
-        from icom_lan.web.handlers import AudioHandler
-        from icom_lan.web.websocket import WebSocketConnection
-
-        mock_ws = MagicMock(spec=WebSocketConnection)
-        handler = AudioHandler(mock_ws, radio=None)
-        assert handler.HIGH_WATERMARK == 30
-
-    def test_audio_handler_default_watermark(self, monkeypatch):
-        monkeypatch.delenv("ICOM_AUDIO_CLIENT_HIGH_WATERMARK", raising=False)
-        from icom_lan.web.handlers import AudioHandler
-        from icom_lan.web.websocket import WebSocketConnection
-
-        mock_ws = MagicMock(spec=WebSocketConnection)
-        handler = AudioHandler(mock_ws, radio=None)
-        assert handler.HIGH_WATERMARK == 10

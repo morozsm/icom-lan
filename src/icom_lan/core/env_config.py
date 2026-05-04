@@ -12,7 +12,6 @@ import sys
 __all__ = [
     "get_audio_sample_rate",
     "get_audio_broadcaster_high_watermark",
-    "get_audio_client_high_watermark",
     "get_audio_rx_jitter_floor_ms",
     "get_audio_rx_jitter_ceiling_ms",
 ]
@@ -24,7 +23,6 @@ _SUPPORTED_SAMPLE_RATES = (8000, 16000, 24000, 48000)
 _DEFAULTS: dict[str, int] = {
     "ICOM_AUDIO_SAMPLE_RATE": 48000,
     "ICOM_AUDIO_BROADCASTER_HIGH_WATERMARK": 10,
-    "ICOM_AUDIO_CLIENT_HIGH_WATERMARK": 10,
     "ICOM_AUDIO_RX_JITTER_FLOOR_MS": 50,
     "ICOM_AUDIO_RX_JITTER_CEILING_MS": 300,
 }
@@ -115,14 +113,6 @@ def get_audio_broadcaster_high_watermark() -> int:
     Reads ``ICOM_AUDIO_BROADCASTER_HIGH_WATERMARK``.  Must be a positive integer.
     """
     return _read_positive_int("ICOM_AUDIO_BROADCASTER_HIGH_WATERMARK")
-
-
-def get_audio_client_high_watermark() -> int:
-    """Return the configured per-client audio HIGH_WATERMARK.
-
-    Reads ``ICOM_AUDIO_CLIENT_HIGH_WATERMARK``.  Must be a positive integer.
-    """
-    return _read_positive_int("ICOM_AUDIO_CLIENT_HIGH_WATERMARK")
 
 
 def _jitter_bounds() -> tuple[int, int]:
