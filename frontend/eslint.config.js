@@ -192,7 +192,7 @@ export default [
         {
           patterns: [
             {
-              group: ['**/components-v2/**'],
+              group: ['**/components-v2/**', '**/components-v2'],
               message:
                 'lib/runtime must not import from components-v2. ' +
                 'Use lib/runtime/props/ or lib/runtime/commands/ instead. ' +
