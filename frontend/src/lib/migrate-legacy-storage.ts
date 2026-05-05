@@ -1,9 +1,17 @@
 /**
  * One-shot migration of v1.x icom-lan localStorage keys to v2.x rigplane keys.
  *
- * Must be invoked at the very top of `main.ts` (before `App.svelte` and any
- * stores are imported), because several stores read localStorage at module
- * init (e.g. `layout.svelte.ts`, `theme-switcher.ts`, `lcd-contrast.svelte.ts`).
+ * **Boot-order critical.** Several stores read localStorage at module init
+ * (e.g. `layout.svelte.ts`, `theme-switcher.ts`, `lcd-contrast.svelte.ts`,
+ * `lcd-display-mode.svelte.ts`). Per ES module spec, all transitive imports
+ * of `main.ts` evaluate BEFORE main.ts's body runs — which means a function
+ * call from main.ts's body would race the stores' reads.
+ *
+ * The fix is to run migration as a **top-level side-effect of THIS module**
+ * (see the bottom of the file). Then `main.ts` only needs to import this
+ * file *first*, before any other import: source-order of sibling imports is
+ * preserved during module evaluation, so this module's body (including the
+ * auto-call) runs before `App.svelte` and its store dependencies resolve.
  *
  * Idempotent — running twice is safe. Once the sentinel is written the
  * migration short-circuits.
@@ -88,3 +96,13 @@ export function migrateLegacyStorage(): void {
     // already-migrated keys are no-ops.
   }
 }
+
+// Auto-run on first import. This is what makes the migration race-free: the
+// stores that read localStorage at module init are *transitive imports* of
+// `main.ts`, and the migration module is the FIRST import of `main.ts`. ES
+// module evaluation is in source order for sibling imports, so this body
+// runs before the App / stores are evaluated.
+//
+// Idempotent via `migrationDone`. Tests call `__resetMigrationStateForTests`
+// in `beforeEach` to reset and then explicitly invoke `migrateLegacyStorage`.
+migrateLegacyStorage();
