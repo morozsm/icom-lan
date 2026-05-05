@@ -39,6 +39,8 @@ Issues = "https://github.com/rigplane/rigplane-core/issues"
 
 [project.scripts]
 rigplane = "rigplane.cli:main"
+# Deprecated alias of `rigplane` — prints DeprecationWarning then forwards.
+icom-lan = "icom_lan._cli_shim:main"
 
 [project.optional-dependencies]
 # `audio` and `bridge` extras are kept as no-op aliases for backwards
