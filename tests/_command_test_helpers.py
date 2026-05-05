@@ -57,11 +57,11 @@ def bind_default_addr_module(module: ModuleType, *, to_addr: int) -> None:
 def bind_default_addr_globals(namespace: dict[str, Any], *, to_addr: int) -> None:
     """Wrap imported command builders in a test module namespace."""
     for name, value in list(namespace.items()):
-        if isinstance(value, ModuleType) and value.__name__ == "icom_lan.commands":
+        if isinstance(value, ModuleType) and value.__name__ == "rigplane.commands":
             namespace[name] = CommandModuleProxy(value, to_addr=to_addr)
             continue
         mod = getattr(value, "__module__", None) or ""
-        if not mod.startswith("icom_lan.commands"):
+        if not mod.startswith("rigplane.commands"):
             continue
         if not callable(value):
             continue

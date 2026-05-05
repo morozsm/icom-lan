@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from icom_lan.rigctld.audit import (
+from rigplane.rigctld.audit import (
     AUDIT_LOGGER_NAME,
     AuditRecord,
     RigctldAuditFormatter,
@@ -228,9 +228,9 @@ class TestLogCommand:
 
 class TestAuditLoggerName:
     def test_name_value(self) -> None:
-        assert AUDIT_LOGGER_NAME == "icom_lan.rigctld.audit"
+        assert AUDIT_LOGGER_NAME == "rigplane.rigctld.audit"
 
     def test_logger_is_separate_from_main(self) -> None:
         audit_logger = logging.getLogger(AUDIT_LOGGER_NAME)
-        main_logger = logging.getLogger("icom_lan.rigctld.server")
+        main_logger = logging.getLogger("rigplane.rigctld.server")
         assert audit_logger is not main_logger

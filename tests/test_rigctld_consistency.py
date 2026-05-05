@@ -45,7 +45,7 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.rigctld.protocol import parse_line
+from rigplane.rigctld.protocol import parse_line
 
 # Canonical list of short commands Hamlib prefixes with VFO under
 # chk_vfo=1, per the rigctl(1) spec.

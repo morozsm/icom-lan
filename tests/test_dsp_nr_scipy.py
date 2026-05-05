@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from icom_lan.dsp.exceptions import DSPBackendUnavailable
+from rigplane.dsp.exceptions import DSPBackendUnavailable
 
 try:
     import scipy  # noqa: F401
@@ -22,7 +22,7 @@ class TestNRScipyNode(unittest.TestCase):
     """Tests for NRScipyNode spectral subtraction noise reduction."""
 
     def _make_node(self, **kwargs):
-        from icom_lan.dsp.nodes.nr_scipy import NRScipyNode
+        from rigplane.dsp.nodes.nr_scipy import NRScipyNode
 
         return NRScipyNode(**kwargs)
 
@@ -125,7 +125,7 @@ class TestNRScipyNode(unittest.TestCase):
         # Temporarily remove scipy from modules
         with patch.dict(sys.modules, {"scipy": None, "scipy.fft": None}):
             # Need to reimport the module to trigger the guard
-            import icom_lan.dsp.nodes.nr_scipy as mod
+            import rigplane.dsp.nodes.nr_scipy as mod
 
             with self.assertRaises(DSPBackendUnavailable):
                 # Force re-import logic by calling the constructor
@@ -138,7 +138,7 @@ class TestResampleIfNeeded(unittest.TestCase):
 
     def test_same_rate_noop(self):
         """Same rate returns input unchanged."""
-        from icom_lan.dsp.resample import resample_if_needed
+        from rigplane.dsp.resample import resample_if_needed
 
         samples = np.ones(100, dtype=np.float32)
         result, rate = resample_if_needed(samples, 48000, 48000)
@@ -147,7 +147,7 @@ class TestResampleIfNeeded(unittest.TestCase):
 
     def test_downsample_reduces_length(self):
         """48000->16000 reduces array length by 3x."""
-        from icom_lan.dsp.resample import resample_if_needed
+        from rigplane.dsp.resample import resample_if_needed
 
         n = 4800  # 0.1s at 48kHz
         samples = np.zeros(n, dtype=np.float32)
@@ -158,7 +158,7 @@ class TestResampleIfNeeded(unittest.TestCase):
 
     def test_preserves_tone_frequency(self):
         """Resampled sine wave preserves dominant frequency."""
-        from icom_lan.dsp.resample import resample_if_needed
+        from rigplane.dsp.resample import resample_if_needed
 
         from_rate = 48000
         to_rate = 16000

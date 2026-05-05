@@ -4,15 +4,15 @@ import struct
 
 import pytest
 
-from icom_lan.exceptions import (
+from rigplane.exceptions import (
     AuthenticationError,
     CommandError,
     ConnectionError,
-    IcomLanError,
+    RigplaneError,
     TimeoutError,
 )
-from icom_lan.protocol import identify_packet_type, parse_header, serialize_header
-from icom_lan.types import (
+from rigplane.protocol import identify_packet_type, parse_header, serialize_header
+from rigplane.types import (
     HEADER_SIZE,
     Mode,
     PacketHeader,
@@ -176,18 +176,18 @@ class TestExceptions:
     """Tests for the custom exception hierarchy."""
 
     def test_base_exception(self) -> None:
-        assert issubclass(IcomLanError, Exception)
+        assert issubclass(RigplaneError, Exception)
 
     @pytest.mark.parametrize(
         "exc_class",
         [ConnectionError, AuthenticationError, CommandError, TimeoutError],
     )
     def test_subclass_of_base(self, exc_class: type) -> None:
-        assert issubclass(exc_class, IcomLanError)
+        assert issubclass(exc_class, RigplaneError)
 
     def test_catch_base_catches_all(self) -> None:
         for cls in (ConnectionError, AuthenticationError, CommandError, TimeoutError):
-            with pytest.raises(IcomLanError):
+            with pytest.raises(RigplaneError):
                 raise cls("test")
 
 

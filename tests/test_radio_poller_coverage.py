@@ -1,4 +1,4 @@
-"""Additional coverage tests for icom_lan.web.radio_poller."""
+"""Additional coverage tests for rigplane.web.radio_poller."""
 
 from __future__ import annotations
 
@@ -8,11 +8,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.exceptions import CommandError
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.radio_state import RadioState
-from icom_lan.rigctld.state_cache import StateCache
-from icom_lan.web.radio_poller import (
+from rigplane.exceptions import CommandError
+from rigplane.profiles import resolve_radio_profile
+from rigplane.radio_state import RadioState
+from rigplane.rigctld.state_cache import StateCache
+from rigplane.web.radio_poller import (
     CommandQueue,
     DisableScope,
     EnableScope,
@@ -139,7 +139,7 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     # instance attributes so isinstance() succeeds on Python 3.12+ where
     # __getattr__-based attribute access no longer satisfies runtime-checkable
     # protocol isinstance checks.
-    from icom_lan.radio_protocol import (
+    from rigplane.radio_protocol import (
         AdvancedControlCapable as _ACC,
         ScopeCapable as _SC,
     )
@@ -535,14 +535,14 @@ async def test_run_backoff_and_query_error_paths() -> None:
     poller._send_query = AsyncMock(return_value=None)  # noqa: SLF001
     poller._initial_state_fetch = AsyncMock()  # noqa: SLF001  — skip to test backoff path
     poller._queue.wait = AsyncMock(side_effect=asyncio.CancelledError())  # noqa: SLF001
-    with patch("icom_lan.web.radio_poller.asyncio.sleep", new=AsyncMock()):
+    with patch("rigplane.web.radio_poller.asyncio.sleep", new=AsyncMock()):
         await poller._run()  # noqa: SLF001
     assert poller._send_query.await_count >= 2  # restore probe + normal query
 
     poller2 = RadioPoller(_make_radio(), StateCache(), CommandQueue())
     poller2._send_query = AsyncMock(side_effect=RuntimeError("query failed"))  # noqa: SLF001
     poller2._queue.wait = AsyncMock(side_effect=asyncio.CancelledError())  # noqa: SLF001
-    with patch("icom_lan.web.radio_poller.asyncio.sleep", new=AsyncMock()):
+    with patch("rigplane.web.radio_poller.asyncio.sleep", new=AsyncMock()):
         await poller2._run()  # noqa: SLF001
 
 

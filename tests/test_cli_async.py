@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from _caps import FULL_ICOM_CAPS
-from icom_lan.cli import (
+from rigplane.cli import (
     _cmd_audio_caps,
     _cmd_audio_loopback,
     _cmd_audio_rx,
@@ -24,7 +24,7 @@ from icom_lan.cli import (
     _run,
     main,
 )
-from icom_lan.exceptions import TimeoutError as IcomTimeout
+from rigplane.exceptions import TimeoutError as IcomTimeout
 
 
 # ---------------------------------------------------------------------------
@@ -570,8 +570,8 @@ class TestRunErrorHandling:
         radio.stop_audio_rx_opus = AsyncMock()
         _add_capability_protocols(radio)
         radio.get_audio_stats = AsyncMock(return_value=runtime_stats)
-        with patch("icom_lan.cli.create_radio", return_value=radio) as mock_create:
-            with patch("icom_lan.cli.asyncio.sleep", new=AsyncMock()):
+        with patch("rigplane.cli.create_radio", return_value=radio) as mock_create:
+            with patch("rigplane.cli.asyncio.sleep", new=AsyncMock()):
                 rc = await _run(args)
         assert rc == 0
         mock_create.assert_called_once()
@@ -597,7 +597,7 @@ class TestRunErrorHandling:
             side_effect=ConnectionError("test connection failed")
         )
         mock_radio.__aexit__ = AsyncMock(return_value=None)
-        with patch("icom_lan.cli.create_radio", return_value=mock_radio):
+        with patch("rigplane.cli.create_radio", return_value=mock_radio):
             rc = await _run(args)
         assert rc == 1
         err = capsys.readouterr().err
@@ -623,8 +623,8 @@ class TestRunErrorHandling:
         radio = AsyncMock()
         radio.__aenter__.return_value = radio
         radio.__aexit__.return_value = None
-        with patch("icom_lan.cli.create_radio", return_value=radio):
-            with patch("icom_lan.cli._cmd_audio_rx", new_callable=AsyncMock) as cmd:
+        with patch("rigplane.cli.create_radio", return_value=radio):
+            with patch("rigplane.cli._cmd_audio_rx", new_callable=AsyncMock) as cmd:
                 cmd.return_value = 0
                 rc = await _run(args)
         assert rc == 0
@@ -649,8 +649,8 @@ class TestRunErrorHandling:
         radio = AsyncMock()
         radio.__aenter__.return_value = radio
         radio.__aexit__.return_value = None
-        with patch("icom_lan.cli.create_radio", return_value=radio):
-            with patch("icom_lan.cli._cmd_audio_tx", new_callable=AsyncMock) as cmd:
+        with patch("rigplane.cli.create_radio", return_value=radio):
+            with patch("rigplane.cli._cmd_audio_tx", new_callable=AsyncMock) as cmd:
                 cmd.return_value = 0
                 rc = await _run(args)
         assert rc == 0
@@ -675,9 +675,9 @@ class TestRunErrorHandling:
         radio = AsyncMock()
         radio.__aenter__.return_value = radio
         radio.__aexit__.return_value = None
-        with patch("icom_lan.cli.create_radio", return_value=radio):
+        with patch("rigplane.cli.create_radio", return_value=radio):
             with patch(
-                "icom_lan.cli._cmd_audio_loopback",
+                "rigplane.cli._cmd_audio_loopback",
                 new_callable=AsyncMock,
             ) as cmd:
                 cmd.return_value = 0
@@ -745,7 +745,7 @@ class TestCmdScope:
 
 class TestMain:
     def test_no_command_prints_help(self, capsys) -> None:
-        with patch("sys.argv", ["icom-lan"]):
+        with patch("sys.argv", ["rigplane"]):
             # main with no command should print help and exit 0
             with pytest.raises(SystemExit) as exc:
                 main()
@@ -753,10 +753,10 @@ class TestMain:
 
     def test_discover_command(self) -> None:
         # Just verify it doesn't crash on import/parse
-        with patch("sys.argv", ["icom-lan", "discover"]):
+        with patch("sys.argv", ["rigplane", "discover"]):
             # Discover will try UDP broadcast — mock socket
             with patch(
-                "icom_lan.cli._cmd_discover",
+                "rigplane.cli._cmd_discover",
                 new_callable=lambda: lambda: AsyncMock(return_value=0),
             ):
                 pass  # We just test parsing works

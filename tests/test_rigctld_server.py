@@ -1,4 +1,4 @@
-"""Tests for src/icom_lan/rigctld/server.py.
+"""Tests for src/rigplane/rigctld/server.py.
 
 Strategy
 --------
@@ -16,16 +16,16 @@ from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
-from icom_lan.rigctld.contract import (
+from rigplane.backends.icom7610.drivers.serial_stub import SerialMockRadio
+from rigplane.rigctld.contract import (
     ClientSession,
     HamlibError,
     RigctldCommand,
     RigctldConfig,
     RigctldResponse,
 )
-from icom_lan.rigctld.server import RigctldServer, run_rigctld_server
-from icom_lan.types import Mode
+from rigplane.rigctld.server import RigctldServer, run_rigctld_server
+from rigplane.types import Mode
 
 # ---------------------------------------------------------------------------
 # Canned objects shared across tests
@@ -797,7 +797,7 @@ class TestRunRigctldServer:
         hdl.execute = AsyncMock(return_value=_FREQ_RESP)
 
         # Patch the module-level imports that run_rigctld_server triggers.
-        import icom_lan.rigctld.server as server_mod
+        import rigplane.rigctld.server as server_mod
 
         orig_cls = server_mod.RigctldServer
 

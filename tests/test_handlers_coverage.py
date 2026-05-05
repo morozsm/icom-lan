@@ -8,23 +8,23 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from _caps import FULL_ICOM_CAPS
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.scope import ScopeFrame
-from icom_lan.types import AudioCodec
-from icom_lan.web.handlers import (
+from rigplane.profiles import resolve_radio_profile
+from rigplane.scope import ScopeFrame
+from rigplane.types import AudioCodec
+from rigplane.web.handlers import (
     AudioBroadcaster,
     AudioHandler,
     ControlHandler,
     ScopeHandler,
 )
-from icom_lan.web.protocol import (
+from rigplane.web.protocol import (
     AUDIO_CODEC_OPUS,
     AUDIO_CODEC_PCM16,
     AUDIO_HEADER_SIZE,
     decode_json,
     encode_json,
 )
-from icom_lan.web.radio_poller import (
+from rigplane.web.radio_poller import (
     PttOff,
     PttOn,
     QuickDwTrigger,
@@ -78,7 +78,7 @@ from icom_lan.web.radio_poller import (
     VfoEqualize,
     VfoSwap,
 )
-from icom_lan.web.websocket import WS_OP_BINARY, WS_OP_TEXT
+from rigplane.web.websocket import WS_OP_BINARY, WS_OP_TEXT
 
 
 def _capable_radio() -> SimpleNamespace:
@@ -1111,7 +1111,7 @@ async def test_scope_sender_timeout_and_error_branches(
             coro.close()
         raise RuntimeError("stop")
 
-    monkeypatch.setattr("icom_lan.web.handlers.scope.asyncio.wait_for", _fake_wait_for)
+    monkeypatch.setattr("rigplane.web.handlers.scope.asyncio.wait_for", _fake_wait_for)
     await handler._sender()
     assert ws.send_binary.await_count == 0
 
@@ -1138,7 +1138,7 @@ async def test_scope_enqueue_and_push_paths() -> None:
 
 
 async def test_audio_broadcaster_subscribe_unsubscribe_lifecycle() -> None:
-    from icom_lan.audio_bus import AudioBus
+    from rigplane.audio_bus import AudioBus
 
     radio = SimpleNamespace(
         capabilities={"audio"},
@@ -1174,7 +1174,7 @@ async def test_audio_broadcaster_subscribe_unsubscribe_lifecycle() -> None:
 
 
 async def test_audio_broadcaster_codec_and_frame_metadata() -> None:
-    from icom_lan.audio_bus import AudioBus
+    from rigplane.audio_bus import AudioBus
 
     radio = SimpleNamespace(
         capabilities={"audio"},
@@ -1213,7 +1213,7 @@ async def test_audio_broadcaster_codec_and_frame_metadata() -> None:
 
 
 async def test_audio_broadcaster_start_relay_failure() -> None:
-    from icom_lan.audio_bus import AudioBus
+    from rigplane.audio_bus import AudioBus
 
     failing_radio = SimpleNamespace(
         capabilities={"audio"},
@@ -1282,7 +1282,7 @@ async def test_audio_broadcaster_reap_stops_relay_when_empty() -> None:
 async def test_audio_handler_reader_control_tx_and_sender_paths(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from icom_lan.radio_protocol import AudioCapable
+    from rigplane.radio_protocol import AudioCapable
 
     broadcaster = SimpleNamespace(
         subscribe=AsyncMock(return_value=asyncio.Queue()),
@@ -1357,13 +1357,13 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
     ws.send_binary = AsyncMock(side_effect=EOFError("closed"))
     handler._done.clear()
     await handler._frame_queue.put(b"x")
-    monkeypatch.setattr("icom_lan.web.handlers.audio.asyncio.wait_for", _fake_wait_for)
+    monkeypatch.setattr("rigplane.web.handlers.audio.asyncio.wait_for", _fake_wait_for)
     await handler._sender_loop()
 
 
 async def test_audio_handler_control_and_tx_guard_paths() -> None:
     ws = SimpleNamespace(send_binary=AsyncMock(), recv=AsyncMock())
-    from icom_lan.radio_protocol import AudioCapable
+    from rigplane.radio_protocol import AudioCapable
 
     class _FakeAudioRadio(AudioCapable):
         capabilities = {"audio"}
@@ -1405,7 +1405,7 @@ async def test_audio_handler_control_and_tx_guard_paths() -> None:
 
 async def test_audio_handler_tx_already_transmitting_is_tolerated() -> None:
     """_handle_control tolerates 'Already transmitting' from start_audio_tx_opus (#684)."""
-    from icom_lan.radio_protocol import AudioCapable
+    from rigplane.radio_protocol import AudioCapable
 
     radio = MagicMock(spec=AudioCapable)
     radio.capabilities = {"audio"}
@@ -1423,7 +1423,7 @@ async def test_audio_handler_tx_already_transmitting_is_tolerated() -> None:
 
 async def test_audio_handler_tx_other_runtime_error_propagates() -> None:
     """Non-'Already transmitting' RuntimeError still propagates."""
-    from icom_lan.radio_protocol import AudioCapable
+    from rigplane.radio_protocol import AudioCapable
 
     radio = MagicMock(spec=AudioCapable)
     radio.capabilities = {"audio"}

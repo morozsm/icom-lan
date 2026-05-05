@@ -23,8 +23,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.rigctld.contract import RigctldCommand, RigctldConfig, RigctldResponse
-from icom_lan.rigctld.server import RigctldServer, _is_packet_mode_set
+from rigplane.rigctld.contract import RigctldCommand, RigctldConfig, RigctldResponse
+from rigplane.rigctld.server import RigctldServer, _is_packet_mode_set
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -122,7 +122,7 @@ async def test_start_aborts_before_listening_when_radio_not_ready() -> None:
     srv = RigctldServer(radio, cfg, _protocol=_make_proto(), _handler=_make_handler())
 
     with patch(
-        "icom_lan.rigctld.server.asyncio.start_server", new=AsyncMock()
+        "rigplane.rigctld.server.asyncio.start_server", new=AsyncMock()
     ) as start_server:
         with pytest.raises(RuntimeError, match="startup aborted"):
             await srv.start()
@@ -196,7 +196,7 @@ class TestCircuitBreakerState:
     async def test_returns_state_after_start(
         self, mock_radio: MagicMock, cfg: RigctldConfig
     ) -> None:
-        from icom_lan.rigctld.circuit_breaker import CircuitBreaker
+        from rigplane.rigctld.circuit_breaker import CircuitBreaker
 
         proto = _make_proto()
         handler = _make_handler()
@@ -487,7 +487,7 @@ async def test_wsjtx_compat_prewarm_triggers_on_first_client(
     mock_radio: MagicMock,
 ) -> None:
     """With wsjtx_compat=True, prewarm coroutine should be scheduled on first connect."""
-    from icom_lan.types import Mode
+    from rigplane.types import Mode
 
     cfg = RigctldConfig(
         host="127.0.0.1",

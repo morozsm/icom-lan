@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.audio.backend import (
+from rigplane.audio.backend import (
     AudioDeviceId,
     AudioDeviceInfo,
     FakeAudioBackend,
 )
-from icom_lan.backends.icom7610.drivers.usb_audio import (
+from rigplane.backends.icom7610.drivers.usb_audio import (
     AudioDeviceSelectionError,
     AudioDriverLifecycleError,
     UsbAudioDevice,
@@ -169,14 +169,14 @@ async def test_usb_audio_driver_double_start_and_missing_tx_guardrails() -> None
 
 @pytest.mark.asyncio
 async def test_usb_audio_driver_missing_backend_dependencies_is_actionable() -> None:
-    from icom_lan.audio.backend import PortAudioBackend
+    from rigplane.audio.backend import PortAudioBackend
 
     def _missing_sounddevice() -> tuple[object, object]:
         raise ImportError("No module named 'sounddevice'")
 
     backend = PortAudioBackend(dependency_loader=_missing_sounddevice)
     driver = UsbAudioDriver(backend=backend)
-    with pytest.raises(ImportError, match="pip install icom-lan\\[bridge\\]"):
+    with pytest.raises(ImportError, match="pip install rigplane\\[bridge\\]"):
         await driver.start_rx(lambda _frame: None)
 
 

@@ -2,14 +2,14 @@
 
 ``aiohttp`` is a dev-only / optional dependency (declared in
 ``[dependency-groups].dev``, not in ``[project].dependencies``). It is only
-needed when the user actually invokes ``icom-lan diagnose --upload``. Importing
-it eagerly would break every other CLI command (``icom-lan status``,
-``icom-lan freq`` …) for users who installed only the runtime requirements
+needed when the user actually invokes ``rigplane diagnose --upload``. Importing
+it eagerly would break every other CLI command (``rigplane status``,
+``rigplane freq`` …) for users who installed only the runtime requirements
 — that's the bug Codex flagged on PR #1413.
 
 This test runs in an **isolated subprocess** (so already-imported modules in
 the parent pytest process can't paper over the issue), blocks ``aiohttp`` via
-``sys.meta_path``, and asserts that ``icom_lan.cli`` loads and ``_build_parser``
+``sys.meta_path``, and asserts that ``rigplane.cli`` loads and ``_build_parser``
 returns a usable parser.
 """
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 
 def test_cli_module_loads_without_aiohttp() -> None:
-    """Importing ``icom_lan.cli`` must not pull in ``aiohttp`` transitively."""
+    """Importing ``rigplane.cli`` must not pull in ``aiohttp`` transitively."""
     script = textwrap.dedent(
         """
         import sys
@@ -40,8 +40,8 @@ def test_cli_module_loads_without_aiohttp() -> None:
 
         # Importing the CLI package must succeed — ``_diagnose`` is imported
         # at module scope by ``cli/__init__.py``, so this exercises the bug.
-        import icom_lan.cli
-        parser = icom_lan.cli._build_parser()
+        import rigplane.cli
+        parser = rigplane.cli._build_parser()
         assert parser is not None
 
         # Sanity-check: ``aiohttp`` truly never made it into ``sys.modules``.
@@ -73,14 +73,14 @@ def test_cli_module_loads_without_aiohttp() -> None:
 
 
 def test_diagnose_save_only_runs_without_aiohttp(tmp_path: Path) -> None:
-    """``icom-lan diagnose --output ...`` (no --upload) must run without aiohttp.
+    """``rigplane diagnose --output ...`` (no --upload) must run without aiohttp.
 
     Regression for the follow-up bug on PR-A (#1417): the lazy-import work
     moved diagnostics symbols out of module level into ``_run_async``, but
     the imports happened at the TOP of ``_run_async``, BEFORE checking
-    ``args.upload``. Result: even ``icom-lan diagnose`` (save-only) would
+    ``args.upload``. Result: even ``rigplane diagnose`` (save-only) would
     pull ``aiohttp`` via the lazy ``upload_bundle`` re-export and crash for
-    ``pip install icom-lan`` users (aiohttp is dev-only).
+    ``pip install rigplane`` users (aiohttp is dev-only).
 
     This test executes the full save-only path in a subprocess with
     ``aiohttp`` blocked on ``sys.meta_path`` and asserts:
@@ -95,7 +95,7 @@ def test_diagnose_save_only_runs_without_aiohttp(tmp_path: Path) -> None:
         f"""
         import sys
 
-        # Block aiohttp BEFORE any icom_lan import.
+        # Block aiohttp BEFORE any rigplane import.
         class _AiohttpBlocker:
             def find_spec(self, name, path=None, target=None):
                 if name == "aiohttp" or name.startswith("aiohttp."):
@@ -106,8 +106,8 @@ def test_diagnose_save_only_runs_without_aiohttp(tmp_path: Path) -> None:
 
         sys.meta_path.insert(0, _AiohttpBlocker())
 
-        from icom_lan.cli import _build_parser
-        from icom_lan.cli._diagnose import run as run_diagnose
+        from rigplane.cli import _build_parser
+        from rigplane.cli._diagnose import run as run_diagnose
 
         parser = _build_parser()
         args = parser.parse_args(
@@ -144,7 +144,7 @@ def test_diagnose_save_only_runs_without_aiohttp(tmp_path: Path) -> None:
 
 
 def test_diagnose_upload_without_aiohttp_emits_friendly_error(tmp_path: Path) -> None:
-    """``icom-lan diagnose --upload`` without aiohttp must NOT show a traceback.
+    """``rigplane diagnose --upload`` without aiohttp must NOT show a traceback.
 
     Regression for the L1.8 UX finding: when ``aiohttp`` is missing and the
     user explicitly passes ``--upload``, the command should print a short
@@ -177,8 +177,8 @@ def test_diagnose_upload_without_aiohttp_emits_friendly_error(tmp_path: Path) ->
 
         sys.meta_path.insert(0, _AiohttpBlocker())
 
-        from icom_lan.cli import _build_parser
-        from icom_lan.cli._diagnose import run as run_diagnose
+        from rigplane.cli import _build_parser
+        from rigplane.cli._diagnose import run as run_diagnose
 
         parser = _build_parser()
         args = parser.parse_args(

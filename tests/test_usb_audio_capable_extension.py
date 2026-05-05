@@ -14,7 +14,7 @@ plugin mechanism, or string discriminator.
 
 from __future__ import annotations
 
-from icom_lan import UsbAudioCapable
+from rigplane import UsbAudioCapable
 
 
 class _StubUsbAudioRadio:
@@ -50,6 +50,6 @@ def test_yaesu_cat_radio_declares_usb_audio() -> None:
     """The shipping :class:`YaesuCatRadio` declares
     ``has_usb_audio = True``, so it satisfies :class:`UsbAudioCapable`
     structurally."""
-    from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
+    from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
 
     assert YaesuCatRadio.has_usb_audio is True

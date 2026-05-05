@@ -1,9 +1,9 @@
 """Extended tests for commands module — VFO, split, att, preamp, CW, power."""
 
-import icom_lan.commands as raw_commands
+import rigplane.commands as raw_commands
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     CONTROLLER_ADDR,
     build_civ_frame,
     parse_civ_frame,

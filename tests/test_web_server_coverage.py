@@ -1,4 +1,4 @@
-"""Additional coverage tests for icom_lan.web.server without real sockets."""
+"""Additional coverage tests for rigplane.web.server without real sockets."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.web.radio_poller import EnableScope
-from icom_lan.web.server import WebConfig, WebServer, _send_response, run_web_server
+from rigplane.web.radio_poller import EnableScope
+from rigplane.web.server import WebConfig, WebServer, _send_response, run_web_server
 
 
 class _FakeSocket:
@@ -135,10 +135,10 @@ async def test_start_and_stop_with_radio_sets_callbacks() -> None:
     srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
     with (
         patch(
-            "icom_lan.web.web_startup.asyncio.start_server",
+            "rigplane.web.web_startup.asyncio.start_server",
             new=AsyncMock(return_value=fake_server),
         ),
-        patch("icom_lan.web.web_startup.RadioPoller", return_value=fake_poller),
+        patch("rigplane.web.web_startup.RadioPoller", return_value=fake_poller),
     ):
         await srv.start()
         assert srv.port == 4242
@@ -182,11 +182,11 @@ async def test_start_aborts_before_listening_when_radio_not_ready() -> None:
 
     with (
         patch(
-            "icom_lan.web.web_startup.assert_radio_startup_ready",
+            "rigplane.web.web_startup.assert_radio_startup_ready",
             side_effect=RuntimeError("web startup aborted"),
         ),
         patch(
-            "icom_lan.web.web_startup.asyncio.start_server", new=AsyncMock()
+            "rigplane.web.web_startup.asyncio.start_server", new=AsyncMock()
         ) as start_server,
     ):
         with pytest.raises(RuntimeError, match="web startup aborted"):
@@ -231,7 +231,7 @@ async def test_read_request_parses_and_handles_invalid_cases() -> None:
             coro.close()
         raise asyncio.TimeoutError
 
-    with patch("icom_lan.web.server.asyncio.wait_for", side_effect=timeout_wait_for):
+    with patch("rigplane.web.server.asyncio.wait_for", side_effect=timeout_wait_for):
         assert await srv._read_request(_reader_with(b"GET / HTTP/1.1\r\n")) is None  # noqa: SLF001
 
 
@@ -239,7 +239,7 @@ async def test_read_request_parses_and_handles_invalid_cases() -> None:
 async def test_handle_http_routes_and_405_404() -> None:
     srv = WebServer(None)
     writer = _FakeWriter()
-    with patch("icom_lan.web.server._send_response", new=AsyncMock()) as send_resp:
+    with patch("rigplane.web.server._send_response", new=AsyncMock()) as send_resp:
         await srv._handle_http(writer, "POST", "/")  # noqa: SLF001
     send_resp.assert_awaited_once()
 
@@ -249,7 +249,7 @@ async def test_handle_http_routes_and_405_404() -> None:
     srv2._serve_state = AsyncMock()
     srv2._serve_capabilities = AsyncMock()
     srv2._serve_static = AsyncMock()
-    with patch("icom_lan.web.server._send_response", new=AsyncMock()) as send_resp2:
+    with patch("rigplane.web.server._send_response", new=AsyncMock()) as send_resp2:
         await srv2._handle_http(writer2, "GET", "/api/v1/info")  # noqa: SLF001
         await srv2._handle_http(writer2, "GET", "/api/v1/state")  # noqa: SLF001
         await srv2._handle_http(writer2, "GET", "/api/v1/capabilities")  # noqa: SLF001
@@ -298,14 +298,14 @@ async def test_handle_websocket_missing_key_unknown_channel_and_control_handler(
 ):
     srv = WebServer(None)
     writer = _FakeWriter()
-    with patch("icom_lan.web.server._send_response", new=AsyncMock()) as send_resp:
+    with patch("rigplane.web.server._send_response", new=AsyncMock()) as send_resp:
         await srv._handle_websocket(_reader_with(b""), writer, "/api/v1/ws", {})  # noqa: SLF001
     send_resp.assert_awaited_once()
 
     ws_unknown = MagicMock()
     ws_unknown.close = AsyncMock()
     ws_unknown.keepalive_loop = AsyncMock()
-    with patch("icom_lan.web.server.WebSocketConnection", return_value=ws_unknown):
+    with patch("rigplane.web.server.WebSocketConnection", return_value=ws_unknown):
         await srv._handle_websocket(  # noqa: SLF001
             _reader_with(b""),
             _FakeWriter(),
@@ -325,8 +325,8 @@ async def test_handle_websocket_missing_key_unknown_channel_and_control_handler(
     handler.run = AsyncMock(side_effect=RuntimeError("handler failed"))
     writer_ok = _FakeWriter()
     with (
-        patch("icom_lan.web.server.WebSocketConnection", return_value=ws_ok),
-        patch("icom_lan.web.server.ControlHandler", return_value=handler),
+        patch("rigplane.web.server.WebSocketConnection", return_value=ws_ok),
+        patch("rigplane.web.server.ControlHandler", return_value=handler),
     ):
         await srv._handle_websocket(  # noqa: SLF001
             _reader_with(b""),
@@ -486,7 +486,7 @@ async def test_send_response_and_run_web_server() -> None:
 
     fake_server = MagicMock()
     fake_server.serve_forever = AsyncMock()
-    with patch("icom_lan.web.server.WebServer", return_value=fake_server):
+    with patch("rigplane.web.server.WebServer", return_value=fake_server):
         await run_web_server(None, host="127.0.0.1", port=8000)
     fake_server.serve_forever.assert_awaited_once()
 
@@ -546,8 +546,8 @@ async def test_broadcast_notification_full_queue_no_crash() -> None:
 
 def test_radio_poller_revision_starts_at_zero() -> None:
     """RadioPoller.revision is 0 before any state changes."""
-    from icom_lan.web.radio_poller import CommandQueue, RadioPoller
-    from icom_lan.rigctld.state_cache import StateCache
+    from rigplane.web.radio_poller import CommandQueue, RadioPoller
+    from rigplane.rigctld.state_cache import StateCache
 
     radio = MagicMock()
     radio.capabilities = set()
@@ -566,8 +566,8 @@ def test_radio_poller_revision_starts_at_zero() -> None:
 
 def test_radio_poller_revision_increments() -> None:
     """bump_revision() monotonically increments revision."""
-    from icom_lan.web.radio_poller import CommandQueue, RadioPoller
-    from icom_lan.rigctld.state_cache import StateCache
+    from rigplane.web.radio_poller import CommandQueue, RadioPoller
+    from rigplane.rigctld.state_cache import StateCache
 
     radio = MagicMock()
     radio.capabilities = set()
@@ -590,8 +590,8 @@ def test_radio_poller_revision_increments() -> None:
 
 def test_radio_poller_revision_never_decreases() -> None:
     """After many bump_revision calls, revision is always >= previous value."""
-    from icom_lan.web.radio_poller import CommandQueue, RadioPoller
-    from icom_lan.rigctld.state_cache import StateCache
+    from rigplane.web.radio_poller import CommandQueue, RadioPoller
+    from rigplane.rigctld.state_cache import StateCache
 
     radio = MagicMock()
     radio.capabilities = set()
@@ -653,8 +653,8 @@ async def test_state_response_revision_zero_without_poller() -> None:
 @pytest.mark.asyncio
 async def test_on_radio_state_change_bumps_revision() -> None:
     """_on_radio_state_change increments poller.revision."""
-    from icom_lan.web.radio_poller import CommandQueue, RadioPoller
-    from icom_lan.rigctld.state_cache import StateCache
+    from rigplane.web.radio_poller import CommandQueue, RadioPoller
+    from rigplane.rigctld.state_cache import StateCache
 
     radio = MagicMock()
     radio.capabilities = set()
@@ -684,7 +684,7 @@ async def test_info_endpoint_returns_structured_capabilities() -> None:
     """/api/v1/info returns model, capabilities, and connection objects."""
     import json as _json
 
-    from icom_lan.radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
+    from rigplane.radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
 
     class _FakeRadio(ScopeCapable, AudioCapable, DualReceiverCapable):
         def __init__(self) -> None:
@@ -706,7 +706,7 @@ async def test_info_endpoint_returns_structured_capabilities() -> None:
     data = _json.loads(text[body_start:])
 
     # Legacy fields still present (backward compat)
-    assert data["server"] == "icom-lan"
+    assert data["server"] == "rigplane"
     assert data["proto"] == 1
     assert data["radio"] == "IC-7610"
 
@@ -755,7 +755,7 @@ async def test_info_endpoint_no_radio() -> None:
 # ---------------------------------------------------------------------------
 
 
-from icom_lan.web.runtime_helpers import _camel_case_state  # noqa: E402
+from rigplane.web.runtime_helpers import _camel_case_state  # noqa: E402
 
 
 class TestCamelCaseState:

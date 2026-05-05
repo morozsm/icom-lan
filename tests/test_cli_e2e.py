@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from _caps import FULL_ICOM_CAPS
-from icom_lan.cli import (
+from rigplane.cli import (
     _cmd_audio_caps,
     _cmd_audio_loopback,
     _cmd_audio_rx,

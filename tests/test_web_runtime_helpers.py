@@ -6,8 +6,8 @@ from typing import Any
 import pytest
 from unittest.mock import MagicMock
 
-from icom_lan.web.runtime_helpers import radio_ready, runtime_capabilities
-from icom_lan.web.server import WebServer
+from rigplane.web.runtime_helpers import radio_ready, runtime_capabilities
+from rigplane.web.server import WebServer
 
 
 class _FakeWriter:
@@ -57,7 +57,7 @@ def test_runtime_capabilities_uses_explicit_caps_without_protocol_fallback() -> 
 
 
 def test_runtime_capabilities_falls_back_to_protocols_when_caps_missing() -> None:
-    from icom_lan.radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
+    from rigplane.radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
 
     class _ProtoRadio(ScopeCapable, AudioCapable, DualReceiverCapable):  # type: ignore[misc]
         def __init__(self) -> None:
@@ -104,7 +104,7 @@ def test_runtime_capabilities_fallback_recognises_usb_audio_only() -> None:
     (and not in-band ``AudioCapable``) must still get the ``"audio"`` tag when
     capabilities are derived purely from Protocol checks.
     """
-    from icom_lan.radio_protocol import UsbAudioCapable
+    from rigplane.radio_protocol import UsbAudioCapable
 
     class _UsbOnlyRadio(UsbAudioCapable):  # type: ignore[misc]
         has_usb_audio: bool = True
@@ -142,8 +142,8 @@ def test_radio_ready_handles_missing_or_non_bool_attributes() -> None:
 @pytest.mark.asyncio
 async def test_webserver_and_control_handler_use_same_capabilities_and_ready() -> None:
     """HTTP /api/v1/info and WS hello share the same runtime helpers."""
-    from icom_lan.web.handlers import ControlHandler
-    from icom_lan.web.websocket import WebSocketConnection
+    from rigplane.web.handlers import ControlHandler
+    from rigplane.web.websocket import WebSocketConnection
 
     caps = {"audio", "scope", "dual_rx", "tx"}
     radio = _FakeRadio(caps=caps, connected=True, radio_ready_flag=True)

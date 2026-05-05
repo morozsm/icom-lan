@@ -5,8 +5,8 @@ Tests fire-and-forget commands that don't wait for responses.
 
 import asyncio
 import pytest
-from icom_lan.radio import IcomRadio  # noqa: TID251
-from icom_lan.types import MemoryChannel, BandStackRegister
+from rigplane.radio import IcomRadio  # noqa: TID251
+from rigplane.types import MemoryChannel, BandStackRegister
 
 pytestmark = pytest.mark.integration
 

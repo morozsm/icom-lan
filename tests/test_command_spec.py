@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.command_spec import CatCommandSpec, CivCommandSpec
-from icom_lan.rig_loader import RigLoadError, load_rig
+from rigplane.command_spec import CatCommandSpec, CivCommandSpec
+from rigplane.rig_loader import RigLoadError, load_rig
 
 
 def _write_toml(tmp_path: Path, content: str, name: str = "test.toml") -> Path:

@@ -25,13 +25,13 @@ from typing import Any
 
 import pytest
 
-from icom_lan.diagnostics import (
+from rigplane.diagnostics import (
     BundleContext,
     build_bundle,
     register,
 )
-from icom_lan.diagnostics import _discovery
-from icom_lan.diagnostics.contributors.config import ConfigContributor
+from rigplane.diagnostics import _discovery
+from rigplane.diagnostics.contributors.config import ConfigContributor
 
 
 # --- Fixtures -------------------------------------------------------

@@ -15,8 +15,8 @@ import pytest
 
 from _audio_stream_fake import FakeAudioStream
 
-from icom_lan.audio import AudioState
-from icom_lan.radio import AudioRecoveryState, IcomRadio
+from rigplane.audio import AudioState
+from rigplane.radio import AudioRecoveryState, IcomRadio
 
 
 # ---------------------------------------------------------------------------
@@ -381,7 +381,7 @@ class TestAudioRecoveryAfterReconnect:
                 side_effect=RuntimeError("audio port gone"),
             ),
         ):
-            with caplog.at_level(logging.WARNING, logger="icom_lan.runtime.radio"):
+            with caplog.at_level(logging.WARNING, logger="rigplane.runtime.radio"):
                 await radio._reconnect_loop()
 
         # Should not have crashed

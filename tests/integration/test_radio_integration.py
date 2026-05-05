@@ -20,9 +20,9 @@ import time
 
 import pytest
 
-from icom_lan import IcomRadio
-from icom_lan.exceptions import TimeoutError as IcomTimeoutError
-from icom_lan.types import Mode
+from rigplane import IcomRadio
+from rigplane.exceptions import TimeoutError as IcomTimeoutError
+from rigplane.types import Mode
 
 from logging_utils import log_event, timed_call
 

@@ -7,18 +7,18 @@ import base64
 import hashlib
 import json
 import struct
-from unittest.mock import patch
 
 import pytest
 
-from icom_lan.audio_bridge import AudioBridge
-from icom_lan.backends.icom7610 import Icom7610SerialRadio
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
-from icom_lan.rigctld.contract import RigctldConfig
-from icom_lan.rigctld.server import RigctldServer
-from icom_lan.web.handlers import AudioBroadcaster
-from icom_lan.web.protocol import AUDIO_CODEC_PCM16, AUDIO_HEADER_SIZE
-from icom_lan.web.server import WebConfig, WebServer
+from rigplane.audio.backend import AudioDeviceId, AudioDeviceInfo, FakeAudioBackend
+from rigplane.audio_bridge import AudioBridge
+from rigplane.backends.icom7610 import Icom7610SerialRadio
+from rigplane.backends.icom7610.drivers.serial_stub import SerialMockRadio
+from rigplane.rigctld.contract import RigctldConfig
+from rigplane.rigctld.server import RigctldServer
+from rigplane.web.handlers import AudioBroadcaster
+from rigplane.web.protocol import AUDIO_CODEC_PCM16, AUDIO_HEADER_SIZE
+from rigplane.web.server import WebConfig, WebServer
 
 
 _WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -390,9 +390,6 @@ async def test_web_audio_broadcaster_smoke_with_serial_backend_audio_driver() ->
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(
-    reason="Flaky in CI: race condition in audio frame propagation timing (#801)"
-)
 async def test_audio_bridge_smoke_with_serial_backend_audio_driver() -> None:
     serial_audio = _FakeUsbAudioDriver()
     radio = Icom7610SerialRadio(
@@ -401,20 +398,42 @@ async def test_audio_bridge_smoke_with_serial_backend_audio_driver() -> None:
         audio_driver=serial_audio,
     )
     await radio.connect()
-    fake_sd = _BridgeSoundDevice()
-    bridge = AudioBridge(radio, device_name="BlackHole", tx_enabled=True)
+
+    # Use FakeAudioBackend to eliminate asyncio.to_thread races that made
+    # this test flaky in CI (#801). FakeRxStream/FakeTxStream are fully
+    # in-loop — no thread pool scheduling, no call_soon_threadsafe delays.
+    device = AudioDeviceInfo(
+        id=AudioDeviceId(1),
+        name="BlackHole 2ch",
+        input_channels=2,
+        output_channels=2,
+    )
+    backend = FakeAudioBackend(devices=[device])
+    bridge = AudioBridge(
+        radio, device_name="BlackHole", tx_enabled=True, backend=backend
+    )
     try:
-        with patch.dict("sys.modules", {"sounddevice": fake_sd}):
-            await bridge.start()
-            serial_audio.emit_rx_pcm(b"\x10\x20" * 960)
-            deadline = asyncio.get_running_loop().time() + 1.0
-            while (
-                not serial_audio.tx_frames
-                and asyncio.get_running_loop().time() < deadline
-            ):
-                await asyncio.sleep(0.02)
-            assert fake_sd.output_stream.writes
-            assert serial_audio.tx_frames
-            await bridge.stop()
+        await bridge.start()
+        # Yield once so _rx_loop and _tx_loop tasks actually start running.
+        await asyncio.sleep(0)
+
+        # RX path: serial driver → AudioBus → _rx_loop → FakeTxStream
+        serial_audio.emit_rx_pcm(b"\x10\x20" * 960)
+        await asyncio.sleep(0)  # let _rx_loop process the queued packet
+        assert backend.tx_streams[0].written_frames, (
+            "RX frame did not reach bridge output"
+        )
+
+        # TX path: FakeRxStream.inject_frame → _on_tx_capture → _tx_loop → radio
+        # PCM value 100 (> silence threshold of 10) so it is not filtered.
+        pcm_tx = bytes([0, 100] * 960)  # 960 int16 samples, each = 0x6400 = 25600
+        backend.rx_streams[0].inject_frame(pcm_tx)
+        # inject_frame calls _on_tx_capture via call_soon_threadsafe; need two
+        # yields: one to run _enqueue_tx, one to let _tx_loop process the frame.
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        assert serial_audio.tx_frames, "TX frame did not reach radio"
+
+        await bridge.stop()
     finally:
         await radio.disconnect()

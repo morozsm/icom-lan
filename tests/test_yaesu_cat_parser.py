@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.backends.yaesu_cat.parser import (
+from rigplane.backends.yaesu_cat.parser import (
     CatCommandParser,
     CatFormatError,
     CatParseError,

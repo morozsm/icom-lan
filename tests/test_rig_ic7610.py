@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.rig_loader import load_rig
+from rigplane.rig_loader import load_rig
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
 IC7610_PATH = RIGS_DIR / "ic7610.toml"

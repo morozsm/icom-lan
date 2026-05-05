@@ -37,14 +37,14 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 import pytest
 from test_radio import MockTransport, _wrap_civ_in_udp
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.runtime._civ_rx import CIV_HEADER_SIZE
-from icom_lan.commands import CONTROLLER_ADDR, build_civ_frame
-from icom_lan.exceptions import ConnectionError
-from icom_lan.radio import IcomRadio
-from icom_lan.radio_state import RadioState
-from icom_lan.scope import ScopeFrame
-from icom_lan.types import CivFrame, Mode, bcd_encode
+from rigplane import IC_7610_ADDR
+from rigplane.runtime._civ_rx import CIV_HEADER_SIZE
+from rigplane.commands import CONTROLLER_ADDR, build_civ_frame
+from rigplane.exceptions import ConnectionError
+from rigplane.radio import IcomRadio
+from rigplane.radio_state import RadioState
+from rigplane.scope import ScopeFrame
+from rigplane.types import CivFrame, Mode, bcd_encode
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -1314,7 +1314,7 @@ def test_publish_scope_frame_invokes_callback(radio: IcomRadio) -> None:
 
 def test_publish_civ_event_drops_oldest_when_full(radio: IcomRadio) -> None:
     """When civ_event_queue is full, oldest event is dropped (lines 655-658)."""
-    from icom_lan.civ import CivEvent, CivEventType
+    from rigplane.civ import CivEvent, CivEventType
 
     event = CivEvent(type=CivEventType.ACK, frame=None)
 
@@ -1334,13 +1334,13 @@ def test_publish_civ_event_drops_oldest_when_full(radio: IcomRadio) -> None:
 
 async def test_start_civ_worker_reuses_existing_commander(radio: IcomRadio) -> None:
     """_start_civ_worker reuses existing commander if already created (line 726)."""
-    from icom_lan.commander import IcomCommander
+    from rigplane.commander import IcomCommander
 
     # Pre-create a commander
     mock_commander = MagicMock(spec=IcomCommander)
     radio._commander = mock_commander
 
-    with patch("icom_lan._civ_rx.IcomCommander") as mock_cls:
+    with patch("rigplane._civ_rx.IcomCommander") as mock_cls:
         radio._civ_runtime.start_worker()
         mock_cls.assert_not_called()  # Commander should NOT be re-created
 

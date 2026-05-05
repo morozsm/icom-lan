@@ -2,7 +2,7 @@
 
 import pytest
 
-from icom_lan.audio import AudioPacket, JitterBuffer
+from rigplane.audio import AudioPacket, JitterBuffer
 
 
 def _pkt(seq: int, data: bytes = b"\x00") -> AudioPacket:

@@ -22,10 +22,10 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from _caps import FULL_ICOM_CAPS
-from icom_lan.radio_protocol import MetersCapable
-from icom_lan.rigctld.contract import RigctldConfig
-from icom_lan.rigctld.server import RigctldServer
-from icom_lan.types import Mode
+from rigplane.radio_protocol import MetersCapable
+from rigplane.rigctld.contract import RigctldConfig
+from rigplane.rigctld.server import RigctldServer
+from rigplane.types import Mode
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -113,8 +113,8 @@ def _make_mock_poller() -> MagicMock:
 @pytest.fixture
 async def wire_server() -> RigctldServer:  # type: ignore[misc]
     """Real RigctldServer bound to 127.0.0.1:0 with mock radio + poller."""
-    from icom_lan.rigctld.handler import RigctldHandler
-    from icom_lan.rigctld.state_cache import StateCache
+    from rigplane.rigctld.handler import RigctldHandler
+    from rigplane.rigctld.state_cache import StateCache
 
     radio = _make_mock_radio()
     poller = _make_mock_poller()
@@ -139,7 +139,7 @@ async def wire_server() -> RigctldServer:  # type: ignore[misc]
 @pytest.fixture
 async def ro_wire_server() -> RigctldServer:  # type: ignore[misc]
     """Read-only RigctldServer for testing that setters are rejected."""
-    from icom_lan.rigctld.handler import RigctldHandler
+    from rigplane.rigctld.handler import RigctldHandler
 
     radio = _make_mock_radio()
     poller = _make_mock_poller()
@@ -245,7 +245,7 @@ class TestGetSetRoundtrip:
         await w.drain()
 
         data = await _read(r)
-        assert data == b"Icom IC-7610 (icom-lan)\n"
+        assert data == b"Icom IC-7610 (rigplane)\n"
         await _close(w)
 
     async def test_chk_vfo_wire(self, wire_server: RigctldServer) -> None:
@@ -317,7 +317,7 @@ class TestDumpStateWire:
         b"0 0 0 0 0 0 0\n"
         b"0x1ff 1\n0 0\n"
         b"0x1ff 3000\n0x1ff 2400\n0x1ff 1800\n"
-        b"0 0\n0\n0\n0\n0\n"
+        b"0 0\n9999\n9999\n0\n0\n"
         b"12 20 0\n6 12 18 0\n"
         b"0x00011B3E\n0x00011B3E\n0x5401791B\n0x0001791B\n0\n0\n"
     )

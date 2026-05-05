@@ -18,9 +18,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.rigctld.state_cache import StateCache
-from icom_lan.web.radio_poller import (
+from rigplane.profiles import resolve_radio_profile
+from rigplane.rigctld.state_cache import StateCache
+from rigplane.web.radio_poller import (
     CommandQueue,
     PttOff,
     PttOn,

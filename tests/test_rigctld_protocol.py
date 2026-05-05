@@ -1,4 +1,4 @@
-"""Tests for src/icom_lan/rigctld/protocol.py.
+"""Tests for src/rigplane/rigctld/protocol.py.
 
 Covers:
 - parse_line: short commands, long commands, arg validation, unknown commands
@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.rigctld.contract import (
+from rigplane.rigctld.contract import (
     ClientSession,
     HamlibError,
     RigctldCommand,
     RigctldResponse,
 )
-from icom_lan.rigctld.protocol import format_error, format_response, parse_line
+from rigplane.rigctld.protocol import format_error, format_response, parse_line
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────

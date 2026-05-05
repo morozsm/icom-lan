@@ -16,13 +16,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.exceptions import (
+from rigplane.exceptions import (
     TimeoutError as IcomTimeoutError,
 )
-from icom_lan.rigctld.contract import RigctldConfig
-from icom_lan.rigctld.poller import RadioPoller
-from icom_lan.rigctld.state_cache import StateCache
-from icom_lan.types import Mode
+from rigplane.rigctld.contract import RigctldConfig
+from rigplane.rigctld.poller import RadioPoller
+from rigplane.rigctld.state_cache import StateCache
+from rigplane.types import Mode
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +165,7 @@ async def test_poll_once_data_mode_connection_error_does_not_crash(
     mock_radio: AsyncMock,
 ) -> None:
     """ConnectionError on get_data_mode should be logged and not crash."""
-    from icom_lan.exceptions import ConnectionError as IcomConnectionError
+    from rigplane.exceptions import ConnectionError as IcomConnectionError
 
     mock_radio.get_data_mode.side_effect = IcomConnectionError("lost")
     await poller._poll_once()
@@ -189,7 +189,7 @@ async def test_maybe_log_stats_emits_after_interval(
     poller._last_stats_log = time.monotonic() - 100.0
     mock_radio.civ_stats = MagicMock(return_value={"active_waiters": 0})
 
-    with caplog.at_level(logging.INFO, logger="icom_lan.rigctld.poller"):
+    with caplog.at_level(logging.INFO, logger="rigplane.rigctld.poller"):
         poller._maybe_log_stats()
 
     assert any("RadioPoller stats" in r.message for r in caplog.records)
@@ -205,7 +205,7 @@ def test_maybe_log_stats_does_not_emit_before_interval(
     # Set last log to now so interval has NOT elapsed
     poller._last_stats_log = time.monotonic()
 
-    with caplog.at_level(logging.INFO, logger="icom_lan.rigctld.poller"):
+    with caplog.at_level(logging.INFO, logger="rigplane.rigctld.poller"):
         poller._maybe_log_stats()
 
     assert not any("RadioPoller stats" in r.message for r in caplog.records)
@@ -224,7 +224,7 @@ async def test_maybe_log_stats_with_civ_stats(
     )
     poller._last_stats_log = time.monotonic() - 100.0
 
-    with caplog.at_level(logging.INFO, logger="icom_lan.rigctld.poller"):
+    with caplog.at_level(logging.INFO, logger="rigplane.rigctld.poller"):
         poller._maybe_log_stats()
 
     assert any("RadioPoller stats" in r.message for r in caplog.records)
@@ -238,14 +238,14 @@ async def test_maybe_log_stats_with_circuit_breaker(
 ) -> None:
     """_maybe_log_stats() should include circuit breaker state."""
     import logging
-    from icom_lan.rigctld.circuit_breaker import CircuitBreaker
+    from rigplane.rigctld.circuit_breaker import CircuitBreaker
 
     cb = CircuitBreaker()
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
     p._last_stats_log = time.monotonic() - 100.0
     mock_radio.civ_stats = MagicMock(return_value={"active_waiters": 0})
 
-    with caplog.at_level(logging.INFO, logger="icom_lan.rigctld.poller"):
+    with caplog.at_level(logging.INFO, logger="rigplane.rigctld.poller"):
         p._maybe_log_stats()
 
     assert any("RadioPoller stats" in r.message for r in caplog.records)

@@ -6,8 +6,8 @@ import os
 
 import pytest
 
-from icom_lan import IcomRadio
-from icom_lan.exceptions import AuthenticationError, ConnectionError, TimeoutError
+from rigplane import IcomRadio
+from rigplane.exceptions import AuthenticationError, ConnectionError, TimeoutError
 
 
 pytestmark = pytest.mark.integration

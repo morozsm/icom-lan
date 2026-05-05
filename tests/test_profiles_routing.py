@@ -7,12 +7,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan import IcomRadio
-from icom_lan.exceptions import CommandError
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.rigctld.state_cache import StateCache
-from icom_lan.web.handlers import ControlHandler
-from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetFreq, SetMode
+from rigplane import IcomRadio
+from rigplane.exceptions import CommandError
+from rigplane.profiles import resolve_radio_profile
+from rigplane.rigctld.state_cache import StateCache
+from rigplane.web.handlers import ControlHandler
+from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetFreq, SetMode
 
 
 def _dual_radio_mock() -> MagicMock:

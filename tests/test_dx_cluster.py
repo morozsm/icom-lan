@@ -1,4 +1,4 @@
-"""Tests for src/icom_lan/web/dx_cluster.py
+"""Tests for src/rigplane/web/dx_cluster.py
 
 Task 1: DXSpot dataclass + parse_spot
 Task 2: DXClusterClient asyncio telnet
@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.web.dx_cluster import DXClusterClient, DXSpot, SpotBuffer, parse_spot
+from rigplane.web.dx_cluster import DXClusterClient, DXSpot, SpotBuffer, parse_spot
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +167,7 @@ class TestDXClusterClient:
         writer = _make_writer()
 
         with patch(
-            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            "rigplane.web.dx_cluster.asyncio.open_connection",
             new=AsyncMock(return_value=(reader, writer)),
         ):
             client = DXClusterClient(
@@ -184,7 +184,7 @@ class TestDXClusterClient:
         spots: list[DXSpot] = []
 
         with patch(
-            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            "rigplane.web.dx_cluster.asyncio.open_connection",
             new=AsyncMock(return_value=(reader, writer)),
         ):
             client = DXClusterClient(
@@ -203,7 +203,7 @@ class TestDXClusterClient:
         spots: list[DXSpot] = []
 
         with patch(
-            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            "rigplane.web.dx_cluster.asyncio.open_connection",
             new=AsyncMock(return_value=(reader, writer)),
         ):
             client = DXClusterClient(
@@ -232,8 +232,8 @@ class TestDXClusterClient:
 
         client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=spots.append)
 
-        with patch("icom_lan.web.dx_cluster.asyncio.open_connection", new=fake_open):
-            with patch("icom_lan.web.dx_cluster.asyncio.sleep", new=AsyncMock()):
+        with patch("rigplane.web.dx_cluster.asyncio.open_connection", new=fake_open):
+            with patch("rigplane.web.dx_cluster.asyncio.sleep", new=AsyncMock()):
                 task = asyncio.create_task(client.start())
                 # Wait for second connection (instant since sleep is mocked)
                 await asyncio.wait_for(connected.wait(), timeout=2.0)
@@ -253,7 +253,7 @@ class TestDXClusterClient:
         client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=MagicMock())
 
         with patch(
-            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            "rigplane.web.dx_cluster.asyncio.open_connection",
             new=AsyncMock(return_value=(reader, writer)),
         ):
             task = asyncio.create_task(client.start())
@@ -275,7 +275,7 @@ class TestDXClusterClient:
         client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=MagicMock())
 
         with patch(
-            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            "rigplane.web.dx_cluster.asyncio.open_connection",
             new=AsyncMock(return_value=(reader, writer)),
         ):
             task = asyncio.create_task(client.start())
@@ -389,7 +389,7 @@ class TestSpotBuffer:
 class TestWebServerDXBroadcast:
     async def test_broadcast_dx_spot_sends_to_control_queue(self):
         """_broadcast_dx_spot() pushes dx_spot message to control event queues."""
-        from icom_lan.web.server import WebConfig, WebServer
+        from rigplane.web.server import WebConfig, WebServer
 
         config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
         srv = WebServer(None, config)
@@ -416,7 +416,7 @@ class TestWebServerDXBroadcast:
 
     async def test_broadcast_dx_spot_adds_to_buffer(self):
         """_broadcast_dx_spot() adds spot to the SpotBuffer."""
-        from icom_lan.web.server import WebConfig, WebServer
+        from rigplane.web.server import WebConfig, WebServer
 
         config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
         srv = WebServer(None, config)
@@ -432,7 +432,7 @@ class TestWebServerDXBroadcast:
         """GET /api/v1/dx/spots returns current spots as JSON."""
         import asyncio
 
-        from icom_lan.web.server import WebConfig, WebServer
+        from rigplane.web.server import WebConfig, WebServer
 
         config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
         srv = WebServer(None, config)
@@ -470,9 +470,9 @@ class TestWebServerDXBroadcast:
         """On subscribe, client receives dx_spots message with current buffer."""
         from unittest.mock import AsyncMock, MagicMock
 
-        from icom_lan.web.handlers import ControlHandler
-        from icom_lan.web.server import WebConfig, WebServer
-        from icom_lan.web.websocket import WS_OP_TEXT, WebSocketConnection
+        from rigplane.web.handlers import ControlHandler
+        from rigplane.web.server import WebConfig, WebServer
+        from rigplane.web.websocket import WS_OP_TEXT, WebSocketConnection
 
         config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
         srv = WebServer(None, config)
@@ -511,7 +511,7 @@ class TestWebServerDXBroadcast:
         """WebConfig with dx_cluster_host starts DXClusterClient on server.start()."""
         from unittest.mock import AsyncMock, MagicMock, patch
 
-        from icom_lan.web.server import WebConfig, WebServer
+        from rigplane.web.server import WebConfig, WebServer
 
         config = WebConfig(
             host="127.0.0.1",
@@ -523,7 +523,7 @@ class TestWebServerDXBroadcast:
         )
         srv = WebServer(None, config)
 
-        with patch("icom_lan.web.web_startup.DXClusterClient") as MockClient:
+        with patch("rigplane.web.web_startup.DXClusterClient") as MockClient:
             mock_instance = MagicMock()
             mock_instance.start = AsyncMock()
             mock_instance.stop = AsyncMock()
@@ -537,7 +537,7 @@ class TestWebServerDXBroadcast:
 
     async def test_no_dx_client_without_config(self):
         """Without dx_cluster_host, no DXClusterClient is started."""
-        from icom_lan.web.server import WebConfig, WebServer
+        from rigplane.web.server import WebConfig, WebServer
 
         config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
         srv = WebServer(None, config)
@@ -553,7 +553,7 @@ class TestWebServerDXBroadcast:
 
 class TestCLIDXClusterFlags:
     def _build_parser(self):
-        from icom_lan.cli import _build_parser
+        from rigplane.cli import _build_parser
 
         return _build_parser()
 
@@ -606,7 +606,7 @@ class TestCLIDXClusterFlags:
         """_cmd_web parses HOST:PORT and passes dx settings to WebConfig."""
         import argparse
 
-        from icom_lan.web.server import WebConfig
+        from rigplane.web.server import WebConfig
 
         # Simulate what _cmd_web does when --dx-cluster is provided
         args = argparse.Namespace(

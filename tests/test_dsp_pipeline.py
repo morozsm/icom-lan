@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from icom_lan.dsp import DSPBackendUnavailable, DSPConfigError, DSPPipeline
+from rigplane.dsp import DSPBackendUnavailable, DSPConfigError, DSPPipeline
 
 
 # ---------------------------------------------------------------------------

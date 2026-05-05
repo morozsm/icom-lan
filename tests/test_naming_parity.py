@@ -118,7 +118,7 @@ def test_overrides_have_prefix(rig_toml: Path) -> None:
 @pytest.mark.xfail(reason="Pending: epic #295 naming standardization", strict=False)
 def test_toml_commands_in_commands_module(rig_toml: Path) -> None:
     """Each active TOML command has a matching function in commands.py."""
-    commands_mod = importlib.import_module("icom_lan.commands")
+    commands_mod = importlib.import_module("rigplane.commands")
     available = {
         name for name, _ in inspect.getmembers(commands_mod, inspect.isfunction)
     }
@@ -129,7 +129,7 @@ def test_toml_commands_in_commands_module(rig_toml: Path) -> None:
             missing.append(cmd)
 
     assert not missing, (
-        f"{rig_toml.name}: commands missing from icom_lan.commands: {missing}"
+        f"{rig_toml.name}: commands missing from rigplane.commands: {missing}"
     )
 
 
@@ -141,7 +141,7 @@ def test_toml_commands_in_commands_module(rig_toml: Path) -> None:
 @pytest.mark.xfail(reason="Pending: epic #295 naming standardization", strict=False)
 def test_toml_commands_in_radio(rig_toml: Path) -> None:
     """Each active TOML command has a matching method in IcomRadio (or is in _COMPOUND_COMMANDS)."""
-    from icom_lan.radio import IcomRadio  # noqa: PLC0415
+    from rigplane.radio import IcomRadio  # noqa: PLC0415
 
     radio_methods = {
         name for name, _ in inspect.getmembers(IcomRadio, predicate=inspect.isfunction)

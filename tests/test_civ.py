@@ -5,13 +5,13 @@ import time
 
 import pytest
 
-from icom_lan.civ import (
+from rigplane.civ import (
     CivEvent,
     CivEventType,
     CivRequestKey,
     CivRequestTracker,
 )
-from icom_lan.types import CivFrame
+from rigplane.types import CivFrame
 
 
 def _ack_frame() -> CivFrame:
@@ -92,7 +92,7 @@ async def test_tracker_preserves_orphan_ack_in_backlog() -> None:
 @pytest.mark.asyncio
 async def test_tracker_ack_backlog_expires(monkeypatch: pytest.MonkeyPatch) -> None:
     now = [1000.0]
-    monkeypatch.setattr("icom_lan.civ.time.monotonic", lambda: now[0])
+    monkeypatch.setattr("rigplane.civ.time.monotonic", lambda: now[0])
 
     tracker = CivRequestTracker(ack_backlog_size=4, ack_backlog_ttl=0.5)
     ack = _ack_frame()

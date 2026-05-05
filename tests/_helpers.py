@@ -7,15 +7,15 @@ from __future__ import annotations
 
 import struct
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     CONTROLLER_ADDR,
     _CMD_ACK,
     _CMD_FREQ_GET,
     _CMD_MODE_GET,
     build_civ_frame,
 )
-from icom_lan.types import Mode, PacketType, bcd_encode
+from rigplane.types import Mode, PacketType, bcd_encode
 
 CIV_HEADER_SIZE = 0x15
 

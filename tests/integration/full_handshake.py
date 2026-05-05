@@ -7,7 +7,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from icom_lan.auth import encode_credentials
+from rigplane.auth import encode_credentials
 
 RADIO_IP = os.environ.get("ICOM_HOST", "192.168.1.100")
 RADIO_PORT = 50001
@@ -68,7 +68,7 @@ class Proto(asyncio.DatagramProtocol):
         pkt[0x40 : 0x40 + len(ue)] = ue
         pe = encode_credentials(PASSWORD)
         pkt[0x50 : 0x50 + len(pe)] = pe
-        nm = b"icom-lan"
+        nm = b"rigplane"
         pkt[0x60 : 0x60 + len(nm)] = nm
         return bytes(pkt), tok
 

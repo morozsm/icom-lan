@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
 import pytest
 
-from icom_lan.audio import AudioPacket
-from icom_lan.audio.usb_driver import UsbAudioDriver
-from icom_lan.audio_bus import AudioBus
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
-from icom_lan.exceptions import AudioFormatError
+from rigplane.audio import AudioPacket
+from rigplane.audio.usb_driver import UsbAudioDriver
+from rigplane.audio_bus import AudioBus
+from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
+from rigplane.exceptions import AudioFormatError
 
 
 # ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ def mock_audio_driver():
 
 @pytest.fixture
 def radio(mock_audio_driver):
-    with patch("icom_lan.backends.yaesu_cat.radio.YaesuCatTransport") as MockTransport:
+    with patch("rigplane.backends.yaesu_cat.radio.YaesuCatTransport") as MockTransport:
         transport = MagicMock()
         transport.connected = True
         transport.close = AsyncMock()
@@ -58,12 +58,12 @@ def test_audio_driver_default_construction():
     """UsbAudioDriver is created with correct args when not injected.
 
     The driver is imported lazily inside ``__init__`` (so the top-level
-    ``icom_lan`` import doesn't pull ``audio.backend``), so we patch the
+    ``rigplane`` import doesn't pull ``audio.backend``), so we patch the
     canonical module path rather than a re-export.
     """
     with (
-        patch("icom_lan.backends.yaesu_cat.radio.YaesuCatTransport"),
-        patch("icom_lan.audio.usb_driver.UsbAudioDriver") as MockDriver,
+        patch("rigplane.backends.yaesu_cat.radio.YaesuCatTransport"),
+        patch("rigplane.audio.usb_driver.UsbAudioDriver") as MockDriver,
     ):
         MockDriver.return_value = MagicMock()
         YaesuCatRadio(

@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from icom_lan.audio import AudioPacket
-from icom_lan.audio_bus import AudioBus, AudioSubscription
+from rigplane.audio import AudioPacket
+from rigplane.audio_bus import AudioBus, AudioSubscription
 
 
 @pytest.fixture

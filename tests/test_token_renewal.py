@@ -5,7 +5,7 @@ import struct
 
 import pytest
 
-from icom_lan.radio import IcomRadio
+from rigplane.radio import IcomRadio
 
 from test_radio import MockTransport
 

@@ -1,10 +1,10 @@
 """Tests for RF Gain and AF Level CI-V commands."""
 
 import pytest
-import icom_lan.commands as raw_commands
+import rigplane.commands as raw_commands
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     get_rf_gain,
     set_rf_gain,
     get_af_level,

@@ -8,16 +8,16 @@ from typing import Protocol
 
 import pytest
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.backends.icom7610.drivers.serial_stub import SerialMockRadio
+from rigplane.commands import (
     CONTROLLER_ADDR,
     _CMD_LEVEL,
     _SUB_RF_POWER,
     build_civ_frame,
 )
-from icom_lan.radio import IcomRadio
-from icom_lan.types import Mode
+from rigplane.radio import IcomRadio
+from rigplane.types import Mode
 
 from _helpers import freq_response as _freq_response
 from _helpers import mode_response as _mode_response

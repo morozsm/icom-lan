@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from icom_lan.runtime._state_queries import build_state_queries
-from icom_lan.profiles import resolve_radio_profile
+from rigplane.runtime._state_queries import build_state_queries
+from rigplane.profiles import resolve_radio_profile
 
 
 def _ic7610_caps() -> set[str]:
@@ -133,12 +133,12 @@ class TestFetchInitialState:
     def _no_real_pacing(self):
         """Skip the 12ms inter-query sleep (~1.2s per test) — tests assert
         call counts and flag state, not real pacing."""
-        with patch("icom_lan.radio.asyncio.sleep", new=AsyncMock()):
+        with patch("rigplane.radio.asyncio.sleep", new=AsyncMock()):
             yield
 
     @pytest.fixture
     def radio(self):
-        from icom_lan.radio import CoreRadio
+        from rigplane.radio import CoreRadio
 
         with patch.object(CoreRadio, "__init__", lambda self: None):
             r = CoreRadio.__new__(CoreRadio)
@@ -163,7 +163,7 @@ class TestFetchInitialState:
     @pytest.mark.asyncio
     async def test_sets_flag_on_failure(self, radio) -> None:
         with patch(
-            "icom_lan._state_queries.build_state_queries",
+            "rigplane._state_queries.build_state_queries",
             side_effect=RuntimeError("boom"),
         ):
             await radio._fetch_initial_state()

@@ -7,7 +7,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from icom_lan.auth import encode_credentials
+from rigplane.auth import encode_credentials
 
 RADIO_IP = os.environ.get("ICOM_HOST", "192.168.1.100")
 RADIO_PORT = 50001
@@ -72,7 +72,7 @@ class HandshakeProtocol(asyncio.DatagramProtocol):
         pkt[0x40 : 0x40 + len(user_enc)] = user_enc
         pass_enc = encode_credentials(PASSWORD)
         pkt[0x50 : 0x50 + len(pass_enc)] = pass_enc
-        name = b"icom-lan"
+        name = b"rigplane"
         pkt[0x60 : 0x60 + len(name)] = name
         return bytes(pkt), tok_request
 

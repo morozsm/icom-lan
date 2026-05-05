@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.cli import (
+from rigplane.cli import (
     _build_backend_config,
     _build_parser,
     _parse_frequency,
@@ -14,7 +14,7 @@ from icom_lan.cli import (
     check_ports_available,
     main,
 )
-from icom_lan.backends.config import LanBackendConfig, SerialBackendConfig
+from rigplane.backends.config import LanBackendConfig, SerialBackendConfig
 
 
 class TestParseFrequency:
@@ -371,7 +371,7 @@ class TestServeSubcommand:
 
 class TestMainEntryPoint:
     def test_no_args_prints_help(self):
-        with patch("sys.argv", ["icom-lan"]):
+        with patch("sys.argv", ["rigplane"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
@@ -393,9 +393,9 @@ def _run_main_serve(env_overrides: dict[str, str] | None = None) -> int:
 
     env = {"ICOM_PID_FILE": "", **(env_overrides or {})}
     with patch.dict("os.environ", env, clear=False):
-        with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "serve"]):
-            with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
-                with patch("icom_lan.cli.os._exit", side_effect=fake_exit):
+        with patch("sys.argv", ["rigplane", "--host", "127.0.0.1", "serve"]):
+            with patch("rigplane.cli._run", new_callable=AsyncMock, return_value=0):
+                with patch("rigplane.cli.os._exit", side_effect=fake_exit):
                     with pytest.raises(SystemExit):
                         main()
     return exit_code
@@ -422,10 +422,10 @@ class TestPidFile:
         """With ICOM_PID_FILE set, status (non-daemon) does not write a PID file."""
         pid_path = tmp_path / "icom.pid"
         with patch.dict("os.environ", {"ICOM_PID_FILE": str(pid_path)}, clear=False):
-            with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "status"]):
-                with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
+            with patch("sys.argv", ["rigplane", "--host", "127.0.0.1", "status"]):
+                with patch("rigplane.cli._run", new_callable=AsyncMock, return_value=0):
                     with patch(
-                        "icom_lan.cli.os._exit",
+                        "rigplane.cli.os._exit",
                         side_effect=lambda c: (_ for _ in ()).throw(SystemExit(c)),
                     ):
                         with pytest.raises(SystemExit) as exc:
@@ -614,7 +614,7 @@ class TestBuildBackendConfig:
         args = p.parse_args(["--backend", "serial", "status"])
         # Discovery finds nothing → sys.exit(1)
         with patch(
-            "icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])
+            "rigplane.discovery.discover_serial_radios", AsyncMock(return_value=[])
         ):
             with pytest.raises(SystemExit):
                 await _build_backend_config(args)
@@ -635,7 +635,7 @@ class TestAutoDiscovery:
         p = _build_parser()
         args = p.parse_args(["status"])
         with patch(
-            "icom_lan.discovery.discover_lan_radios",
+            "rigplane.discovery.discover_lan_radios",
             AsyncMock(return_value=[{"host": "10.0.0.42", "remote_id": 1}]),
         ):
             config = await _build_backend_config(args)
@@ -646,7 +646,7 @@ class TestAutoDiscovery:
         p = _build_parser()
         args = p.parse_args(["status"])
         with patch(
-            "icom_lan.discovery.discover_lan_radios",
+            "rigplane.discovery.discover_lan_radios",
             AsyncMock(return_value=[]),
         ):
             with pytest.raises(SystemExit):
@@ -656,7 +656,7 @@ class TestAutoDiscovery:
         p = _build_parser()
         args = p.parse_args(["status"])
         with patch(
-            "icom_lan.discovery.discover_lan_radios",
+            "rigplane.discovery.discover_lan_radios",
             AsyncMock(
                 return_value=[
                     {"host": "10.0.0.1", "remote_id": 1},
@@ -685,7 +685,7 @@ class TestPresets:
     """Tests for --preset flag expansion."""
 
     async def test_preset_digimode_enables_bridge_and_wsjtx(self):
-        from icom_lan.cli import _apply_preset
+        from rigplane.cli import _apply_preset
 
         p = _build_parser()
         args = p.parse_args(["--host", "1.2.3.4", "web"])
@@ -695,7 +695,7 @@ class TestPresets:
         assert args.web_rigctld is True
 
     async def test_preset_does_not_override_explicit_flags(self):
-        from icom_lan.cli import _apply_preset
+        from rigplane.cli import _apply_preset
 
         p = _build_parser()
         args = p.parse_args(["--host", "1.2.3.4", "web", "--bridge", "MyDevice"])
@@ -704,7 +704,7 @@ class TestPresets:
         assert args.web_bridge == "MyDevice"
 
     def test_unknown_preset_exits(self):
-        from icom_lan.cli import _apply_preset
+        from rigplane.cli import _apply_preset
 
         p = _build_parser()
         args = p.parse_args(["--host", "1.2.3.4", "web"])
@@ -730,7 +730,7 @@ class TestWebRigctldDefault:
         """rigctld starts by default (no flag passed) and banner shows it."""
         import asyncio
 
-        from icom_lan.cli import _cmd_web
+        from rigplane.cli import _cmd_web
 
         radio = AsyncMock()
         radio.model = "IC-7610"
@@ -758,8 +758,8 @@ class TestWebRigctldDefault:
         args = p.parse_args(["--host", "1.2.3.4", "web"])
 
         with (
-            patch("icom_lan.web.server.WebServer", FakeWebServer),
-            patch("icom_lan.rigctld.server.RigctldServer", FakeRigctldServer),
+            patch("rigplane.web.server.WebServer", FakeWebServer),
+            patch("rigplane.rigctld.server.RigctldServer", FakeRigctldServer),
         ):
             rc = await _cmd_web(radio, args)
 
@@ -773,7 +773,7 @@ class TestWebRigctldDefault:
         """`--no-rigctld` disables rigctld; banner omits the rigctld line."""
         import asyncio
 
-        from icom_lan.cli import _cmd_web
+        from rigplane.cli import _cmd_web
 
         radio = AsyncMock()
         radio.model = "IC-7610"
@@ -795,8 +795,8 @@ class TestWebRigctldDefault:
         args = p.parse_args(["--host", "1.2.3.4", "web", "--no-rigctld"])
 
         with (
-            patch("icom_lan.web.server.WebServer", FakeWebServer),
-            patch("icom_lan.rigctld.server.RigctldServer", ExplodingRigctldServer),
+            patch("rigplane.web.server.WebServer", FakeWebServer),
+            patch("rigplane.rigctld.server.RigctldServer", ExplodingRigctldServer),
         ):
             rc = await _cmd_web(radio, args)
 
@@ -810,7 +810,7 @@ class TestWebRigctldDefault:
         import errno
         import logging
 
-        from icom_lan.cli import _cmd_web
+        from rigplane.cli import _cmd_web
 
         radio = AsyncMock()
         radio.model = "IC-7610"
@@ -836,9 +836,9 @@ class TestWebRigctldDefault:
         args = p.parse_args(["--host", "1.2.3.4", "web"])
 
         with (
-            patch("icom_lan.web.server.WebServer", FakeWebServer),
-            patch("icom_lan.rigctld.server.RigctldServer", BusyRigctldServer),
-            caplog.at_level(logging.WARNING, logger="icom_lan.cli"),
+            patch("rigplane.web.server.WebServer", FakeWebServer),
+            patch("rigplane.rigctld.server.RigctldServer", BusyRigctldServer),
+            caplog.at_level(logging.WARNING, logger="rigplane.cli"),
         ):
             rc = await _cmd_web(radio, args)
 
@@ -860,7 +860,7 @@ class TestWebRigctldDefault:
         import errno
         import logging
 
-        from icom_lan.cli import _cmd_web
+        from rigplane.cli import _cmd_web
 
         radio = AsyncMock()
         radio.model = "IC-7610"
@@ -886,9 +886,9 @@ class TestWebRigctldDefault:
         args = p.parse_args(["--host", "1.2.3.4", "web"])
 
         with (
-            patch("icom_lan.web.server.WebServer", FakeWebServer),
-            patch("icom_lan.rigctld.server.RigctldServer", PrivilegedRigctldServer),
-            caplog.at_level(logging.ERROR, logger="icom_lan.cli"),
+            patch("rigplane.web.server.WebServer", FakeWebServer),
+            patch("rigplane.rigctld.server.RigctldServer", PrivilegedRigctldServer),
+            caplog.at_level(logging.ERROR, logger="rigplane.cli"),
         ):
             with pytest.raises(OSError) as exc_info:
                 await _cmd_web(radio, args)
@@ -908,7 +908,7 @@ class TestWebRigctldDefault:
         import errno
         import logging
 
-        from icom_lan.cli import _cmd_web
+        from rigplane.cli import _cmd_web
 
         radio = AsyncMock()
         radio.model = "IC-7610"
@@ -934,9 +934,9 @@ class TestWebRigctldDefault:
         args = p.parse_args(["--host", "1.2.3.4", "web"])
 
         with (
-            patch("icom_lan.web.server.WebServer", FakeWebServer),
-            patch("icom_lan.rigctld.server.RigctldServer", ExhaustedRigctldServer),
-            caplog.at_level(logging.ERROR, logger="icom_lan.cli"),
+            patch("rigplane.web.server.WebServer", FakeWebServer),
+            patch("rigplane.rigctld.server.RigctldServer", ExhaustedRigctldServer),
+            caplog.at_level(logging.ERROR, logger="rigplane.cli"),
         ):
             with pytest.raises(OSError) as exc_info:
                 await _cmd_web(radio, args)
@@ -953,12 +953,12 @@ class TestWebRigctldDefault:
 
 class TestBackendAwareDiscover:
     def test_discover_serial_exits_with_error(self, capsys):
-        with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
+        with patch("sys.argv", ["rigplane", "--backend", "serial", "discover"]):
             with patch(
-                "icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])
+                "rigplane.discovery.discover_lan_radios", AsyncMock(return_value=[])
             ):
                 with patch(
-                    "icom_lan.discovery.discover_serial_radios",
+                    "rigplane.discovery.discover_serial_radios",
                     AsyncMock(return_value=[]),
                 ):
                     with pytest.raises(SystemExit) as exc_info:
@@ -969,12 +969,12 @@ class TestBackendAwareDiscover:
         assert "serial" in captured.out.lower()
 
     def test_discover_serial_error_mentions_lan(self, capsys):
-        with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
+        with patch("sys.argv", ["rigplane", "--backend", "serial", "discover"]):
             with patch(
-                "icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])
+                "rigplane.discovery.discover_lan_radios", AsyncMock(return_value=[])
             ):
                 with patch(
-                    "icom_lan.discovery.discover_serial_radios",
+                    "rigplane.discovery.discover_serial_radios",
                     AsyncMock(return_value=[]),
                 ):
                     with pytest.raises(SystemExit) as exc_info:
@@ -997,7 +997,7 @@ class TestListAudioDevices:
             return real_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=mock_import):
-            with patch("sys.argv", ["icom-lan", "--list-audio-devices"]):
+            with patch("sys.argv", ["rigplane", "--list-audio-devices"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
         assert exc_info.value.code == 1
@@ -1011,8 +1011,8 @@ class TestListAudioDevices:
             print("  [1] Built-in Mic  (in=1, out=0)")
             return 0
 
-        with patch("icom_lan.cli._cmd_list_audio_devices", side_effect=fake_list_cmd):
-            with patch("sys.argv", ["icom-lan", "--list-audio-devices"]):
+        with patch("rigplane.cli._cmd_list_audio_devices", side_effect=fake_list_cmd):
+            with patch("sys.argv", ["rigplane", "--list-audio-devices"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
         assert exc_info.value.code == 0
@@ -1026,8 +1026,8 @@ class TestListAudioDevices:
             captured["json"] = getattr(args, "json", False)
             return 0
 
-        with patch("icom_lan.cli._cmd_list_audio_devices", side_effect=fake_list_cmd):
-            with patch("sys.argv", ["icom-lan", "--list-audio-devices", "--json"]):
+        with patch("rigplane.cli._cmd_list_audio_devices", side_effect=fake_list_cmd):
+            with patch("sys.argv", ["rigplane", "--list-audio-devices", "--json"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
         assert exc_info.value.code == 0
@@ -1037,7 +1037,7 @@ class TestListAudioDevices:
         import asyncio
         import argparse as _ap
         import json as json_module
-        from icom_lan.cli import _cmd_list_audio_devices
+        from rigplane.cli import _cmd_list_audio_devices
 
         mock_sd = MagicMock()
         mock_sd.query_devices.return_value = [
@@ -1111,7 +1111,7 @@ class TestCheckPortsAvailable:
         import asyncio
         import socket
 
-        from icom_lan.cli import _run
+        from rigplane.cli import _run
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -1132,7 +1132,7 @@ class TestCheckPortsAvailable:
             mock_radio = MagicMock()
             mock_radio.__aenter__ = AsyncMock(return_value=mock_radio)
             mock_radio.__aexit__ = AsyncMock(return_value=False)
-            with patch("icom_lan.cli.create_radio", return_value=mock_radio):
+            with patch("rigplane.cli.create_radio", return_value=mock_radio):
                 result = asyncio.run(_run(args))
 
         # Radio should never have connected — port check exits before async with.

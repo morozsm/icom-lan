@@ -16,8 +16,8 @@ import time
 
 import pytest
 
-from icom_lan import IcomRadio
-from icom_lan.exceptions import (
+from rigplane import IcomRadio
+from rigplane.exceptions import (
     AuthenticationError,
     ConnectionError,
     TimeoutError as IcomTimeoutError,

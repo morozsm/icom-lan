@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-from icom_lan.audio.config import (
+from rigplane.audio.config import (
     AudioConfig,
     BridgeConfig,
     BridgeReconnectConfig,

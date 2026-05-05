@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.commands import (
+from rigplane.commands import (
     CONTROLLER_ADDR,
 )
-from icom_lan.commands.tx_band import (
+from rigplane.commands.tx_band import (
     get_tx_band_count,
     get_tx_band_edge,
     parse_tx_band_count_response,
     parse_tx_band_edge_response,
 )
-from icom_lan.commands._frame import _CMD_TX_BAND_EDGE
-from icom_lan.radio_state import RadioState, TxBandEdge
-from icom_lan.types import CivFrame
+from rigplane.commands._frame import _CMD_TX_BAND_EDGE
+from rigplane.radio_state import RadioState, TxBandEdge
+from rigplane.types import CivFrame
 
 _RADIO_ADDR = 0x98
 
@@ -83,7 +83,7 @@ class TestParseTxBandCount:
 class TestParseTxBandEdge:
     def test_160m_band(self) -> None:
         """1.8 MHz - 2.0 MHz band edge."""
-        from icom_lan.types import bcd_encode
+        from rigplane.types import bcd_encode
 
         start = bcd_encode(1_800_000)  # 1.8 MHz
         end = bcd_encode(2_000_000)  # 2.0 MHz
@@ -93,7 +93,7 @@ class TestParseTxBandEdge:
 
     def test_20m_band(self) -> None:
         """14.0 MHz - 14.35 MHz band edge."""
-        from icom_lan.types import bcd_encode
+        from rigplane.types import bcd_encode
 
         start = bcd_encode(14_000_000)
         end = bcd_encode(14_350_000)
@@ -106,7 +106,7 @@ class TestParseTxBandEdge:
             parse_tx_band_edge_response(bytes(9))
 
     def test_exact_10_bytes(self) -> None:
-        from icom_lan.types import bcd_encode
+        from rigplane.types import bcd_encode
 
         data = bcd_encode(7_000_000) + bcd_encode(7_300_000)
         assert len(data) == 10
@@ -184,14 +184,14 @@ class TestCivRxTxBandEdge:
 
     def test_band_edge_parsed(self) -> None:
         """0x1E 0x01 with 10-byte BCD data should populate tx_band_edges."""
-        from icom_lan.types import bcd_encode
+        from rigplane.types import bcd_encode
 
         data = bcd_encode(14_000_000) + bcd_encode(14_350_000)
         frame = self._make_frame(sub=0x01, data=data)
 
         rs = RadioState()
         # Import and call the parser directly
-        from icom_lan.runtime._civ_rx import CivRuntime
+        from rigplane.runtime._civ_rx import CivRuntime
 
         # We need a minimal host to test the parser
         from unittest.mock import MagicMock
@@ -209,13 +209,13 @@ class TestCivRxTxBandEdge:
 
     def test_no_duplicates(self) -> None:
         """Same edge should not be added twice."""
-        from icom_lan.types import bcd_encode
+        from rigplane.types import bcd_encode
 
         data = bcd_encode(14_000_000) + bcd_encode(14_350_000)
         frame = self._make_frame(sub=0x01, data=data)
 
         rs = RadioState()
-        from icom_lan.runtime._civ_rx import CivRuntime
+        from rigplane.runtime._civ_rx import CivRuntime
         from unittest.mock import MagicMock
 
         host = MagicMock()
@@ -233,7 +233,7 @@ class TestCivRxTxBandEdge:
         frame = self._make_frame(sub=0x01, data=bytes(5))
 
         rs = RadioState()
-        from icom_lan.runtime._civ_rx import CivRuntime
+        from rigplane.runtime._civ_rx import CivRuntime
         from unittest.mock import MagicMock
 
         host = MagicMock()
@@ -253,7 +253,7 @@ class TestCivRxTxBandEdge:
 
 class TestReExport:
     def test_tx_band_symbols_exported(self) -> None:
-        from icom_lan import commands
+        from rigplane import commands
 
         assert hasattr(commands, "get_tx_band_count")
         assert hasattr(commands, "get_tx_band_edge")

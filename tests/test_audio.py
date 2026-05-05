@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.audio import (
+from rigplane.audio import (
     AUDIO_HEADER_SIZE,
     TX_IDENT,
     RX_IDENT_0xA0,
@@ -15,7 +15,7 @@ from icom_lan.audio import (
     build_audio_packet,
     parse_audio_packet,
 )
-from icom_lan.types import PacketType
+from rigplane.types import PacketType
 
 
 # ---------------------------------------------------------------------------

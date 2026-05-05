@@ -4,12 +4,12 @@ from unittest.mock import patch
 
 import pytest
 
-from icom_lan import commands
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import CONTROLLER_ADDR, parse_bool_response, parse_level_response
-from icom_lan.exceptions import CommandError
-from icom_lan.radio import IcomRadio
-from icom_lan.types import CivFrame
+from rigplane import commands
+from rigplane import IC_7610_ADDR
+from rigplane.commands import CONTROLLER_ADDR, parse_bool_response, parse_level_response
+from rigplane.exceptions import CommandError
+from rigplane.radio import IcomRadio
+from rigplane.types import CivFrame
 from _command_test_helpers import bind_default_addr_globals
 
 bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
@@ -597,7 +597,7 @@ class TestSwapMainSubVsSwapVfoAb:
         legacy ``vfo_exchange`` / ``vfo_equalize`` declarations were replaced
         with the canonical ``swap_main_sub`` / ``equalize_main_sub`` methods.
         """
-        from icom_lan.radio_protocol import DualReceiverCapable
+        from rigplane.radio_protocol import DualReceiverCapable
 
         r = _make_radio("IC-7610")
         assert isinstance(r, DualReceiverCapable)

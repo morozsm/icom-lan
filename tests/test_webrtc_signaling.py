@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 import pytest
 
-from icom_lan.web.server import WebServer
+from rigplane.web.server import WebServer
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ def _parse_response(writer: _FakeWriter) -> tuple[int, dict]:
 
 def _make_radio(*, audio: bool = True, caps: set[str] | None = None):
     """Build a fake radio, optionally implementing AudioCapable."""
-    from icom_lan.radio_protocol import AudioCapable, ScopeCapable
+    from rigplane.radio_protocol import AudioCapable, ScopeCapable
 
     bases: list[type] = [ScopeCapable]
     if audio:
@@ -80,7 +80,7 @@ class TestWebrtcAvailability:
     """webrtc_available() detection."""
 
     def test_reports_false_when_aiortc_missing(self):
-        import icom_lan.web.rtc as rtc_mod
+        import rigplane.web.rtc as rtc_mod
 
         # Reset cached state
         rtc_mod._aiortc_checked = False
@@ -93,7 +93,7 @@ class TestWebrtcAvailability:
         assert result is False
 
     def test_caches_result(self):
-        import icom_lan.web.rtc as rtc_mod
+        import rigplane.web.rtc as rtc_mod
 
         rtc_mod._aiortc_checked = True
         rtc_mod._aiortc_ok = True
@@ -107,9 +107,9 @@ class TestRtcCapabilityInfo:
     """rtc_capability_info() output."""
 
     def test_unavailable_info(self):
-        from icom_lan.web.rtc import rtc_capability_info
+        from rigplane.web.rtc import rtc_capability_info
 
-        with patch("icom_lan.web.rtc.webrtc_available", return_value=False):
+        with patch("rigplane.web.rtc.webrtc_available", return_value=False):
             info = rtc_capability_info()
 
         assert info["available"] is False
@@ -117,9 +117,9 @@ class TestRtcCapabilityInfo:
         assert info["supportedDirections"] == []
 
     def test_available_info(self):
-        from icom_lan.web.rtc import rtc_capability_info
+        from rigplane.web.rtc import rtc_capability_info
 
-        with patch("icom_lan.web.rtc.webrtc_available", return_value=True):
+        with patch("rigplane.web.rtc.webrtc_available", return_value=True):
             info = rtc_capability_info()
 
         assert info["available"] is True
@@ -132,10 +132,10 @@ class TestHandleRtcOffer:
 
     @pytest.mark.asyncio
     async def test_returns_error_when_aiortc_missing(self):
-        from icom_lan.web.rtc import handle_rtc_offer
+        from rigplane.web.rtc import handle_rtc_offer
 
         radio = _make_radio()
-        with patch("icom_lan.web.rtc.webrtc_available", return_value=False):
+        with patch("rigplane.web.rtc.webrtc_available", return_value=False):
             result = await handle_rtc_offer("v=0\r\n", "offer", radio)
 
         assert result["status"] == "error"
@@ -143,9 +143,9 @@ class TestHandleRtcOffer:
 
     @pytest.mark.asyncio
     async def test_returns_error_when_no_radio(self):
-        from icom_lan.web.rtc import handle_rtc_offer
+        from rigplane.web.rtc import handle_rtc_offer
 
-        with patch("icom_lan.web.rtc.webrtc_available", return_value=True):
+        with patch("rigplane.web.rtc.webrtc_available", return_value=True):
             result = await handle_rtc_offer("v=0\r\n", "offer", None)
 
         assert result["status"] == "error"
@@ -155,7 +155,7 @@ class TestHandleRtcOffer:
     async def test_success_includes_scaffold_note(self):
         from unittest.mock import AsyncMock, MagicMock
 
-        from icom_lan.web.rtc import handle_rtc_offer
+        from rigplane.web.rtc import handle_rtc_offer
 
         radio = _make_radio()
 
@@ -176,7 +176,7 @@ class TestHandleRtcOffer:
         fake_aiortc.RTCSessionDescription.return_value = MagicMock()
 
         with (
-            patch("icom_lan.web.rtc.webrtc_available", return_value=True),
+            patch("rigplane.web.rtc.webrtc_available", return_value=True),
             patch.dict("sys.modules", {"aiortc": fake_aiortc}),
         ):
             result = await handle_rtc_offer("v=0\r\n", "offer", radio)
@@ -187,10 +187,10 @@ class TestHandleRtcOffer:
 
     @pytest.mark.asyncio
     async def test_returns_error_when_radio_has_no_audio(self):
-        from icom_lan.web.rtc import handle_rtc_offer
+        from rigplane.web.rtc import handle_rtc_offer
 
         radio = _make_radio(audio=False)
-        with patch("icom_lan.web.rtc.webrtc_available", return_value=True):
+        with patch("rigplane.web.rtc.webrtc_available", return_value=True):
             result = await handle_rtc_offer("v=0\r\n", "offer", radio)
 
         assert result["status"] == "error"
@@ -210,7 +210,7 @@ class TestRtcOfferEndpoint:
         srv = WebServer(radio=None)
         writer = _FakeWriter()
 
-        with patch("icom_lan.web.server.webrtc_available", return_value=False):
+        with patch("rigplane.web.server.webrtc_available", return_value=False):
             await srv._handle_rtc_offer(writer, {}, None)  # noqa: SLF001
 
         status, body = _parse_response(writer)
@@ -222,7 +222,7 @@ class TestRtcOfferEndpoint:
         srv = WebServer(radio=None)
         writer = _FakeWriter()
 
-        with patch("icom_lan.web.server.webrtc_available", return_value=True):
+        with patch("rigplane.web.server.webrtc_available", return_value=True):
             await srv._handle_rtc_offer(writer, {}, None)  # noqa: SLF001
 
         status, body = _parse_response(writer)
@@ -242,7 +242,7 @@ class TestRtcOfferEndpoint:
         reader.feed_eof()
         headers = {"content-length": str(len(raw))}
 
-        with patch("icom_lan.web.server.webrtc_available", return_value=True):
+        with patch("rigplane.web.server.webrtc_available", return_value=True):
             await srv._handle_rtc_offer(writer, headers, reader)  # noqa: SLF001
 
         status, body = _parse_response(writer)
@@ -262,7 +262,7 @@ class TestRtcOfferEndpoint:
         reader.feed_eof()
         headers = {"content-length": str(len(raw))}
 
-        with patch("icom_lan.web.server.webrtc_available", return_value=True):
+        with patch("rigplane.web.server.webrtc_available", return_value=True):
             await srv._handle_rtc_offer(writer, headers, reader)  # noqa: SLF001
 
         status, body = _parse_response(writer)
@@ -284,8 +284,8 @@ class TestRtcOfferEndpoint:
         headers = {"content-length": str(len(raw))}
 
         with (
-            patch("icom_lan.web.server.webrtc_available", return_value=True),
-            patch("icom_lan.web.rtc.webrtc_available", return_value=True),
+            patch("rigplane.web.server.webrtc_available", return_value=True),
+            patch("rigplane.web.rtc.webrtc_available", return_value=True),
         ):
             await srv._handle_rtc_offer(writer, headers, reader)  # noqa: SLF001
 
@@ -299,7 +299,7 @@ class TestRtcOfferEndpoint:
         from unittest.mock import MagicMock
 
         radio = _make_radio()
-        with patch("icom_lan.web.server.AudioFftScope", MagicMock()):
+        with patch("rigplane.web.server.AudioFftScope", MagicMock()):
             srv = WebServer(radio=radio)
         writer = _FakeWriter()
 
@@ -311,8 +311,8 @@ class TestRtcOfferEndpoint:
 
         sdp_err = {"status": "error", "code": "sdp_error", "message": "bad"}
         with (
-            patch("icom_lan.web.server.webrtc_available", return_value=True),
-            patch("icom_lan.web.server.handle_rtc_offer", return_value=sdp_err),
+            patch("rigplane.web.server.webrtc_available", return_value=True),
+            patch("rigplane.web.server.handle_rtc_offer", return_value=sdp_err),
         ):
             await srv._handle_rtc_offer(writer, headers, reader)  # noqa: SLF001
 
@@ -334,7 +334,7 @@ class TestCapabilityExposure:
         srv = WebServer(radio=None)
         writer = _FakeWriter()
 
-        with patch("icom_lan.web.server.webrtc_available", return_value=False):
+        with patch("rigplane.web.server.webrtc_available", return_value=False):
             await srv._serve_info(writer)  # noqa: SLF001
 
         _, body = _parse_response(writer)
@@ -346,12 +346,12 @@ class TestCapabilityExposure:
 
         radio = _make_radio()
 
-        with patch("icom_lan.web.server.AudioFftScope", MagicMock()):
+        with patch("rigplane.web.server.AudioFftScope", MagicMock()):
             srv = WebServer(radio=radio)
 
         writer = _FakeWriter()
 
-        with patch("icom_lan.web.server.webrtc_available", return_value=True):
+        with patch("rigplane.web.server.webrtc_available", return_value=True):
             await srv._serve_info(writer)  # noqa: SLF001
 
         _, body = _parse_response(writer)
@@ -363,7 +363,7 @@ class TestCapabilityExposure:
         srv = WebServer(radio=radio)
         writer = _FakeWriter()
 
-        with patch("icom_lan.web.server.webrtc_available", return_value=True):
+        with patch("rigplane.web.server.webrtc_available", return_value=True):
             await srv._serve_info(writer)  # noqa: SLF001
 
         _, body = _parse_response(writer)
@@ -376,7 +376,7 @@ class TestCapabilityExposure:
         writer = _FakeWriter()
 
         with patch(
-            "icom_lan.web.server.rtc_capability_info",
+            "rigplane.web.server.rtc_capability_info",
             return_value={
                 "available": False,
                 "reason": "aiortc not installed",

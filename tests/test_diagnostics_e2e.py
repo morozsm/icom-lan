@@ -3,7 +3,7 @@
 Wires:
 
 * ``upload_bundle`` direct flow
-* CLI ``icom-lan diagnose --upload`` (subprocess)
+* CLI ``rigplane diagnose --upload`` (subprocess)
 * Web ``/api/v1/diagnose/{preview,send,save}`` (in-process handler)
 
 against a localhost mock receiver implementing
@@ -31,7 +31,7 @@ import pytest
 import pytest_asyncio
 from aiohttp.test_utils import TestServer
 
-from icom_lan.diagnostics import (
+from rigplane.diagnostics import (
     BundleContext,
     BundleTooLarge,
     ForbiddenContent,
@@ -41,8 +41,8 @@ from icom_lan.diagnostics import (
     ReportSubmitted,
     upload_bundle,
 )
-from icom_lan.diagnostics import _discovery
-from icom_lan.web.server import WebConfig, WebServer
+from rigplane.diagnostics import _discovery
+from rigplane.web.server import WebConfig, WebServer
 from _diagnostics_mock_server import MockReceiver
 
 # ---------------------------------------------------------------------------
@@ -255,7 +255,7 @@ def _isolated_env(tmp_path: Path, endpoint: str) -> dict[str, str]:
     """Copy os.environ + redirect HOME / XDG_* into ``tmp_path``.
 
     Without this the CLI subprocess scans the developer's real
-    ``~/.config/icom-lan`` and ``~/Library/Caches/icom-lan`` via
+    ``~/.config/rigplane`` and ``~/Library/Caches/rigplane`` via
     platformdirs and the test stops being hermetic.
     """
     iso_home = tmp_path / "home"
@@ -267,7 +267,7 @@ def _isolated_env(tmp_path: Path, endpoint: str) -> dict[str, str]:
     env["HOME"] = str(iso_home)
     env["XDG_CONFIG_HOME"] = str(iso_cfg)
     env["XDG_CACHE_HOME"] = str(iso_cache)
-    env["ICOM_LAN_REPORT_ENDPOINT"] = endpoint
+    env["RIGPLANE_REPORT_ENDPOINT"] = endpoint
     return env
 
 
@@ -278,7 +278,7 @@ async def _run_cli(
     proc = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "icom_lan",
+        "rigplane",
         *argv,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -451,8 +451,8 @@ async def test_web_diagnose_full_flow(
 ) -> None:
     receiver, url = mock_pair
     # upload_bundle, called from inside handle_send, resolves the endpoint
-    # via ICOM_LAN_REPORT_ENDPOINT.
-    monkeypatch.setenv("ICOM_LAN_REPORT_ENDPOINT", url)
+    # via RIGPLANE_REPORT_ENDPOINT.
+    monkeypatch.setenv("RIGPLANE_REPORT_ENDPOINT", url)
     _register_test_contributor()
     _stub_dirs(monkeypatch, tmp_path)
 
@@ -492,7 +492,7 @@ async def test_web_diagnose_save_returns_zip_bytes_no_mock_traffic(
     tmp_path: Path,
 ) -> None:
     receiver, url = mock_pair
-    monkeypatch.setenv("ICOM_LAN_REPORT_ENDPOINT", url)
+    monkeypatch.setenv("RIGPLANE_REPORT_ENDPOINT", url)
     _register_test_contributor()
     _stub_dirs(monkeypatch, tmp_path)
 

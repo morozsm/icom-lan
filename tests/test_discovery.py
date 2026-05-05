@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from icom_lan.discovery import (
+from rigplane.discovery import (
     CivProbeResult,
     RadioDiscoveryResult,
     SerialPortCandidate,
@@ -35,13 +35,13 @@ def _fast_probes():
     with ExitStack() as stack:
         stack.enter_context(
             patch(
-                "icom_lan.discovery.probe_serial_civ",
+                "rigplane.discovery.probe_serial_civ",
                 partial(probe_serial_civ, baud_rates=[19200], timeout=0.01),
             )
         )
         stack.enter_context(
             patch(
-                "icom_lan.discovery.probe_serial_yaesu_cat",
+                "rigplane.discovery.probe_serial_yaesu_cat",
                 partial(probe_serial_yaesu_cat, baud_rates=[38400], timeout=0.01),
             )
         )
@@ -467,7 +467,7 @@ class _FakeCatTransport:
     async def query(self, command: str, *, timeout: float | None = None) -> str:
         self.queries.append(command)
         if self._response is None:
-            from icom_lan.backends.yaesu_cat.transport import CatTimeoutError
+            from rigplane.backends.yaesu_cat.transport import CatTimeoutError
 
             raise CatTimeoutError("timeout")
         return self._response

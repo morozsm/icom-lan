@@ -8,8 +8,8 @@ correct receiver in RadioState.
 from __future__ import annotations
 
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
     RECEIVER_SUB,
@@ -17,8 +17,8 @@ from icom_lan.commands import (
     build_civ_frame,
     parse_civ_frame,
 )
-from icom_lan.radio_state import RadioState
-from icom_lan.types import bcd_encode, CivFrame
+from rigplane.radio_state import RadioState
+from rigplane.types import bcd_encode, CivFrame
 
 
 # ---------------------------------------------------------------------------
@@ -56,12 +56,12 @@ def _apply_frame(frame: CivFrame, rs: RadioState) -> None:
         cmd = frame.command
 
         if cmd in (0x03, 0x00):
-            from icom_lan.commands import parse_frequency_response
+            from rigplane.commands import parse_frequency_response
 
             rx.freq = parse_frequency_response(frame)
 
         elif cmd in (0x04, 0x01):
-            from icom_lan.commands import parse_mode_response
+            from rigplane.commands import parse_mode_response
 
             mode_val, filt = parse_mode_response(frame)
             rx.mode = mode_val.name

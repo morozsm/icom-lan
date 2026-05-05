@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from typing import Callable
 
-from icom_lan import StatePollable, StatePoller
-from icom_lan.radio_state import RadioState
+from rigplane import StatePollable, StatePoller
+from rigplane.radio_state import RadioState
 
 
 class _StubStatePoller:
@@ -60,6 +60,6 @@ def test_stub_poller_satisfies_protocol() -> None:
 def test_yaesu_cat_radio_satisfies_state_pollable() -> None:
     """The shipping Yaesu CAT backend already conforms to the public
     :class:`StatePollable` Protocol (no inheritance required)."""
-    from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
+    from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
 
     assert issubclass(YaesuCatRadio, StatePollable)

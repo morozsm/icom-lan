@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.backends.yaesu_cat.poller import YaesuCatPoller
-from icom_lan.radio_state import RadioState
+from rigplane.backends.yaesu_cat.poller import YaesuCatPoller
+from rigplane.radio_state import RadioState
 
 
 # ---------------------------------------------------------------------------
@@ -869,7 +869,7 @@ async def test_slow_poll_skips_fr_ft_without_dual_rx() -> None:
 @pytest.mark.asyncio
 async def test_execute_command_set_apf_dispatches_to_radio() -> None:
     """SetApf must reach radio.set_audio_peak_filter — used to be silently dropped."""
-    from icom_lan.runtime._poller_types import SetApf
+    from rigplane.runtime._poller_types import SetApf
 
     radio = make_radio()
     radio.set_audio_peak_filter = AsyncMock()
@@ -883,7 +883,7 @@ async def test_execute_command_set_apf_dispatches_to_radio() -> None:
 @pytest.mark.asyncio
 async def test_execute_command_set_apf_off_dispatches_to_radio() -> None:
     """SetApf(mode=0) reaches the canonical entry point too."""
-    from icom_lan.runtime._poller_types import SetApf
+    from rigplane.runtime._poller_types import SetApf
 
     radio = make_radio()
     radio.set_audio_peak_filter = AsyncMock()
@@ -902,7 +902,7 @@ async def test_execute_command_set_apf_off_dispatches_to_radio() -> None:
 @pytest.mark.asyncio
 async def test_execute_command_set_power_watts_unit_dispatches_to_radio() -> None:
     """SetPower(unit='watts') flows directly to radio.set_power(watts)."""
-    from icom_lan.runtime._poller_types import SetPower
+    from rigplane.runtime._poller_types import SetPower
 
     radio = make_radio()
     radio.set_power = AsyncMock()
@@ -920,13 +920,13 @@ async def test_execute_command_set_power_raw_255_unit_rejected(
     """Default SetPower(unit='raw_255') is rejected by Yaesu poller and logs warning."""
     import logging
 
-    from icom_lan.runtime._poller_types import SetPower
+    from rigplane.runtime._poller_types import SetPower
 
     radio = make_radio()
     radio.set_power = AsyncMock()
     poller = YaesuCatPoller(radio, callback=lambda s: None, fast_interval=10.0)
 
-    with caplog.at_level(logging.WARNING, logger="icom_lan.backends.yaesu_cat.poller"):
+    with caplog.at_level(logging.WARNING, logger="rigplane.backends.yaesu_cat.poller"):
         await poller._execute_command(SetPower(level=200))  # default unit='raw_255'
 
     radio.set_power.assert_not_awaited()

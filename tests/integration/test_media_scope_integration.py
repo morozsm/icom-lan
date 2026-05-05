@@ -8,9 +8,9 @@ from typing import List
 
 import pytest
 
-from icom_lan import IcomRadio
-from icom_lan.backends.icom7610 import Icom7610SerialRadio
-from icom_lan.exceptions import AudioCodecBackendError, CommandError
+from rigplane import IcomRadio
+from rigplane.backends.icom7610 import Icom7610SerialRadio
+from rigplane.exceptions import AudioCodecBackendError, CommandError
 
 pytestmark = pytest.mark.integration
 

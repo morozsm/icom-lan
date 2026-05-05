@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from icom_lan import radio_protocol
-from icom_lan.radio_protocol import (
+from rigplane import radio_protocol
+from rigplane.radio_protocol import (
     MetersCapable,
     PowerControlCapable,
     Radio,
@@ -13,7 +13,7 @@ from icom_lan.radio_protocol import (
     TransceiverStatusCapable,
     VoiceControlCapable,
 )
-from icom_lan.radio_state import RadioState
+from rigplane.radio_state import RadioState
 
 
 class _StubRadio:
@@ -21,7 +21,7 @@ class _StubRadio:
 
     @property
     def backend_id(self) -> str:
-        return "icom_lan"
+        return "rigplane"
 
     @property
     def connected(self) -> bool:
@@ -73,13 +73,13 @@ def test_backend_id_property_on_stub() -> None:
     """Radio protocol surface includes backend_id returning a str."""
     stub = _StubRadio()
     assert isinstance(stub, Radio)
-    assert stub.backend_id == "icom_lan"
+    assert stub.backend_id == "rigplane"
     assert isinstance(stub.backend_id, str)
 
 
 def test_backend_id_known_values() -> None:
     """backend_id can hold any of the documented family values."""
-    known_ids = {"icom_lan", "icom_serial", "yaesu_cat"}
+    known_ids = {"rigplane", "icom_serial", "yaesu_cat"}
     assert _StubRadio().backend_id in known_ids
 
 
@@ -309,7 +309,7 @@ def test_icom_like_stub_satisfies_both_protocols() -> None:
 
 def test_yaesu_cat_radio_satisfies_ritxit_capable() -> None:
     """YaesuCatRadio class declares the canonical six methods (PR-7 migration)."""
-    from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
+    from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
 
     for name in (
         "get_rit_frequency",
@@ -330,8 +330,8 @@ def test_icom_radio_satisfies_scope_capable_with_extended_surface() -> None:
     ``@runtime_checkable`` does not validate signatures, so we explicitly
     assert each new attribute is present and callable).
     """
-    from icom_lan.radio import IcomRadio
-    from icom_lan.radio_protocol import ScopeCapable
+    from rigplane.radio import IcomRadio
+    from rigplane.radio_protocol import ScopeCapable
 
     radio = IcomRadio(host="")
     assert isinstance(radio, ScopeCapable)
@@ -360,7 +360,7 @@ def test_scope_capable_get_scope_ref_is_float() -> None:
     """P3-10: get_scope_ref protocol declaration must match impl (-> float)."""
     import typing
 
-    from icom_lan.radio_protocol import ScopeCapable
+    from rigplane.radio_protocol import ScopeCapable
 
     hints = typing.get_type_hints(ScopeCapable.get_scope_ref)
     assert hints.get("return") is float, (
@@ -377,7 +377,7 @@ def test_scope_capable_set_scope_ref_accepts_float() -> None:
     """
     import typing
 
-    from icom_lan.radio_protocol import ScopeCapable
+    from rigplane.radio_protocol import ScopeCapable
 
     hints = typing.get_type_hints(ScopeCapable.set_scope_ref)
     assert hints.get("ref") is float, (

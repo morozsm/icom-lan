@@ -22,11 +22,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.audio_bus import AudioBus
-from icom_lan.radio_protocol import AudioCapable
-from icom_lan.types import AudioCodec
-from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
-from icom_lan.web.websocket import WebSocketConnection
+from rigplane.audio_bus import AudioBus
+from rigplane.radio_protocol import AudioCapable
+from rigplane.types import AudioCodec
+from rigplane.web.handlers import AudioBroadcaster, AudioHandler
+from rigplane.web.websocket import WebSocketConnection
 
 pytestmark = [pytest.mark.integration, pytest.mark.mock_integration]
 

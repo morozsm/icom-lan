@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.web.handlers import ControlHandler
-from icom_lan.web.radio_poller import (
+from rigplane.profiles import resolve_radio_profile
+from rigplane.web.handlers import ControlHandler
+from rigplane.web.radio_poller import (
     SetAntiVoxGain,
     SetBreakInDelay,
     SetDashRatio,

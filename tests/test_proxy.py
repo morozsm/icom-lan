@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from icom_lan.proxy import _RelayProtocol, run_proxy
+from rigplane.proxy import _RelayProtocol, run_proxy
 
 
 class TestRelayProtocol:
@@ -89,7 +89,7 @@ class TestRelayProtocol:
 
         # Simulate timeout
         relay.last_activity = time.monotonic() - 120.0
-        from icom_lan.proxy import SESSION_TIMEOUT
+        from rigplane.proxy import SESSION_TIMEOUT
 
         now = time.monotonic()
         if relay.client_addr and (now - relay.last_activity) > SESSION_TIMEOUT:

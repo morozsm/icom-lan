@@ -1,10 +1,10 @@
-"""Shared test fixtures for icom-lan tests."""
+"""Shared test fixtures for rigplane tests."""
 
 from __future__ import annotations
 
 import os as _os
 
-_os.environ.setdefault("ICOM_LAN_DISABLE_DIAGNOSTIC_LOGGING", "1")
+_os.environ.setdefault("RIGPLANE_DISABLE_DIAGNOSTIC_LOGGING", "1")
 del _os
 
 import struct  # noqa: E402
@@ -12,8 +12,8 @@ from collections.abc import AsyncGenerator  # noqa: E402
 
 import pytest  # noqa: E402
 
-from icom_lan.radio import IcomRadio  # noqa: TID251, E402
-from icom_lan.types import HEADER_SIZE, PacketType  # noqa: E402
+from rigplane.radio import IcomRadio  # noqa: TID251, E402
+from rigplane.types import HEADER_SIZE, PacketType  # noqa: E402
 
 from _perf_helpers import fast_connect  # noqa: E402
 from mock_server import MockIcomRadio  # noqa: E402

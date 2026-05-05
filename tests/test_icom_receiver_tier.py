@@ -20,8 +20,8 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.radio import IcomRadio
-from icom_lan.radio_protocol import ReceiverBankCapable, VfoSlotCapable
+from rigplane.radio import IcomRadio
+from rigplane.radio_protocol import ReceiverBankCapable, VfoSlotCapable
 
 from test_radio import MockTransport, _wrap_civ_in_udp
 

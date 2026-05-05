@@ -2,8 +2,8 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-from icom_lan.sync import IcomRadio
-from icom_lan.types import AudioCodec
+from rigplane.sync import IcomRadio
+from rigplane.types import AudioCodec
 
 
 class TestSyncInit:
@@ -55,7 +55,7 @@ class TestSyncAudioNaming:
         r._loop.close()
 
     def test_audio_capabilities(self) -> None:
-        from icom_lan.types import get_audio_capabilities
+        from rigplane.types import get_audio_capabilities
 
         caps = get_audio_capabilities()
         assert caps.default_codec.name == "PCM_2CH_16BIT"

@@ -1,8 +1,8 @@
 """Tests for IC-9700 backend initialization, profile routing, and dual-receiver support."""
 
-from icom_lan.backends.config import SerialBackendConfig
-from icom_lan.backends.factory import create_radio
-from icom_lan.backends.ic9700.serial import Ic9700SerialRadio
+from rigplane.backends.config import SerialBackendConfig
+from rigplane.backends.factory import create_radio
+from rigplane.backends.ic9700.serial import Ic9700SerialRadio
 
 
 def test_ic9700_factory_creates_correct_backend():
@@ -49,7 +49,7 @@ def test_ic9700_dual_receiver_capability():
     # IC-9700 is the only currently supported radio with dual receivers
     assert profile.receiver_count == 2
     # Compare with IC-7300 (single receiver)
-    from icom_lan.backends.ic7300.serial import Ic7300SerialRadio
+    from rigplane.backends.ic7300.serial import Ic7300SerialRadio
 
     ic7300 = Ic7300SerialRadio(device="/dev/ttyUSB0", model="IC-7300")
     assert ic7300._profile.receiver_count == 1

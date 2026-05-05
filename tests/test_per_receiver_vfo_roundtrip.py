@@ -19,9 +19,9 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.exceptions import CommandError
-from icom_lan.radio import IcomRadio
-from icom_lan.types import Mode, bcd_encode
+from rigplane.exceptions import CommandError
+from rigplane.radio import IcomRadio
+from rigplane.types import Mode, bcd_encode
 
 from test_radio import MockTransport, _wrap_civ_in_udp
 

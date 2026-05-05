@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.commands._codec import filter_hz_to_index, filter_index_to_hz
-from icom_lan.rig_loader import load_rig
+from rigplane.commands._codec import filter_hz_to_index, filter_index_to_hz
+from rigplane.rig_loader import load_rig
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
 IC7300_PATH = RIGS_DIR / "ic7300.toml"
@@ -254,7 +254,7 @@ class TestCommandOverrides:
 
     def test_get_speech_cmd_map_uses_set_speech(self, cmdmap):
         """Profile exposes set_speech; get_speech() must resolve the same opcode."""
-        from icom_lan.commands import get_speech
+        from rigplane.commands import get_speech
 
         with_map = get_speech(2, to_addr=0x94, cmd_map=cmdmap)
         bare = get_speech(2, to_addr=0x94)

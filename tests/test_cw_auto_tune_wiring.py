@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.dsp.tap_registry import TapRegistry
-from icom_lan.radio_state import RadioState, ReceiverState
-from icom_lan.web.handlers.control import ControlHandler
+from rigplane.dsp.tap_registry import TapRegistry
+from rigplane.radio_state import RadioState, ReceiverState
+from rigplane.web.handlers.control import ControlHandler
 
 
 def _make_handler(
@@ -70,7 +70,7 @@ class TestCwAutoTuneWiring:
 
         # No audio fed → tuner never fires → timeout
         with patch(
-            "icom_lan.web.handlers.control.asyncio.wait_for",
+            "rigplane.web.handlers.control.asyncio.wait_for",
             side_effect=_raise_timeout,
         ):
             result = await handler._cw_auto_tune()
@@ -86,7 +86,7 @@ class TestCwAutoTuneWiring:
             ),
         )
         # Patch CwAutoTuner to immediately call the callback with 650 Hz
-        with patch("icom_lan.cw_auto_tuner.CwAutoTuner") as MockTuner:
+        with patch("rigplane.cw_auto_tuner.CwAutoTuner") as MockTuner:
             instance = MockTuner.return_value
             instance.feed_audio = MagicMock()
             instance.cancel = MagicMock()
@@ -114,7 +114,7 @@ class TestCwAutoTuneWiring:
         """Detected=None (silence) returns applied=False."""
         handler = _make_handler()
 
-        with patch("icom_lan.cw_auto_tuner.CwAutoTuner") as MockTuner:
+        with patch("rigplane.cw_auto_tuner.CwAutoTuner") as MockTuner:
             instance = MockTuner.return_value
             instance.feed_audio = MagicMock()
             instance.cancel = MagicMock()
@@ -137,7 +137,7 @@ class TestCwAutoTuneWiring:
             ),
         )
 
-        with patch("icom_lan.cw_auto_tuner.CwAutoTuner") as MockTuner:
+        with patch("rigplane.cw_auto_tuner.CwAutoTuner") as MockTuner:
             instance = MockTuner.return_value
             instance.feed_audio = MagicMock()
             instance.cancel = MagicMock()
@@ -173,7 +173,7 @@ class TestCwAutoTuneWiring:
         handler = _make_handler()
         registry = handler._server._audio_broadcaster._tap_registry
 
-        with patch("icom_lan.cw_auto_tuner.CwAutoTuner") as MockTuner:
+        with patch("rigplane.cw_auto_tuner.CwAutoTuner") as MockTuner:
             instance = MockTuner.return_value
             instance.feed_audio = MagicMock()
             instance.cancel = MagicMock()
@@ -199,7 +199,7 @@ class TestCwAutoTuneWiring:
             raise asyncio.TimeoutError
 
         with patch(
-            "icom_lan.web.handlers.control.asyncio.wait_for",
+            "rigplane.web.handlers.control.asyncio.wait_for",
             side_effect=_raise_timeout,
         ):
             await handler._cw_auto_tune()
@@ -210,7 +210,7 @@ class TestCwAutoTuneWiring:
         """ensure_relay is called so audio flows to the tap."""
         handler = _make_handler()
 
-        with patch("icom_lan.cw_auto_tuner.CwAutoTuner") as MockTuner:
+        with patch("rigplane.cw_auto_tuner.CwAutoTuner") as MockTuner:
             instance = MockTuner.return_value
             instance.feed_audio = MagicMock()
             instance.cancel = MagicMock()

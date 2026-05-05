@@ -31,18 +31,18 @@ from unittest.mock import AsyncMock
 import pytest
 
 from _caps import FULL_ICOM_CAPS
-from icom_lan.exceptions import ConnectionError as IcomConnectionError
-from icom_lan.exceptions import TimeoutError as IcomTimeoutError
-from icom_lan.radio_protocol import MetersCapable
-from icom_lan.rigctld.contract import (
+from rigplane.exceptions import ConnectionError as IcomConnectionError
+from rigplane.exceptions import TimeoutError as IcomTimeoutError
+from rigplane.radio_protocol import MetersCapable
+from rigplane.rigctld.contract import (
     ClientSession,
     HamlibError,
     RigctldCommand,
     RigctldConfig,
 )
-from icom_lan.rigctld.handler import RigctldHandler
-from icom_lan.rigctld.protocol import format_error, format_response, parse_line
-from icom_lan.types import Mode
+from rigplane.rigctld.handler import RigctldHandler
+from rigplane.rigctld.protocol import format_error, format_response, parse_line
+from rigplane.types import Mode
 
 # ---------------------------------------------------------------------------
 # Load fixtures at module level so parametrize sees them at collection time.
@@ -121,7 +121,7 @@ async def test_golden_protocol(fixture: dict) -> None:
     # cache_ttl=0.0 → cache always expired → deterministic radio calls in tests.
     config = RigctldConfig(read_only=read_only, cache_ttl=0.0)
     # Populate level cache when mock has level getters so get_level returns numeric (not RPRT -4)
-    from icom_lan.rigctld.state_cache import StateCache
+    from rigplane.rigctld.state_cache import StateCache
 
     cache = StateCache()
     if "get_s_meter" in mock_spec:

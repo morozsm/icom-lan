@@ -18,9 +18,9 @@ from typing import Any
 
 import pytest
 
-from icom_lan.diagnostics import _discovery, _error_ring
-from icom_lan.diagnostics.contributor import BundleContext
-from icom_lan.diagnostics.contributors import (
+from rigplane.diagnostics import _discovery, _error_ring
+from rigplane.diagnostics.contributor import BundleContext
+from rigplane.diagnostics.contributors import (
     ErrorsContributor,
     LogsContributor,
     StateContributor,
@@ -167,7 +167,7 @@ def test_uninstall_hooks_restores_threading_excepthook() -> None:
 def test_logs_copies_files_with_redaction(tmp_path: Path) -> None:
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
-    (log_dir / "icom-lan.log").write_text(
+    (log_dir / "rigplane.log").write_text(
         "2026-05-03 boot: cwd=/Users/foo/secret/work\n"
         "2026-05-03 connect: host=8.8.8.8 password=topsecret\n",
         encoding="utf-8",
@@ -177,7 +177,7 @@ def test_logs_copies_files_with_redaction(tmp_path: Path) -> None:
 
     LogsContributor().contribute(_make_ctx(log_dir=log_dir), out_dir)
 
-    text = (out_dir / "icom-lan.log").read_text()
+    text = (out_dir / "rigplane.log").read_text()
     assert "/Users/foo/secret" not in text
     assert "/Users/<USER>/" in text
     assert "topsecret" not in text
@@ -195,7 +195,7 @@ def test_logs_oserror_does_not_leak_unredacted(
     """
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
-    src = log_dir / "icom-lan.log"
+    src = log_dir / "rigplane.log"
     src.write_text(
         "2026-05-03 boot: cwd=/Users/foo/secret/work password=topsecret\n",
         encoding="utf-8",
@@ -214,7 +214,7 @@ def test_logs_oserror_does_not_leak_unredacted(
 
     LogsContributor().contribute(_make_ctx(log_dir=log_dir), out_dir)
 
-    dst = out_dir / "icom-lan.log"
+    dst = out_dir / "rigplane.log"
     # Destination must be absent — no fallback copy that would leak content.
     assert not dst.exists()
     # No leftover tmp file either.
@@ -232,14 +232,14 @@ def test_logs_handles_missing_dir(tmp_path: Path) -> None:
 def test_logs_skips_missing_rotation_files(tmp_path: Path) -> None:
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
-    (log_dir / "icom-lan.log").write_text("only-the-base\n", encoding="utf-8")
+    (log_dir / "rigplane.log").write_text("only-the-base\n", encoding="utf-8")
     out_dir = tmp_path / "out"
     out_dir.mkdir()
 
     LogsContributor().contribute(_make_ctx(log_dir=log_dir), out_dir)
 
     files = sorted(p.name for p in out_dir.iterdir())
-    assert files == ["icom-lan.log"]
+    assert files == ["rigplane.log"]
 
 
 # --------------------------------------------------------------------- state

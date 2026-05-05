@@ -8,14 +8,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import CONTROLLER_ADDR
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.radio import IcomRadio
-from icom_lan.radio_state import RadioState, ReceiverState
-from icom_lan.rigctld.state_cache import StateCache
-from icom_lan.types import CivFrame
-from icom_lan.web.radio_poller import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import CONTROLLER_ADDR
+from rigplane.profiles import resolve_radio_profile
+from rigplane.radio import IcomRadio
+from rigplane.radio_state import RadioState, ReceiverState
+from rigplane.rigctld.state_cache import StateCache
+from rigplane.types import CivFrame
+from rigplane.web.radio_poller import (
     CommandQueue,
     RadioPoller,
     SetAntiVoxGain,
@@ -69,7 +69,7 @@ def _make_poller(*, with_state: bool = True) -> tuple[RadioPoller, RadioState]:
     radio._radio_state = SimpleNamespace(active="MAIN")
     radio.send_civ = AsyncMock()
     # Fill AdvancedControlCapable protocol
-    from icom_lan.radio_protocol import AdvancedControlCapable as _ACC
+    from rigplane.radio_protocol import AdvancedControlCapable as _ACC
 
     try:
         from typing import get_protocol_members as _gpm

@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from icom_lan.rigctld.utils import get_mode_reader
-from icom_lan.types import Mode
+from rigplane.rigctld.utils import get_mode_reader
+from rigplane.types import Mode
 
 
 class _ModeInfoRadio:

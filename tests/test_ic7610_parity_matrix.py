@@ -50,8 +50,8 @@ def _resolve_symbol(symbol_ref: str) -> object:
     target: object = module
     parts = qualname.split(".")
     for i, part in enumerate(parts):
-        # P0: _CivRxMixin was replaced by CivRuntime in icom_lan._civ_rx
-        if part == "_CivRxMixin" and module_name == "icom_lan._civ_rx":
+        # P0: _CivRxMixin was replaced by CivRuntime in rigplane._civ_rx
+        if part == "_CivRxMixin" and module_name == "rigplane._civ_rx":
             part = "CivRuntime"
         target = getattr(target, part)
     return target

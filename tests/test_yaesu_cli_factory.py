@@ -6,13 +6,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from icom_lan.backends.config import (
+from rigplane.backends.config import (
     SerialBackendConfig,
     YaesuCatBackendConfig,
 )
-from icom_lan.backends.factory import create_radio
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
-from icom_lan.cli import _build_backend_config, _build_parser
+from rigplane.backends.factory import create_radio
+from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
+from rigplane.cli import _build_backend_config, _build_parser
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +133,7 @@ class TestCliBuildBackendConfig:
         p = _build_parser()
         args = p.parse_args(["--backend", "yaesu-cat", "status"])
         with patch(
-            "icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])
+            "rigplane.discovery.discover_serial_radios", AsyncMock(return_value=[])
         ):
             with pytest.raises(SystemExit):
                 await _build_backend_config(args)

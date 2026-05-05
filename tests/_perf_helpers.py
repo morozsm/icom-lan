@@ -28,7 +28,7 @@ def fast_connect():  # noqa: D103
     """
     with (
         patch("asyncio.sleep", _fast_sleep),
-        patch("icom_lan._control_phase.wait_for_radio_startup_ready", new=AsyncMock()),
-        patch("icom_lan.radio.CoreRadio._fetch_initial_state", new=AsyncMock()),
+        patch("rigplane._control_phase.wait_for_radio_startup_ready", new=AsyncMock()),
+        patch("rigplane.radio.CoreRadio._fetch_initial_state", new=AsyncMock()),
     ):
         yield

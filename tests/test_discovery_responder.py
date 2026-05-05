@@ -8,8 +8,8 @@ import socket
 
 import pytest
 
-from icom_lan import __version__
-from icom_lan.web.discovery import DiscoveryResponder, RadioInfo
+from rigplane import __version__
+from rigplane.web.discovery import DiscoveryResponder, RadioInfo
 
 MAGIC = b"ICOM_LAN_DISCOVER\n"
 

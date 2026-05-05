@@ -8,12 +8,12 @@ from unittest.mock import AsyncMock
 import pytest
 
 from _caps import FULL_ICOM_CAPS
-from icom_lan.exceptions import ConnectionError as IcomConnectionError
-from icom_lan.exceptions import TimeoutError as IcomTimeoutError
-from icom_lan.radio_state import RadioState
-from icom_lan.rigctld.contract import HamlibError, RigctldCommand, RigctldConfig
-from icom_lan.rigctld.handler import RigctldHandler
-from icom_lan.types import CivFrame, Mode
+from rigplane.exceptions import ConnectionError as IcomConnectionError
+from rigplane.exceptions import TimeoutError as IcomTimeoutError
+from rigplane.radio_state import RadioState
+from rigplane.rigctld.contract import HamlibError, RigctldCommand, RigctldConfig
+from rigplane.rigctld.handler import RigctldHandler
+from rigplane.types import CivFrame, Mode
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -668,8 +668,8 @@ async def test_dump_state(handler: RigctldHandler, mock_radio: AsyncMock) -> Non
     # Line 12: end of filters sentinel
     assert lines[12] == "0 0"
     # Lines 13-16: bare scalars — no 'key: value' prefix
-    assert lines[13] == "0"  # max_rit
-    assert lines[14] == "0"  # max_xit
+    assert lines[13] == "9999"  # max_rit
+    assert lines[14] == "9999"  # max_xit
     assert lines[15] == "0"  # max_ifshift
     assert lines[16] == "0"  # announces
     # Lines 17-18: preamp/attenuator — space-separated ints, 0-terminated
@@ -766,6 +766,131 @@ async def test_get_rit_reads_radio_state(
 
     assert resp.ok
     assert resp.values == ["-250"]
+
+
+@pytest.mark.asyncio
+async def test_set_rit_calls_radio(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.set_rit_frequency = AsyncMock()
+    mock_radio.set_rit_status = AsyncMock()
+    resp = await handler.execute(set_cmd("set_rit", "500"))
+    assert resp.ok
+    mock_radio.set_rit_frequency.assert_awaited_once_with(500)
+    mock_radio.set_rit_status.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_rit_zero_disables(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.set_rit_frequency = AsyncMock()
+    mock_radio.set_rit_status = AsyncMock()
+    resp = await handler.execute(set_cmd("set_rit", "0"))
+    assert resp.ok
+    mock_radio.set_rit_frequency.assert_awaited_once_with(0)
+    mock_radio.set_rit_status.assert_awaited_once_with(False)
+
+
+@pytest.mark.asyncio
+async def test_set_rit_negative_hz(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.set_rit_frequency = AsyncMock()
+    mock_radio.set_rit_status = AsyncMock()
+    resp = await handler.execute(set_cmd("set_rit", "-250"))
+    assert resp.ok
+    mock_radio.set_rit_frequency.assert_awaited_once_with(-250)
+    mock_radio.set_rit_status.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_rit_missing_arg_returns_einval(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_rit"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_set_rit_invalid_arg_returns_einval(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_rit", "bad"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_set_rit_no_cap_returns_enimpl(
+    mock_radio: AsyncMock, config: RigctldConfig
+) -> None:
+    mock_radio.capabilities = set()
+    h = RigctldHandler(mock_radio, config)
+    resp = await h.execute(set_cmd("set_rit", "100"))
+    assert resp.error == HamlibError.ENIMPL
+
+
+@pytest.mark.asyncio
+async def test_get_xit_reads_radio_state(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.rit_freq = 300
+    mock_radio.radio_state = state
+    resp = await handler.execute(get_cmd("get_xit"))
+    assert resp.ok
+    assert resp.values == ["300"]
+
+
+@pytest.mark.asyncio
+async def test_get_xit_default_zero(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(get_cmd("get_xit"))
+    assert resp.ok
+    assert resp.values == ["0"]
+
+
+@pytest.mark.asyncio
+async def test_set_xit_calls_radio(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.set_rit_frequency = AsyncMock()
+    mock_radio.set_rit_tx_status = AsyncMock()
+    resp = await handler.execute(set_cmd("set_xit", "750"))
+    assert resp.ok
+    mock_radio.set_rit_frequency.assert_awaited_once_with(750)
+    mock_radio.set_rit_tx_status.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_xit_zero_disables(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.set_rit_frequency = AsyncMock()
+    mock_radio.set_rit_tx_status = AsyncMock()
+    resp = await handler.execute(set_cmd("set_xit", "0"))
+    assert resp.ok
+    mock_radio.set_rit_frequency.assert_awaited_once_with(0)
+    mock_radio.set_rit_tx_status.assert_awaited_once_with(False)
+
+
+@pytest.mark.asyncio
+async def test_set_xit_missing_arg_returns_einval(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_xit"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_set_xit_no_cap_returns_enimpl(
+    mock_radio: AsyncMock, config: RigctldConfig
+) -> None:
+    mock_radio.capabilities = set()
+    h = RigctldHandler(mock_radio, config)
+    resp = await h.execute(set_cmd("set_xit", "100"))
+    assert resp.error == HamlibError.ENIMPL
 
 
 @pytest.mark.asyncio
@@ -900,55 +1025,55 @@ async def test_timeout_error_on_set_ptt_becomes_etimeout(
 
 
 def test_passband_to_filter_zero_gives_none() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(0) is None
 
 
 def test_passband_to_filter_negative_gives_none() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(-1) is None
 
 
 def test_passband_to_filter_wide_gives_fil1() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(3000) == 1
 
 
 def test_passband_to_filter_medium_gives_fil2() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(2400) == 2
 
 
 def test_passband_to_filter_narrow_gives_fil3() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(1800) == 3
 
 
 def test_filter_to_passband_none_gives_zero() -> None:
-    from icom_lan.rigctld.handler import _filter_to_passband
+    from rigplane.rigctld.handler import _filter_to_passband
 
     assert _filter_to_passband(None) == 0
 
 
 def test_filter_to_passband_fil1() -> None:
-    from icom_lan.rigctld.handler import _filter_to_passband
+    from rigplane.rigctld.handler import _filter_to_passband
 
     assert _filter_to_passband(1) == 3000
 
 
 def test_filter_to_passband_fil2() -> None:
-    from icom_lan.rigctld.handler import _filter_to_passband
+    from rigplane.rigctld.handler import _filter_to_passband
 
     assert _filter_to_passband(2) == 2400
 
 
 def test_filter_to_passband_fil3() -> None:
-    from icom_lan.rigctld.handler import _filter_to_passband
+    from rigplane.rigctld.handler import _filter_to_passband
 
     assert _filter_to_passband(3) == 1800
     assert _filter_to_passband(3) == 1800
@@ -1702,7 +1827,7 @@ async def test_send_raw_no_send_civ_raw_returns_enimpl(config: RigctldConfig) ->
 # Yaesu-specific level/func routing
 # ---------------------------------------------------------------------------
 
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio  # noqa: E402
+from rigplane.backends.yaesu_cat.radio import YaesuCatRadio  # noqa: E402
 
 
 class _FakeYaesuRadio(YaesuCatRadio):
@@ -1722,7 +1847,7 @@ def yaesu_radio() -> AsyncMock:
     end-to-end (``AsyncMock(spec=…)`` would otherwise return a bare
     MagicMock with non-awaitable ``get_level``/``get_func`` methods).
     """
-    from icom_lan.rigctld.routing import YaesuRouting
+    from rigplane.rigctld.routing import YaesuRouting
 
     mock = AsyncMock(spec=_FakeYaesuRadio)
     mock.backend_id = "yaesu_cat"
@@ -2304,7 +2429,7 @@ async def test_icom_dump_state_unchanged(
 
 
 class _FakeProfile:
-    """Minimal stand-in for ``icom_lan.profiles.RadioProfile`` for tests."""
+    """Minimal stand-in for ``rigplane.profiles.RadioProfile`` for tests."""
 
     def __init__(self, *, receiver_count: int, vfo_scheme: str) -> None:
         self.receiver_count = receiver_count
@@ -2688,7 +2813,7 @@ async def test_get_split_vfo_dual_rx_returns_tracked_tx_vfo(
 
 def _yaesu_handler(get_attenuator_value: bool) -> RigctldHandler:
     """Build a handler with a Yaesu-tagged radio so create_routing returns YaesuRouting."""
-    from icom_lan.rigctld.routing import YaesuRouting
+    from rigplane.rigctld.routing import YaesuRouting
 
     radio = AsyncMock(spec=_FakeYaesuRadio)
     radio.backend_id = "yaesu_cat"

@@ -12,10 +12,10 @@ import asyncio
 from unittest.mock import patch
 
 import pytest
-import icom_lan.commands as raw_commands
+import rigplane.commands as raw_commands
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     CONTROLLER_ADDR,
     build_civ_frame,
     get_scope_center_type,
@@ -49,9 +49,9 @@ from icom_lan.commands import (
     scope_set_vbw,
     scope_single_dual,
 )
-from icom_lan.scope import ScopeAssembler, ScopeFrame
-from icom_lan.types import bcd_encode
-from icom_lan.radio import IcomRadio
+from rigplane.scope import ScopeAssembler, ScopeFrame
+from rigplane.types import bcd_encode
+from rigplane.radio import IcomRadio
 from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
 from _helpers import wrap_civ_in_udp as _wrap_civ_in_udp
 
@@ -393,7 +393,7 @@ class TestScopeAssemblerTimeout:
         )
 
         t0 = 1000.0
-        with patch("icom_lan.scope.time.monotonic", return_value=t0):
+        with patch("rigplane.scope.time.monotonic", return_value=t0):
             result = asm.feed(seq1, 0)
         assert result is None
 
@@ -402,8 +402,8 @@ class TestScopeAssemblerTimeout:
 
         t_expired = t0 + 6.0
         with (
-            patch("icom_lan.scope.time.monotonic", return_value=t_expired),
-            patch.object(logging.getLogger("icom_lan.scope"), "warning") as mock_warn,
+            patch("rigplane.scope.time.monotonic", return_value=t_expired),
+            patch.object(logging.getLogger("rigplane.scope"), "warning") as mock_warn,
         ):
             seq2 = _seq_n_payload(2, 3, bytes(range(10)))
             result2 = asm.feed(seq2, 0)
@@ -428,13 +428,13 @@ class TestScopeAssemblerTimeout:
             oor=False,
         )
         t0 = 1000.0
-        with patch("icom_lan.scope.time.monotonic", return_value=t0):
+        with patch("rigplane.scope.time.monotonic", return_value=t0):
             asm.feed(seq1_old, 0)
 
         # Trigger timeout by sending a middle packet late.
         t_expired = t0 + 10.0
         seq2_old = _seq_n_payload(2, 3, bytes([0xAA] * 5))
-        with patch("icom_lan.scope.time.monotonic", return_value=t_expired):
+        with patch("rigplane.scope.time.monotonic", return_value=t_expired):
             asm.feed(seq2_old, 0)  # discarded by timeout
 
         # New single-packet frame should assemble correctly.
@@ -449,7 +449,7 @@ class TestScopeAssemblerTimeout:
             oor=False,
             extra_pixels=pixels,
         )
-        with patch("icom_lan.scope.time.monotonic", return_value=t_expired + 0.1):
+        with patch("rigplane.scope.time.monotonic", return_value=t_expired + 0.1):
             result = asm.feed(seq1_new, 0)
 
         assert result is not None
@@ -470,12 +470,12 @@ class TestScopeAssemblerTimeout:
             oor=False,
         )
         t0 = 0.0
-        with patch("icom_lan.scope.time.monotonic", return_value=t0):
+        with patch("rigplane.scope.time.monotonic", return_value=t0):
             asm.feed(seq1, 0)
 
         # 1.5s > 1.0s timeout → discard.
         seq2 = _seq_n_payload(2, 2, bytes([0x10] * 3))
-        with patch("icom_lan.scope.time.monotonic", return_value=t0 + 1.5):
+        with patch("rigplane.scope.time.monotonic", return_value=t0 + 1.5):
             result = asm.feed(seq2, 0)
         assert result is None
 
@@ -493,13 +493,13 @@ class TestScopeAssemblerTimeout:
             oor=False,
         )
         t0 = 1000.0
-        with patch("icom_lan.scope.time.monotonic", return_value=t0):
+        with patch("rigplane.scope.time.monotonic", return_value=t0):
             asm.feed(seq1, 0)
 
         pixels = bytes([0x10, 0x20, 0x30])
         seq2 = _seq_n_payload(2, 2, pixels)
         # 4.9s < 5.0s timeout → should complete.
-        with patch("icom_lan.scope.time.monotonic", return_value=t0 + 4.9):
+        with patch("rigplane.scope.time.monotonic", return_value=t0 + 4.9):
             result = asm.feed(seq2, 0)
 
         assert result is not None

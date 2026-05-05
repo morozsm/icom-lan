@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # All tests use MockIcomRadio — no real hardware required.
 pytestmark = pytest.mark.mock_integration
 
-from icom_lan.radio import IcomRadio  # noqa: E402, TID251
+from rigplane.radio import IcomRadio  # noqa: E402, TID251
 from _perf_helpers import fast_connect  # noqa: E402
 from mock_server import MockIcomRadio  # noqa: E402
 

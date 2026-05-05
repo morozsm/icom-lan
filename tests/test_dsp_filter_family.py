@@ -16,18 +16,18 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
-from icom_lan.commands._codec import (
+from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
+from rigplane.commands._codec import (
     filter_hz_to_index,
     filter_index_to_hz,
     hz_to_table_index,
     table_index_to_hz,
 )
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.radio import IcomRadio
-from icom_lan.radio_protocol import DspControlCapable
-from icom_lan.rig_loader import load_rig
-from icom_lan.types import CivFrame
+from rigplane.profiles import resolve_radio_profile
+from rigplane.radio import IcomRadio
+from rigplane.radio_protocol import DspControlCapable
+from rigplane.rig_loader import load_rig
+from rigplane.types import CivFrame
 
 _RIGS_DIR = Path(__file__).parents[1] / "rigs"
 
@@ -111,7 +111,7 @@ class TestDspControlCapableSatisfaction:
         assert isinstance(radio, DspControlCapable)
 
     def test_protocol_in_all(self) -> None:
-        from icom_lan import radio_protocol
+        from rigplane import radio_protocol
 
         assert "DspControlCapable" in radio_protocol.__all__
 
@@ -175,7 +175,7 @@ async def test_icom_set_filter_width_routes_sub_via_cmd29() -> None:
 @pytest.mark.asyncio
 async def test_icom_set_filter_width_rejects_out_of_range() -> None:
     """Bounds enforcement happens inside the backend (P2-04)."""
-    from icom_lan.exceptions import CommandError
+    from rigplane.exceptions import CommandError
 
     radio = _connected_icom()
     radio.send_civ = AsyncMock()  # type: ignore[method-assign]
@@ -440,8 +440,8 @@ async def test_icom_get_filter_sub_no_fallback_to_main_cache() -> None:
 @pytest.mark.asyncio
 async def test_rigctld_filter_width_passband_round_trip() -> None:
     """rigctld set_mode → get_mode passband round-trip (smoke)."""
-    from icom_lan.rigctld.contract import RigctldCommand, RigctldConfig
-    from icom_lan.rigctld.handler import RigctldHandler
+    from rigplane.rigctld.contract import RigctldCommand, RigctldConfig
+    from rigplane.rigctld.handler import RigctldHandler
 
     class _Stub:
         def __init__(self) -> None:

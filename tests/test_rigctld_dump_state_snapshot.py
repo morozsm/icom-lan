@@ -48,8 +48,8 @@ from pathlib import Path
 
 # Test-only import of private dump_state constants. See module docstring
 # for why this is acceptable here.
-from icom_lan.rigctld.handler import _IC7610_DUMP_STATE  # noqa: TID251
-from icom_lan.rigctld.routing import _YAESU_DUMP_STATE  # noqa: TID251
+from rigplane.rigctld.handler import _IC7610_DUMP_STATE  # noqa: TID251
+from rigplane.rigctld.routing import _YAESU_DUMP_STATE  # noqa: TID251
 
 GOLDEN_DIR = Path(__file__).parent / "golden"
 

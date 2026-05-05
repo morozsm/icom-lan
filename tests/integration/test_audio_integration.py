@@ -17,8 +17,8 @@ from typing import List
 
 import pytest
 
-from icom_lan import IcomRadio
-from icom_lan.audio import AudioPacket
+from rigplane import IcomRadio
+from rigplane.audio import AudioPacket
 
 
 pytestmark = pytest.mark.integration
