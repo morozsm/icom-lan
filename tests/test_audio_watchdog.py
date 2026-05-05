@@ -103,7 +103,9 @@ async def _run_watchdog_n_ticks(
         if sleep_side_effect:
             await sleep_side_effect(tick)
 
-    with patch("rigplane.runtime.radio_reconnect.asyncio.sleep", side_effect=fake_sleep):
+    with patch(
+        "rigplane.runtime.radio_reconnect.asyncio.sleep", side_effect=fake_sleep
+    ):
         try:
             await radio_reconnect.audio_error_watchdog_loop(radio)  # type: ignore[arg-type]
         except asyncio.CancelledError:

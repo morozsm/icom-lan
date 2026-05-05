@@ -409,7 +409,9 @@ async def test_audio_bridge_smoke_with_serial_backend_audio_driver() -> None:
         output_channels=2,
     )
     backend = FakeAudioBackend(devices=[device])
-    bridge = AudioBridge(radio, device_name="BlackHole", tx_enabled=True, backend=backend)
+    bridge = AudioBridge(
+        radio, device_name="BlackHole", tx_enabled=True, backend=backend
+    )
     try:
         await bridge.start()
         # Yield once so _rx_loop and _tx_loop tasks actually start running.
@@ -418,7 +420,9 @@ async def test_audio_bridge_smoke_with_serial_backend_audio_driver() -> None:
         # RX path: serial driver → AudioBus → _rx_loop → FakeTxStream
         serial_audio.emit_rx_pcm(b"\x10\x20" * 960)
         await asyncio.sleep(0)  # let _rx_loop process the queued packet
-        assert backend.tx_streams[0].written_frames, "RX frame did not reach bridge output"
+        assert backend.tx_streams[0].written_frames, (
+            "RX frame did not reach bridge output"
+        )
 
         # TX path: FakeRxStream.inject_frame → _on_tx_capture → _tx_loop → radio
         # PCM value 100 (> silence threshold of 10) so it is not filtered.

@@ -217,9 +217,7 @@ async def audio_error_watchdog_loop(radio: "IcomRadio") -> None:
                     await audio_stream.stop_rx()
                     await audio_stream.stop_tx()
                 except Exception:
-                    logger.debug(
-                        "audio-watchdog: stream stop failed", exc_info=True
-                    )
+                    logger.debug("audio-watchdog: stream stop failed", exc_info=True)
                 radio._audio_stream = None
 
             try:
@@ -236,14 +234,16 @@ async def audio_error_watchdog_loop(radio: "IcomRadio") -> None:
             # Reconnect: new transport starts with _udp_error_count == 0.
             try:
                 await radio._ensure_audio_transport()
-                if radio._connected and snapshot is not None and radio._auto_recover_audio:
+                if (
+                    radio._connected
+                    and snapshot is not None
+                    and radio._auto_recover_audio
+                ):
                     await radio._audio_runtime.recover(snapshot)
                 if radio._connected:
                     logger.info("Audio watchdog: audio-only recovery succeeded")
             except Exception as exc:
-                logger.warning(
-                    "Audio watchdog: audio-only recovery failed: %s", exc
-                )
+                logger.warning("Audio watchdog: audio-only recovery failed: %s", exc)
             # Loop continues to monitor the new (or absent) transport.
     except asyncio.CancelledError:
         pass

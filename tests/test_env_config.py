@@ -270,4 +270,3 @@ class TestHandlerIntegration:
 
         broadcaster = AudioBroadcaster(radio=None)
         assert broadcaster.HIGH_WATERMARK == 10
-

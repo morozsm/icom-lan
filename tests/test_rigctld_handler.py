@@ -821,7 +821,9 @@ async def test_set_rit_invalid_arg_returns_einval(
 
 
 @pytest.mark.asyncio
-async def test_set_rit_no_cap_returns_enimpl(mock_radio: AsyncMock, config: RigctldConfig) -> None:
+async def test_set_rit_no_cap_returns_enimpl(
+    mock_radio: AsyncMock, config: RigctldConfig
+) -> None:
     mock_radio.capabilities = set()
     h = RigctldHandler(mock_radio, config)
     resp = await h.execute(set_cmd("set_rit", "100"))
@@ -882,7 +884,9 @@ async def test_set_xit_missing_arg_returns_einval(
 
 
 @pytest.mark.asyncio
-async def test_set_xit_no_cap_returns_enimpl(mock_radio: AsyncMock, config: RigctldConfig) -> None:
+async def test_set_xit_no_cap_returns_enimpl(
+    mock_radio: AsyncMock, config: RigctldConfig
+) -> None:
     mock_radio.capabilities = set()
     h = RigctldHandler(mock_radio, config)
     resp = await h.execute(set_cmd("set_xit", "100"))

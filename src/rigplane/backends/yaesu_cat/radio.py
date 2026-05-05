@@ -1182,9 +1182,9 @@ class YaesuCatRadio:
                 f"cross-band split requires different rx_xcvr and tx_xcvr; "
                 f"got rx={rx_xcvr}, tx={tx_xcvr}"
             )
-        await self.set_rx_func(0)           # FR00: Dual RX
-        await self.select_receiver(rx_xcvr) # VS{rx_xcvr}: focus active receiver
-        await self.set_tx_source(tx_xcvr)   # FT{tx_xcvr}: route TX
+        await self.set_rx_func(0)  # FR00: Dual RX
+        await self.select_receiver(rx_xcvr)  # VS{rx_xcvr}: focus active receiver
+        await self.set_tx_source(tx_xcvr)  # FT{tx_xcvr}: route TX
 
     async def get_split(self) -> bool:
         """Get split operation state."""
