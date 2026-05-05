@@ -27,7 +27,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: icom-lan Version
+      label: rigplane Version
       placeholder: "e.g., 0.11.0"
 
   - type: input
