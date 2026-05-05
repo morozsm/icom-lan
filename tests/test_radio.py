@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     _CMD_ACK,
     _CMD_FREQ_GET,
     _CMD_LEVEL,
@@ -22,9 +22,9 @@ from icom_lan.commands import (
     build_civ_frame,
     build_cmd29_frame,
 )
-from icom_lan.exceptions import ConnectionError, TimeoutError
-from icom_lan.radio import IcomRadio
-from icom_lan.types import (
+from rigplane.exceptions import ConnectionError, TimeoutError
+from rigplane.radio import IcomRadio
+from rigplane.types import (
     AgcMode,
     AudioCodec,
     AudioPeakFilter,
@@ -451,7 +451,7 @@ class TestMeters:
 
     def test_meters_capable_protocol_satisfied(self, radio: IcomRadio) -> None:
         """IcomRadio satisfies the extended MetersCapable protocol (#1104)."""
-        from icom_lan.radio_protocol import MetersCapable
+        from rigplane.radio_protocol import MetersCapable
 
         assert isinstance(radio, MetersCapable)
         # Spot-check the new methods exist with the expected names.
@@ -580,7 +580,7 @@ class TestLevelsCapableProtocol:
     def test_icom_radio_satisfies_levels_capable(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        from icom_lan.radio_protocol import LevelsCapable
+        from rigplane.radio_protocol import LevelsCapable
 
         assert isinstance(radio, LevelsCapable)
 
@@ -1094,7 +1094,7 @@ class TestCivTimeoutIsolation:
 
 def _dual_watch_response(on: bool) -> bytes:
     """Build a CI-V dual-watch query response (0x07 0xC2 <on>) wrapped in UDP."""
-    from icom_lan.commands import build_civ_frame
+    from rigplane.commands import build_civ_frame
 
     civ = build_civ_frame(
         CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xC2, 0x01 if on else 0x00])
@@ -1144,7 +1144,7 @@ class TestDualWatch:
 
 def _bool_response_1c(sub: int, val: bool) -> bytes:
     """Build a mock 0x1C response from the radio, wrapped in UDP."""
-    from icom_lan.commands import build_civ_frame
+    from rigplane.commands import build_civ_frame
 
     civ = build_civ_frame(
         CONTROLLER_ADDR,
@@ -1158,7 +1158,7 @@ def _bool_response_1c(sub: int, val: bool) -> bytes:
 
 def _transceiver_id_response(model_id: int = 0x98) -> bytes:
     """Build a mock 0x19 0x00 response from the radio, wrapped in UDP."""
-    from icom_lan.commands import build_civ_frame
+    from rigplane.commands import build_civ_frame
 
     civ = build_civ_frame(
         CONTROLLER_ADDR,

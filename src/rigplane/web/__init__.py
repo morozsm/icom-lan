@@ -1,11 +1,11 @@
-"""icom-lan Web UI — WebSocket + HTTP server package.
+"""rigplane Web UI — WebSocket + HTTP server package.
 
 Provides a built-in web interface for real-time spectrum/waterfall display,
 radio control, and audio streaming accessible from any browser on the LAN.
 
 Entrypoint::
 
-    from icom_lan.web.server import WebServer, WebConfig
+    from rigplane.web.server import WebServer, WebConfig
     server = WebServer(radio, WebConfig(port=8080))
     await server.serve_forever()
 """

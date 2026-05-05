@@ -1,4 +1,4 @@
-"""Tests for ``icom-lan diagnose`` CLI subcommand."""
+"""Tests for ``rigplane diagnose`` CLI subcommand."""
 
 from __future__ import annotations
 
@@ -11,9 +11,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan import diagnostics as _diagnostics_pkg
-from icom_lan.cli import _build_parser, _diagnose
-from icom_lan.diagnostics import (
+from rigplane import diagnostics as _diagnostics_pkg
+from rigplane.cli import _build_parser, _diagnose
+from rigplane.diagnostics import (
     BundleContext,
     BundleTooLarge,
     ForbiddenContent,
@@ -58,7 +58,7 @@ def _write_fake_bundle(path: Path, manifest: dict[str, Any] | None = None) -> Pa
     )
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("manifest.json", json.dumps(payload))
-        zf.writestr("logs/icom-lan.log", "fake log line\n")
+        zf.writestr("logs/rigplane.log", "fake log line\n")
     return path
 
 
@@ -74,8 +74,8 @@ def fake_build_bundle(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         return output_path
 
     # Patch the source module — ``_diagnose._run_async`` does a local
-    # ``from icom_lan.diagnostics import build_bundle`` at call time, so the
-    # local import resolves via ``sys.modules['icom_lan.diagnostics']``.
+    # ``from rigplane.diagnostics import build_bundle`` at call time, so the
+    # local import resolves via ``sys.modules['rigplane.diagnostics']``.
     monkeypatch.setattr(_diagnostics_pkg, "build_bundle", _fake)
     return captured
 
@@ -179,7 +179,7 @@ class TestSaveOnly:
         assert rc == 0
         # The output path written by _fake build_bundle was passed to it.
         assert fake_build_bundle["output"].parent == tmp_path
-        assert fake_build_bundle["output"].name.startswith("icom-lan-report-")
+        assert fake_build_bundle["output"].name.startswith("rigplane-report-")
 
 
 # ---------------------------------------------------------------------------
@@ -458,11 +458,11 @@ class TestEndpoint:
         force_non_tty,
         monkeypatch: pytest.MonkeyPatch,
     ):
-        """When --endpoint is not passed but ICOM_LAN_REPORT_ENDPOINT is set,
+        """When --endpoint is not passed but RIGPLANE_REPORT_ENDPOINT is set,
         upload_bundle must receive the resolved URL — NOT None — so consent
         is obtained for the URL that actually receives the data.
         """
-        monkeypatch.setenv("ICOM_LAN_REPORT_ENDPOINT", "https://my-org.example/u")
+        monkeypatch.setenv("RIGPLANE_REPORT_ENDPOINT", "https://my-org.example/u")
         args = parsed(["--upload", "--no-confirm"])
         rc = _diagnose.run(args)
         assert rc == 0
@@ -471,12 +471,12 @@ class TestEndpoint:
         assert kwargs.get("endpoint") == "https://my-org.example/u"
 
     def test_default_endpoint_resolution(self, monkeypatch):
-        monkeypatch.delenv("ICOM_LAN_REPORT_ENDPOINT", raising=False)
-        from icom_lan.diagnostics import DEFAULT_ENDPOINT
+        monkeypatch.delenv("RIGPLANE_REPORT_ENDPOINT", raising=False)
+        from rigplane.diagnostics import DEFAULT_ENDPOINT
 
         assert _diagnose._resolve_endpoint(None) == DEFAULT_ENDPOINT
         assert _diagnose._resolve_endpoint("https://x") == "https://x"
 
     def test_env_endpoint_used(self, monkeypatch):
-        monkeypatch.setenv("ICOM_LAN_REPORT_ENDPOINT", "https://env.test/u")
+        monkeypatch.setenv("RIGPLANE_REPORT_ENDPOINT", "https://env.test/u")
         assert _diagnose._resolve_endpoint(None) == "https://env.test/u"

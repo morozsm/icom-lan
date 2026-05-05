@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.capabilities import KNOWN_CAPABILITIES
+from rigplane.capabilities import KNOWN_CAPABILITIES
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
 TEMPLATE_PATH = RIGS_DIR / "ic7610.toml"

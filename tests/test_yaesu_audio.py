@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from icom_lan.audio import AudioPacket
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
-from icom_lan.exceptions import AudioFormatError
-from icom_lan.types import AudioCodec
+from rigplane.audio import AudioPacket
+from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
+from rigplane.exceptions import AudioFormatError
+from rigplane.types import AudioCodec
 
 
 # ---------------------------------------------------------------------------
@@ -108,15 +108,15 @@ def radio(
     """Create a YaesuCatRadio with faked transport + audio driver."""
     # Patch transport so connect() doesn't try to open a real serial port
     monkeypatch.setattr(
-        "icom_lan.backends.yaesu_cat.transport.YaesuCatTransport.connect",
+        "rigplane.backends.yaesu_cat.transport.YaesuCatTransport.connect",
         AsyncMock(),
     )
     monkeypatch.setattr(
-        "icom_lan.backends.yaesu_cat.transport.YaesuCatTransport.close",
+        "rigplane.backends.yaesu_cat.transport.YaesuCatTransport.close",
         AsyncMock(),
     )
     monkeypatch.setattr(
-        "icom_lan.backends.yaesu_cat.transport.YaesuCatTransport.connected",
+        "rigplane.backends.yaesu_cat.transport.YaesuCatTransport.connected",
         True,
     )
     r = YaesuCatRadio(
@@ -149,7 +149,7 @@ class TestAudioSampleRateProperty:
 
     Before the fix the Yaesu backend stored ``_audio_sample_rate`` but did
     not expose it as a property, so ``getattr(radio, "audio_sample_rate", None)``
-    returned ``None`` in :mod:`icom_lan.web.handlers.audio` and the relay
+    returned ``None`` in :mod:`rigplane.web.handlers.audio` and the relay
     fell back to a default rate, mis-clocking FTX-1 audio.
     """
 
@@ -180,7 +180,7 @@ class TestAudioSampleRateProperty:
 
 class TestAudioCapableProtocol:
     def test_yaesu_satisfies_audio_capable(self, radio: YaesuCatRadio) -> None:
-        from icom_lan.radio_protocol import AudioCapable
+        from rigplane.radio_protocol import AudioCapable
 
         assert isinstance(radio, AudioCapable)
 
@@ -436,7 +436,7 @@ class TestMetersCapableProtocol:
     """Yaesu backend satisfies the extended MetersCapable protocol (#1104)."""
 
     def test_yaesu_satisfies_meters_capable(self, radio: YaesuCatRadio) -> None:
-        from icom_lan.radio_protocol import MetersCapable
+        from rigplane.radio_protocol import MetersCapable
 
         assert isinstance(radio, MetersCapable)
         for name in ("get_power_meter", "get_alc_meter", "get_swr_meter"):

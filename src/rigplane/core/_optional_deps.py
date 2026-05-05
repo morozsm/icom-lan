@@ -27,7 +27,7 @@ def _require_numpy() -> None:
         import numpy  # noqa: F401
     except ImportError as exc:
         raise ImportError(
-            "numpy is required for this feature. Install with: pip install icom-lan"
+            "numpy is required for this feature. Install with: pip install rigplane"
         ) from exc
 
 
@@ -38,7 +38,7 @@ def _require_sounddevice() -> None:
     except ImportError as exc:
         raise ImportError(
             "sounddevice is required for audio device access. "
-            "Install with: pip install icom-lan"
+            "Install with: pip install rigplane"
         ) from exc
 
 
@@ -49,7 +49,7 @@ def _require_opuslib() -> None:
     except ImportError as exc:
         raise ImportError(
             "opuslib is required for Opus audio codec support. "
-            "Install with: pip install icom-lan"
+            "Install with: pip install rigplane"
         ) from exc
 
 
@@ -60,7 +60,7 @@ def _require_pillow() -> None:
     except ImportError as exc:
         raise ImportError(
             "Pillow is required for scope rendering. "
-            "Install with: pip install icom-lan[scope]"
+            "Install with: pip install rigplane[scope]"
         ) from exc
 
 
@@ -71,7 +71,7 @@ def _require_pyserial_asyncio() -> None:
     except ImportError as exc:
         raise ImportError(
             "pyserial-asyncio is required for serial backends. "
-            "Install with: pip install icom-lan[serial]"
+            "Install with: pip install rigplane[serial]"
         ) from exc
 
 

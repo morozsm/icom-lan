@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.backends.yaesu_cat import (
+from rigplane.backends.yaesu_cat import (
     CatTimeoutError,
     CatTransportError,
     YaesuCatTransport,

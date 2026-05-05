@@ -1,4 +1,4 @@
-"""HTTP method/path dispatch for :class:`icom_lan.web.server.WebServer`.
+"""HTTP method/path dispatch for :class:`rigplane.web.server.WebServer`.
 
 Extracted from ``web/server.py`` to keep ``WebServer._handle_http`` as a
 thin delegator (issue #1262, Tier 3 wave 4 of #1063).
@@ -8,8 +8,8 @@ argument (clean dependency injection — no module-level state). Handler
 implementations themselves stay on :class:`WebServer` and on the
 ``web/handlers/`` modules; this file owns only the route table.
 
-The module imports :mod:`icom_lan.web.server` lazily inside the dispatch
-function so unit tests that patch ``icom_lan.web.server._send_response``
+The module imports :mod:`rigplane.web.server` lazily inside the dispatch
+function so unit tests that patch ``rigplane.web.server._send_response``
 continue to work — the patch reaches the binding through the module
 reference rather than an early ``from .server import _send_response``.
 """
@@ -45,7 +45,7 @@ async def dispatch_http_request(
     method now delegates here so the public API and route semantics are
     preserved.
     """
-    # Lazy import: keeps test patches of ``icom_lan.web.server._send_response``
+    # Lazy import: keeps test patches of ``rigplane.web.server._send_response``
     # effective (binding lookup goes through the module).
     from . import server as _server_mod  # noqa: TID251
 

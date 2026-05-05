@@ -6,15 +6,15 @@ from dataclasses import dataclass
 
 import pytest
 
-from icom_lan import IcomRadio, create_radio
-from icom_lan.backends.config import (
+from rigplane import IcomRadio, create_radio
+from rigplane.backends.config import (
     LanBackendConfig,
     SerialBackendConfig,
     YaesuCatBackendConfig,
 )
-from icom_lan.backends.icom7610 import Icom7610SerialRadio
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
-from icom_lan.backends.icom7610.drivers.contracts import (
+from rigplane.backends.icom7610 import Icom7610SerialRadio
+from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
+from rigplane.backends.icom7610.drivers.contracts import (
     AudioDriver,
     CivLink,
     SessionDriver,
@@ -117,7 +117,7 @@ class TestCreateRadioFactory:
 
     def test_lan_backend_has_icom_lan_backend_id(self) -> None:
         radio = create_radio(LanBackendConfig(host="192.168.55.40"))
-        assert radio.backend_id == "icom_lan"
+        assert radio.backend_id == "rigplane"
 
     def test_serial_icom_backend_has_icom_serial_backend_id(self) -> None:
         radio = create_radio(SerialBackendConfig(device="/dev/ttyUSB0"))

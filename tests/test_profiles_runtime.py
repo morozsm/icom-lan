@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from icom_lan.profiles_runtime import PRESETS, OperatingProfile, apply_profile
-from icom_lan.ic705 import prepare_ic705_data_profile, restore_ic705_data_profile
-from icom_lan.types import ScopeCompletionPolicy
+from rigplane.profiles_runtime import PRESETS, OperatingProfile, apply_profile
+from rigplane.ic705 import prepare_ic705_data_profile, restore_ic705_data_profile
+from rigplane.types import ScopeCompletionPolicy
 
 
 # ---------------------------------------------------------------------------
@@ -493,7 +493,7 @@ class TestIC705BackwardCompat:
 
 class TestExports:
     def test_importable_from_top_level(self) -> None:
-        from icom_lan import OperatingProfile, apply_profile, PRESETS  # noqa: F811
+        from rigplane import OperatingProfile, apply_profile, PRESETS  # noqa: F811
 
         assert OperatingProfile is not None
         assert apply_profile is not None
@@ -501,8 +501,8 @@ class TestExports:
 
     def test_importable_but_not_in_all(self) -> None:
         """Runtime profile symbols are importable but not part of the public API surface."""
-        import icom_lan
+        import rigplane
 
-        assert hasattr(icom_lan, "OperatingProfile")
-        assert hasattr(icom_lan, "apply_profile")
-        assert hasattr(icom_lan, "PRESETS")
+        assert hasattr(rigplane, "OperatingProfile")
+        assert hasattr(rigplane, "apply_profile")
+        assert hasattr(rigplane, "PRESETS")

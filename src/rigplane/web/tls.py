@@ -14,7 +14,7 @@ __all__ = ["build_ssl_context", "generate_self_signed"]
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_SSL_DIR = pathlib.Path.home() / ".icom-lan" / "ssl"
+_DEFAULT_SSL_DIR = pathlib.Path.home() / ".rigplane" / "ssl"
 _DEFAULT_CERT = _DEFAULT_SSL_DIR / "cert.pem"
 _DEFAULT_KEY = _DEFAULT_SSL_DIR / "key.pem"
 
@@ -35,8 +35,8 @@ def _generate_with_cryptography(
 
     subject = issuer = x509.Name(
         [
-            x509.NameAttribute(NameOID.COMMON_NAME, "icom-lan"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "icom-lan"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "rigplane"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "rigplane"),
         ]
     )
 
@@ -99,7 +99,7 @@ def _generate_with_openssl(
             str(days),
             "-nodes",
             "-subj",
-            f"/CN={hostname}/O=icom-lan",
+            f"/CN={hostname}/O=rigplane",
         ],
         check=True,
         capture_output=True,
@@ -141,7 +141,7 @@ def build_ssl_context(
     """Build an SSL context for the web server.
 
     If *cert_path* / *key_path* are ``None``, a self-signed certificate is
-    auto-generated under ``~/.icom-lan/ssl/``.
+    auto-generated under ``~/.rigplane/ssl/``.
     """
     if cert_path is None or key_path is None:
         cert_path, key_path = generate_self_signed()

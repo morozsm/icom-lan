@@ -7,7 +7,7 @@ backend — Icom LAN, Icom serial, Yaesu CAT, etc.
 
 Quick start::
 
-    from icom_lan.radio_protocol import Radio, AudioCapable
+    from rigplane.radio_protocol import Radio, AudioCapable
 
     async def tune(radio: Radio) -> None:
         await radio.set_freq(14_074_000)
@@ -57,18 +57,18 @@ from .types import AudioCodec, BreakInMode, Mode
 
 if TYPE_CHECKING:
     from ._state_cache import StateCache
-    from icom_lan.audio_bus import AudioBus
+    from rigplane.audio_bus import AudioBus
 
     # ``_FallbackRigState`` actually lives in ``rigctld.handler`` and is
     # re-exported through ``rigctld.routing``'s TYPE_CHECKING namespace; a
     # single import edge keeps the import-linter exemption count to one
     # per contract.
-    from icom_lan.rigctld.routing import (  # type: ignore[attr-defined]  # noqa: TID251
+    from rigplane.rigctld.routing import (  # type: ignore[attr-defined]  # noqa: TID251
         RigctldRouting,
         _FallbackRigState,
     )
-    from icom_lan.runtime._poller_types import CommandQueue
-    from icom_lan.scope import ScopeFrame
+    from rigplane.runtime._poller_types import CommandQueue
+    from rigplane.scope import ScopeFrame
     from .types import BandStackRegister, MemoryChannel, ScopeFixedEdge
 
 __all__ = [
@@ -229,7 +229,7 @@ class Radio(Protocol):
         logic without importing concrete backend classes.
 
         Known values (family-level, not per-model):
-          - ``"icom_lan"``    — Icom LAN/CI-V-over-Ethernet (IC-7610, IC-9700, …)
+          - ``"rigplane"``    — Icom LAN/CI-V-over-Ethernet (IC-7610, IC-9700, …)
           - ``"icom_serial"`` — Icom serial CI-V (IC-7300, IC-705, …)
           - ``"yaesu_cat"``   — Yaesu CAT (FTX-1, …)
         """
@@ -546,7 +546,7 @@ class StatePollable(Protocol):
 
     Yaesu CAT radios implement this; Icom CI-V radios do not (they push
     state changes via the CI-V RX stream and let the web layer drive a
-    fire-and-forget :class:`~icom_lan.web.radio_poller.RadioPoller` for
+    fire-and-forget :class:`~rigplane.web.radio_poller.RadioPoller` for
     cache prewarming instead).
 
     Consumers (web, rigctld) check this with ``isinstance`` and route
@@ -585,7 +585,7 @@ class RigctldRoutable(Protocol):
     routing that works for Icom CI-V radios. Backends with significantly
     different command semantics (Yaesu CAT today; future Kenwood TS-590
     or other vendors) expose their own
-    :class:`~icom_lan.rigctld.routing.RigctldRouting` implementation via
+    :class:`~rigplane.rigctld.routing.RigctldRouting` implementation via
     this method.
 
     Consumers (rigctld handler) check this with ``isinstance`` and pick
@@ -643,7 +643,7 @@ class AudioCapable(Protocol):
     def audio_bus(self) -> "AudioBus":
         """AudioBus instance for pub/sub audio distribution.
 
-        Returns an :class:`~icom_lan.audio_bus.AudioBus` that manages
+        Returns an :class:`~rigplane.audio_bus.AudioBus` that manages
         subscriptions and automatically starts/stops the radio's audio
         stream based on subscriber count.
         """
@@ -654,7 +654,7 @@ class AudioCapable(Protocol):
         """Configured audio codec for the radio's audio stream.
 
         Backends fix this once at construction time (e.g. Yaesu USB-audio
-        always reports :attr:`~icom_lan.types.AudioCodec.PCM_1CH_16BIT`);
+        always reports :attr:`~rigplane.types.AudioCodec.PCM_1CH_16BIT`);
         Icom LAN backends honour the value supplied to the constructor.
         """
         ...
@@ -728,7 +728,7 @@ class UsbAudioCapable(Protocol):
     UI capability for backends that lack in-band :class:`AudioCapable`
     audio but still let the user listen via the OS sound device.
     Resolution of the actual USB audio device indices is independent of
-    this Protocol — see :mod:`icom_lan.audio._usb_resolve`, which keys
+    this Protocol — see :mod:`rigplane.audio._usb_resolve`, which keys
     off the serial port path.
 
     Implementations declare a ``has_usb_audio: bool`` class attribute
@@ -741,7 +741,7 @@ class UsbAudioCapable(Protocol):
     :class:`AudioCapable` are still detected via that Protocol; this
     one specifically captures backends that ONLY have OS-level audio
     (e.g. classic CAT-only Yaesu radios). Note: the shipping
-    :class:`~icom_lan.backends.yaesu_cat.radio.YaesuCatRadio` already
+    :class:`~rigplane.backends.yaesu_cat.radio.YaesuCatRadio` already
     structurally satisfies :class:`AudioCapable` because its
     ``UsbAudioDriver`` is wrapped behind the same ``audio_bus`` /
     ``start_audio_rx_*`` surface; declaring ``has_usb_audio = True``
@@ -957,7 +957,7 @@ class VfoSlotCapable(Protocol):
 
     Completes the ``Transceiver → Receiver → VFO`` hierarchy: each receiver
     owns a pair of VFO slots (A and B) with independent state tracked by
-    :class:`~icom_lan.radio_state.VfoSlotState` (frequency, mode, filter,
+    :class:`~rigplane.radio_state.VfoSlotState` (frequency, mode, filter,
     etc.).  Operations take an explicit ``receiver`` index matching the
     existing ``receiver: int = 0`` convention.
 

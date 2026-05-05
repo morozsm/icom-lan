@@ -22,7 +22,7 @@ class TestRequirePillowImportError:
         # Setting the value to None causes Python to raise ImportError on import.
         monkeypatch.setitem(sys.modules, "PIL", None)  # type: ignore[arg-type]
 
-        from icom_lan.scope_render import _require_pillow
+        from rigplane.scope_render import _require_pillow
 
         with pytest.raises(ImportError, match="Pillow is required"):
             _require_pillow()
@@ -33,6 +33,6 @@ class TestRequirePillowImportError:
         # which is the intended behaviour for an optional-dependency guard.
         PIL = pytest.importorskip("PIL")  # noqa: F841
 
-        from icom_lan.scope_render import _require_pillow
+        from rigplane.scope_render import _require_pillow
 
         _require_pillow()  # should not raise

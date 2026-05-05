@@ -19,16 +19,16 @@ def test_rigctld_init_import_error_sets_empty_all(
     # Block the server sub-module so the 'from .server import RigctldServer' fails
     monkeypatch.setitem(
         sys.modules,
-        "icom_lan.rigctld.server",
+        "rigplane.rigctld.server",
         None,  # type: ignore[arg-type]
     )
     # Also remove any already-cached version of the init module
     for key in list(sys.modules.keys()):
-        if key == "icom_lan.rigctld":
+        if key == "rigplane.rigctld":
             monkeypatch.delitem(sys.modules, key)
 
     # Re-import the __init__; with server blocked, ImportError branch is taken
-    import icom_lan.rigctld as rigctld_pkg
+    import rigplane.rigctld as rigctld_pkg
 
     importlib.reload(rigctld_pkg)
 

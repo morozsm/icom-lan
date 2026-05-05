@@ -15,10 +15,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from icom_lan.audio._codecs import decode_ulaw_to_pcm16
-from icom_lan.types import AudioCodec
-from icom_lan.web.handlers import AudioBroadcaster
-from icom_lan.web.protocol import (
+from rigplane.audio._codecs import decode_ulaw_to_pcm16
+from rigplane.types import AudioCodec
+from rigplane.web.handlers import AudioBroadcaster
+from rigplane.web.protocol import (
     encode_audio_frame,
     MSG_TYPE_AUDIO_RX,
     AUDIO_CODEC_PCM16,

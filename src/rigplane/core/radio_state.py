@@ -2,11 +2,11 @@
 
 Holds the complete state for both MAIN and SUB receivers of the IC-7610,
 plus global parameters (PTT, split, TX power).  Populated by
-:class:`~icom_lan._civ_rx.CivRuntime` from incoming CI-V frames; read
+:class:`~rigplane._civ_rx.CivRuntime` from incoming CI-V frames; read
 by the HTTP ``GET /api/v1/state`` endpoint.
 
 This is intentionally additive: it runs *alongside* the existing
-:class:`~icom_lan.rigctld.state_cache.StateCache` without replacing it.
+:class:`~rigplane.rigctld.state_cache.StateCache` without replacing it.
 """
 
 from __future__ import annotations

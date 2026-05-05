@@ -17,15 +17,15 @@ from typing import Any
 
 import pytest
 
-from icom_lan.diagnostics import _discovery
-from icom_lan.diagnostics.contributor import BundleContext
-from icom_lan.diagnostics.contributors import (
+from rigplane.diagnostics import _discovery
+from rigplane.diagnostics.contributor import BundleContext
+from rigplane.diagnostics.contributors import (
     ConfigContributor,
     DependenciesContributor,
     InvocationContributor,
     SystemContributor,
 )
-from icom_lan.diagnostics.contributors import system as system_mod
+from rigplane.diagnostics.contributors import system as system_mod
 
 
 @pytest.fixture(autouse=True)
@@ -127,11 +127,11 @@ def test_invocation_writes_argv_and_env(tmp_path: Path) -> None:
 def test_invocation_env_allowlist_filters(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("ICOM_LAN_REPORT_ENDPOINT", "https://example.com/x")
+    monkeypatch.setenv("RIGPLANE_REPORT_ENDPOINT", "https://example.com/x")
     monkeypatch.setenv("UNRELATED_SECRET_VAR_1390", "should-not-leak")
     InvocationContributor().contribute(_make_ctx(), tmp_path)
     payload = json.loads((tmp_path / "invocation.json").read_text())
-    assert payload["env"].get("ICOM_LAN_REPORT_ENDPOINT") == "https://example.com/x"
+    assert payload["env"].get("RIGPLANE_REPORT_ENDPOINT") == "https://example.com/x"
     assert "UNRELATED_SECRET_VAR_1390" not in payload["env"]
     assert "should-not-leak" not in (tmp_path / "invocation.json").read_text()
 
@@ -139,7 +139,7 @@ def test_invocation_env_allowlist_filters(
 def test_invocation_argv_credentials_redacted(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["icom-lan", "--password=secret123abc"])
+    monkeypatch.setattr(sys, "argv", ["rigplane", "--password=secret123abc"])
     InvocationContributor().contribute(_make_ctx(), tmp_path)
     text = (tmp_path / "invocation.json").read_text()
     # JSON must round-trip — would fail if a regex consumed the closing quote
@@ -154,23 +154,23 @@ def test_invocation_env_credentials_redacted(
 ) -> None:
     """Env values containing credential patterns are redacted at the value level."""
     monkeypatch.setenv(
-        "ICOM_LAN_REPORT_ENDPOINT", "https://example.com/x?password=secret123env"
+        "RIGPLANE_REPORT_ENDPOINT", "https://example.com/x?password=secret123env"
     )
     InvocationContributor().contribute(_make_ctx(), tmp_path)
     text = (tmp_path / "invocation.json").read_text()
     # JSON must round-trip — guards against a regex consuming structural chars.
     payload = json.loads(text)
     assert "secret123env" not in text
-    assert "REDACTED" in payload["env"]["ICOM_LAN_REPORT_ENDPOINT"]
+    assert "REDACTED" in payload["env"]["RIGPLANE_REPORT_ENDPOINT"]
 
 
 def test_invocation_argv_drops_executable_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["/usr/local/bin/icom-lan", "discover"])
+    monkeypatch.setattr(sys, "argv", ["/usr/local/bin/rigplane", "discover"])
     InvocationContributor().contribute(_make_ctx(), tmp_path)
     payload = json.loads((tmp_path / "invocation.json").read_text())
-    assert payload["argv"] == ["icom-lan", "discover"]
+    assert payload["argv"] == ["rigplane", "discover"]
 
 
 def test_invocation_path_truncated_to_five_entries(
@@ -239,8 +239,8 @@ def test_dependencies_writes_pip_freeze(tmp_path: Path) -> None:
 def test_dependencies_includes_icom_lan(tmp_path: Path) -> None:
     DependenciesContributor().contribute(_make_ctx(), tmp_path)
     text = (tmp_path / "pip-freeze.txt").read_text()
-    assert any(line.lower().startswith("icom-lan==") for line in text.splitlines()), (
-        "icom-lan distribution not present in pip-freeze.txt"
+    assert any(line.lower().startswith("rigplane==") for line in text.splitlines()), (
+        "rigplane distribution not present in pip-freeze.txt"
     )
 
 

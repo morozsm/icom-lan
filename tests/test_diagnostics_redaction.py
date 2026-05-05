@@ -1,10 +1,10 @@
-"""Golden tests for icom-lan diagnostics redaction utilities (#1388)."""
+"""Golden tests for rigplane diagnostics redaction utilities (#1388)."""
 
 from __future__ import annotations
 
 import pytest
 
-from icom_lan.diagnostics.redaction import (
+from rigplane.diagnostics.redaction import (
     REDACTORS,
     redact_credentials,
     redact_hostnames,
@@ -56,7 +56,7 @@ def test_redact_paths_windows(raw: str, expected: str) -> None:
     [
         "/var/log/foo",
         "/etc/hosts",
-        "/opt/icom-lan/bin",
+        "/opt/rigplane/bin",
         "no path here at all",
         "https://api.example.com/Users/profile/config",
     ],
@@ -299,7 +299,7 @@ def test_idempotent(func, raw: str) -> None:  # type: ignore[no-untyped-def]
 
 def test_realistic_log_line_no_false_positive() -> None:
     raw = (
-        "INFO icom_lan.audio: codec=PCM_2CH_16BIT freq=14074000 mode=USB "
+        "INFO rigplane.audio: codec=PCM_2CH_16BIT freq=14074000 mode=USB "
         "callsign=DL9EAC ip=192.168.55.40 device='IC-7610 USB Audio'"
     )
     out = raw

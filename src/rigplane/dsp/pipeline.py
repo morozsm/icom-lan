@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from icom_lan.dsp.exceptions import DSPBackendUnavailable, DSPConfigError
-from icom_lan.dsp.resample import resample_if_needed
+from rigplane.dsp.exceptions import DSPBackendUnavailable, DSPConfigError
+from rigplane.dsp.resample import resample_if_needed
 
 if TYPE_CHECKING:
     import numpy as np

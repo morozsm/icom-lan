@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.command_map import CommandMap
-from icom_lan.profiles import BandInfo, FreqRangeInfo, RadioProfile
-from icom_lan.rig_loader import RigConfig, RigLoadError, discover_rigs, load_rig
+from rigplane.command_map import CommandMap
+from rigplane.profiles import BandInfo, FreqRangeInfo, RadioProfile
+from rigplane.rig_loader import RigConfig, RigLoadError, discover_rigs, load_rig
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
 TEMPLATE_PATH = RIGS_DIR / "ic7610.toml"

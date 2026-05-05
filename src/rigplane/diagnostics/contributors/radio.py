@@ -6,13 +6,13 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from icom_lan.core.radio_protocol import (
+from rigplane.core.radio_protocol import (
     AudioCapable,
     RigctldRoutable,
     StatePollable,
     UsbAudioCapable,
 )
-from icom_lan.diagnostics.redaction import (
+from rigplane.diagnostics.redaction import (
     redact_credentials,
     redact_hostnames,
     redact_ips,
@@ -20,7 +20,7 @@ from icom_lan.diagnostics.redaction import (
 )
 
 if TYPE_CHECKING:
-    from icom_lan.diagnostics.contributor import BundleContext
+    from rigplane.diagnostics.contributor import BundleContext
 
 
 def _safe_attr(obj: Any, name: str, default: Any = None) -> Any:

@@ -1,4 +1,4 @@
-"""UDP Discovery Responder for icom-lan.
+"""UDP Discovery Responder for rigplane.
 
 Listens for broadcast discovery requests from companion apps and responds
 with server information (version, URL, radio status) via unicast.
@@ -66,7 +66,7 @@ class _DiscoveryProtocol(asyncio.DatagramProtocol):
 
 
 class DiscoveryResponder:
-    """UDP server that responds to icom-lan discovery broadcasts.
+    """UDP server that responds to rigplane discovery broadcasts.
 
     Args:
         web_port: HTTP/HTTPS port of the web server.

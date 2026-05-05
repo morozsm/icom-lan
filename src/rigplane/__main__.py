@@ -1,4 +1,4 @@
-"""Allow running as: python -m icom_lan"""
+"""Allow running as: python -m rigplane"""
 
 __all__ = ["main"]
 

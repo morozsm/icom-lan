@@ -13,13 +13,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.rigctld.contract import (
+from rigplane.rigctld.contract import (
     HamlibError,
     RigctldCommand,
     RigctldConfig,
     RigctldResponse,
 )
-from icom_lan.rigctld.server import RigctldServer
+from rigplane.rigctld.server import RigctldServer
 
 
 # ---------------------------------------------------------------------------
@@ -232,7 +232,7 @@ class TestOverLimit:
             return fake_now[0]
 
         srv = _make_server(mock_radio, proto, handler, rate_limit=1.0)
-        with patch("icom_lan.rigctld.server.time.monotonic", _fake_monotonic):
+        with patch("rigplane.rigctld.server.time.monotonic", _fake_monotonic):
             async with srv:
                 r, w = await _connect(srv)
 
@@ -278,7 +278,7 @@ class TestWindowReset:
             return fake_now[0]
 
         srv = _make_server(mock_radio, proto, handler, rate_limit=2.0)
-        with patch("icom_lan.rigctld.server.time.monotonic", _fake_monotonic):
+        with patch("rigplane.rigctld.server.time.monotonic", _fake_monotonic):
             async with srv:
                 r, w = await _connect(srv)
 

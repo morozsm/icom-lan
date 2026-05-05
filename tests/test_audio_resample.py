@@ -5,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from icom_lan.audio.backend import AudioDeviceId, AudioDeviceInfo, FakeAudioBackend
-from icom_lan.audio.resample import (
+from rigplane.audio.backend import AudioDeviceId, AudioDeviceInfo, FakeAudioBackend
+from rigplane.audio.resample import (
     PcmResampler,
     SampleRateNegotiation,
     negotiate_sample_rate,

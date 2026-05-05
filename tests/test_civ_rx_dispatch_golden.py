@@ -19,11 +19,11 @@ from typing import Any
 import pytest
 from test_radio import MockTransport
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import CONTROLLER_ADDR
-from icom_lan.radio import IcomRadio
-from icom_lan.radio_state import RadioState
-from icom_lan.types import CivFrame
+from rigplane import IC_7610_ADDR
+from rigplane.commands import CONTROLLER_ADDR
+from rigplane.radio import IcomRadio
+from rigplane.radio_state import RadioState
+from rigplane.types import CivFrame
 
 _FIXTURES_PATH = Path(__file__).parent / "fixtures" / "civ_rx_frames.json"
 
@@ -90,7 +90,7 @@ def test_civ_rx_dispatch_golden(radio: IcomRadio, fixture: dict[str, Any]) -> No
     if setup.get("clear_profile"):
         radio._profile = None  # type: ignore[assignment]
     if "preexisting_tx_band_edge" in setup:
-        from icom_lan.radio_state import TxBandEdge
+        from rigplane.radio_state import TxBandEdge
 
         spec = setup["preexisting_tx_band_edge"]
         radio._radio_state.tx_band_edges.append(

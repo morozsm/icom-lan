@@ -95,8 +95,8 @@ class AudioBackend(Protocol):
     """Abstract audio backend capable of listing devices and opening streams.
 
     **Tier 2 — Best-effort.** Import path:
-    ``from icom_lan.audio.backend import AudioBackend`` (also lazily exposed
-    on the top-level ``icom_lan`` package via PEP 562 ``__getattr__``).
+    ``from rigplane.audio.backend import AudioBackend`` (also lazily exposed
+    on the top-level ``rigplane`` package via PEP 562 ``__getattr__``).
 
     The contract is the four methods declared below: :meth:`list_devices`,
     :meth:`check_sample_rate`, :meth:`open_rx`, :meth:`open_tx`. Streams
@@ -153,7 +153,7 @@ class AudioBackend(Protocol):
 
 _DEPENDENCY_HINT = (
     "PortAudioBackend requires optional dependencies sounddevice and numpy. "
-    "Install with: pip install icom-lan[bridge]"
+    "Install with: pip install rigplane[bridge]"
 )
 
 
@@ -340,7 +340,7 @@ class PortAudioBackend:
     """AudioBackend backed by PortAudio via *sounddevice*.
 
     **Tier 2 — Best-effort.** Import path:
-    ``from icom_lan.audio.backend import PortAudioBackend``. Implements the
+    ``from rigplane.audio.backend import PortAudioBackend``. Implements the
     :class:`AudioBackend` protocol on top of the optional ``[bridge]`` extras
     (``sounddevice`` + ``numpy``); dependencies are loaded lazily on first
     method call so importing this class does not require PortAudio at import
@@ -546,7 +546,7 @@ class FakeAudioBackend:
     """Deterministic AudioBackend for tests — no real audio hardware.
 
     **Tier 2 — Best-effort.** Import path:
-    ``from icom_lan.audio.backend import FakeAudioBackend``. Implements the
+    ``from rigplane.audio.backend import FakeAudioBackend``. Implements the
     :class:`AudioBackend` protocol with in-memory :class:`FakeRxStream` /
     :class:`FakeTxStream` doubles so consumer code can be exercised without
     PortAudio or any optional extras.

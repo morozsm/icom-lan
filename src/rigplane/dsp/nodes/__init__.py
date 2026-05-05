@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from icom_lan.dsp.nodes.base import GainNode, PassthroughNode
-from icom_lan.dsp.nodes.nr_scipy import NRScipyNode
+from rigplane.dsp.nodes.base import GainNode, PassthroughNode
+from rigplane.dsp.nodes.nr_scipy import NRScipyNode
 
 __all__ = ["GainNode", "NRScipyNode", "PassthroughNode"]

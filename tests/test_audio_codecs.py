@@ -2,7 +2,7 @@
 
 import pytest
 
-from icom_lan.audio._codecs import decode_ulaw_to_pcm16
+from rigplane.audio._codecs import decode_ulaw_to_pcm16
 
 
 class TestUlawDecoder:

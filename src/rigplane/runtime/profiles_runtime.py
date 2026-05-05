@@ -6,7 +6,7 @@ skips fields the radio does not support.
 
 Example::
 
-    from icom_lan import OperatingProfile, apply_profile, PRESETS
+    from rigplane import OperatingProfile, apply_profile, PRESETS
 
     # Custom profile
     profile = OperatingProfile(
@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
-from icom_lan.core.types import ScopeCompletionPolicy
+from rigplane.core.types import ScopeCompletionPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +45,9 @@ async def _apply_vfo(radio: Any, vfo: str) -> None:
     """Apply ``profile.vfo`` via the canonical receiver-tier protocols.
 
     Routes ``"MAIN"`` / ``"SUB"`` through
-    :meth:`~icom_lan.radio_protocol.ReceiverBankCapable.select_receiver`
+    :meth:`~rigplane.radio_protocol.ReceiverBankCapable.select_receiver`
     and ``"A"`` / ``"B"`` through
-    :meth:`~icom_lan.radio_protocol.VfoSlotCapable.set_vfo_slot`, falling
+    :meth:`~rigplane.radio_protocol.VfoSlotCapable.set_vfo_slot`, falling
     back to the other if only one is implemented.  The legacy
     ``set_vfo("A"/"B"/"MAIN"/"SUB")`` overload was removed in v0.20
     (#1206), so backends must expose the typed protocol surface.

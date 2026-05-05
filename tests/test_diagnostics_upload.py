@@ -13,7 +13,7 @@ import pytest_asyncio
 from aiohttp import web
 from aiohttp.test_utils import TestServer
 
-from icom_lan.diagnostics import (
+from rigplane.diagnostics import (
     BundleTooLarge,
     DiagnosticUploadError,
     ForbiddenContent,
@@ -132,7 +132,7 @@ async def test_upload_endpoint_arg_overrides_env(
         return web.json_response(_success_body())
 
     server = await make_server(handler)
-    monkeypatch.setenv("ICOM_LAN_REPORT_ENDPOINT", "http://wrong.invalid/")
+    monkeypatch.setenv("RIGPLANE_REPORT_ENDPOINT", "http://wrong.invalid/")
     await upload_bundle(bundle_file, {}, endpoint=_url(server))
     assert hits["n"] == 1
 
@@ -149,7 +149,7 @@ async def test_upload_endpoint_env_overrides_default(
         return web.json_response(_success_body())
 
     server = await make_server(handler)
-    monkeypatch.setenv("ICOM_LAN_REPORT_ENDPOINT", _url(server))
+    monkeypatch.setenv("RIGPLANE_REPORT_ENDPOINT", _url(server))
     await upload_bundle(bundle_file, {})
     assert hits["n"] == 1
 

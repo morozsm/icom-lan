@@ -14,8 +14,8 @@ from collections.abc import Callable
 from enum import StrEnum
 from typing import ClassVar
 
-from icom_lan.core._bounded_queue import BoundedQueue
-from icom_lan.core._queue_pressure import PRESSURE_THRESHOLD
+from rigplane.core._bounded_queue import BoundedQueue
+from rigplane.core._queue_pressure import PRESSURE_THRESHOLD
 from .exceptions import TimeoutError as _TimeoutError
 from .types import HEADER_SIZE, PacketType
 

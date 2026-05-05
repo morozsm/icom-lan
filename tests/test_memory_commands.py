@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.commands import (
+from rigplane.commands import (
     CONTROLLER_ADDR,
     bcd_encode_value,
     build_memory_clear,
@@ -25,8 +25,8 @@ from icom_lan.commands import (
     build_memory_write,
     parse_memory_contents_response,
 )
-from icom_lan.radio_protocol import MemoryCapable
-from icom_lan.types import BandStackRegister, CivFrame, MemoryChannel
+from rigplane.radio_protocol import MemoryCapable
+from rigplane.types import BandStackRegister, CivFrame, MemoryChannel
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ class TestMemoryCapableProtocol:
         assert not isinstance(IncompleteRadio(), MemoryCapable)
 
     def test_protocol_in_all(self) -> None:
-        from icom_lan import radio_protocol
+        from rigplane import radio_protocol
 
         assert "MemoryCapable" in radio_protocol.__all__
 
@@ -260,7 +260,7 @@ class TestIcomRadioMemoryMethods:
 
     @pytest.mark.asyncio
     async def test_set_memory_mode_calls_builder(self) -> None:
-        from icom_lan.radio import IcomRadio
+        from rigplane.radio import IcomRadio
 
         radio = self._make_radio()
         # Bind the real method to our mock
@@ -272,7 +272,7 @@ class TestIcomRadioMemoryMethods:
 
     @pytest.mark.asyncio
     async def test_memory_write_calls_builder(self) -> None:
-        from icom_lan.radio import IcomRadio
+        from rigplane.radio import IcomRadio
 
         radio = self._make_radio()
         bound = IcomRadio.memory_write.__get__(radio, type(radio))
@@ -283,7 +283,7 @@ class TestIcomRadioMemoryMethods:
 
     @pytest.mark.asyncio
     async def test_memory_to_vfo_calls_builder(self) -> None:
-        from icom_lan.radio import IcomRadio
+        from rigplane.radio import IcomRadio
 
         radio = self._make_radio()
         bound = IcomRadio.memory_to_vfo.__get__(radio, type(radio))
@@ -294,7 +294,7 @@ class TestIcomRadioMemoryMethods:
 
     @pytest.mark.asyncio
     async def test_memory_clear_calls_builder(self) -> None:
-        from icom_lan.radio import IcomRadio
+        from rigplane.radio import IcomRadio
 
         radio = self._make_radio()
         bound = IcomRadio.memory_clear.__get__(radio, type(radio))
@@ -305,7 +305,7 @@ class TestIcomRadioMemoryMethods:
 
     @pytest.mark.asyncio
     async def test_set_memory_mode_rejects_invalid_channel(self) -> None:
-        from icom_lan.radio import IcomRadio
+        from rigplane.radio import IcomRadio
 
         radio = self._make_radio()
         bound = IcomRadio.set_memory_mode.__get__(radio, type(radio))
@@ -314,7 +314,7 @@ class TestIcomRadioMemoryMethods:
 
     @pytest.mark.asyncio
     async def test_set_memory_contents_calls_builder(self) -> None:
-        from icom_lan.radio import IcomRadio
+        from rigplane.radio import IcomRadio
 
         radio = self._make_radio()
         bound = IcomRadio.set_memory_contents.__get__(radio, type(radio))
@@ -335,7 +335,7 @@ class TestIcomRadioMemoryMethods:
 
     @pytest.mark.asyncio
     async def test_set_bsr_calls_builder(self) -> None:
-        from icom_lan.radio import IcomRadio
+        from rigplane.radio import IcomRadio
 
         radio = self._make_radio()
         bound = IcomRadio.set_bsr.__get__(radio, type(radio))
@@ -362,7 +362,7 @@ class TestHandlerMemoryDispatch:
     """Verify ControlHandler dispatches memory commands correctly."""
 
     def _make_handler(self, *, memory_capable: bool = True) -> Any:
-        from icom_lan.web.handlers import ControlHandler
+        from rigplane.web.handlers import ControlHandler
 
         ws = MagicMock()
         ws.send_text = AsyncMock()
@@ -382,7 +382,7 @@ class TestHandlerMemoryDispatch:
             radio.set_bsr = AsyncMock()
 
         server = MagicMock()
-        from icom_lan.web.radio_poller import CommandQueue
+        from rigplane.web.radio_poller import CommandQueue
 
         server.command_queue = CommandQueue()
 
@@ -402,7 +402,7 @@ class TestHandlerMemoryDispatch:
         assert result == {"channel": 5}
         cmds = q.drain()
         assert len(cmds) == 1
-        from icom_lan.web.radio_poller import SetMemoryMode
+        from rigplane.web.radio_poller import SetMemoryMode
 
         assert isinstance(cmds[0], SetMemoryMode)
         assert cmds[0].channel == 5
@@ -414,7 +414,7 @@ class TestHandlerMemoryDispatch:
         assert result == {}
         cmds = q.drain()
         assert len(cmds) == 1
-        from icom_lan.web.radio_poller import MemoryWrite
+        from rigplane.web.radio_poller import MemoryWrite
 
         assert isinstance(cmds[0], MemoryWrite)
 
@@ -425,7 +425,7 @@ class TestHandlerMemoryDispatch:
         assert result == {"channel": 42}
         cmds = q.drain()
         assert len(cmds) == 1
-        from icom_lan.web.radio_poller import MemoryToVfo
+        from rigplane.web.radio_poller import MemoryToVfo
 
         assert isinstance(cmds[0], MemoryToVfo)
         assert cmds[0].channel == 42
@@ -437,7 +437,7 @@ class TestHandlerMemoryDispatch:
         assert result == {"channel": 10}
         cmds = q.drain()
         assert len(cmds) == 1
-        from icom_lan.web.radio_poller import MemoryClear
+        from rigplane.web.radio_poller import MemoryClear
 
         assert isinstance(cmds[0], MemoryClear)
         assert cmds[0].channel == 10
@@ -459,7 +459,7 @@ class TestHandlerMemoryDispatch:
         assert result == {"channel": 1}
         cmds = q.drain()
         assert len(cmds) == 1
-        from icom_lan.web.radio_poller import SetMemoryContents
+        from rigplane.web.radio_poller import SetMemoryContents
 
         assert isinstance(cmds[0], SetMemoryContents)
         assert cmds[0].mem.channel == 1
@@ -479,7 +479,7 @@ class TestHandlerMemoryDispatch:
         assert result == {"band": 5, "register": 1}
         cmds = q.drain()
         assert len(cmds) == 1
-        from icom_lan.web.radio_poller import SetBsr
+        from rigplane.web.radio_poller import SetBsr
 
         assert isinstance(cmds[0], SetBsr)
         assert cmds[0].bsr.band == 5
@@ -487,8 +487,8 @@ class TestHandlerMemoryDispatch:
     @pytest.mark.asyncio
     async def test_memory_command_rejects_non_capable(self) -> None:
         """A radio without memory methods should fail the MemoryCapable check."""
-        from icom_lan.web.handlers import ControlHandler
-        from icom_lan.web.radio_poller import CommandQueue
+        from rigplane.web.handlers import ControlHandler
+        from rigplane.web.radio_poller import CommandQueue
 
         ws = MagicMock()
         ws.send_text = AsyncMock()
@@ -530,7 +530,7 @@ class TestIc7610TomlMemory:
     """Verify memory commands are enabled in ic7610.toml."""
 
     def test_memory_commands_in_toml(self) -> None:
-        from icom_lan.rig_loader import load_rig
+        from rigplane.rig_loader import load_rig
         from pathlib import Path
 
         toml_path = Path(__file__).parents[1] / "rigs" / "ic7610.toml"
@@ -544,7 +544,7 @@ class TestIc7610TomlMemory:
 
     def test_vox_delay_not_marked_unimplemented(self) -> None:
         """VOX delay should be in commands without NOT_IMPLEMENTED flag."""
-        from icom_lan.rig_loader import load_rig
+        from rigplane.rig_loader import load_rig
         from pathlib import Path
 
         toml_path = Path(__file__).parents[1] / "rigs" / "ic7610.toml"

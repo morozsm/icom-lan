@@ -11,8 +11,8 @@ from dataclasses import dataclass
 
 import pytest
 
-from icom_lan.runtime._civ_rx import CivRuntime
-from icom_lan.exceptions import ConnectionError
+from rigplane.runtime._civ_rx import CivRuntime
+from rigplane.exceptions import ConnectionError
 
 
 @dataclass

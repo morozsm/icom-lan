@@ -18,8 +18,8 @@ import time
 
 import pytest
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     _CMD_FREQ_GET,
     _CMD_FREQ_SET,
     _CMD_MODE_GET,
@@ -29,7 +29,7 @@ from icom_lan.commands import (
     CONTROLLER_ADDR,
     build_civ_frame,
 )
-from icom_lan.types import Mode, bcd_encode
+from rigplane.types import Mode, bcd_encode
 
 
 class TestCIVCommandProfiling:
@@ -155,8 +155,8 @@ class TestCommandPipelineLatency:
     @pytest.mark.asyncio
     async def test_command_queue_processing_latency(self):
         """Profile latency of command queue processing."""
-        from icom_lan.web.radio_poller import CommandQueue
-        from icom_lan.web.radio_poller import SetAntenna1
+        from rigplane.web.radio_poller import CommandQueue
+        from rigplane.web.radio_poller import SetAntenna1
 
         queue = CommandQueue()
 

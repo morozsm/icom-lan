@@ -163,7 +163,7 @@ _SLOW_INTERVAL: float = 0.25  # levels/settings — rarely change
 
 
 # ------------------------------------------------------------------
-# Command types — canonical definitions live in icom_lan._poller_types.
+# Command types — canonical definitions live in rigplane._poller_types.
 # Re-exported here for backward compatibility.
 # ------------------------------------------------------------------
 

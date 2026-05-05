@@ -1,7 +1,7 @@
 """Public package export tests."""
 
-import icom_lan
-from icom_lan import AudioCodecBackendError, AudioFormatError, ScopeCompletionPolicy
+import rigplane
+from rigplane import AudioCodecBackendError, AudioFormatError, ScopeCompletionPolicy
 
 
 def test_scope_completion_policy_exported() -> None:
@@ -59,7 +59,7 @@ def test_public_api_surface() -> None:
         "VfoSlotCapable",
         "VoiceControlCapable",
         # --- Tier 1: Exceptions ---
-        "IcomLanError",
+        "RigplaneError",
         "ConnectionError",
         "AuthenticationError",
         "CommandError",
@@ -94,7 +94,7 @@ def test_public_api_surface() -> None:
         "DspPipeline",
         "UsbAudioDriver",
     }
-    assert set(icom_lan.__all__) == expected_public
+    assert set(rigplane.__all__) == expected_public
 
 
 def test_internal_symbols_still_importable() -> None:
@@ -127,7 +127,7 @@ def test_internal_symbols_still_importable() -> None:
         "HEADER_SIZE",
     ]
     for name in internal_symbols:
-        assert hasattr(icom_lan, name), (
-            f"{name} should still be importable from icom_lan"
+        assert hasattr(rigplane, name), (
+            f"{name} should still be importable from rigplane"
         )
-        assert name not in icom_lan.__all__, f"{name} should NOT be in __all__"
+        assert name not in rigplane.__all__, f"{name} should NOT be in __all__"

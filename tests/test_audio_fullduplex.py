@@ -4,9 +4,9 @@ import asyncio
 
 import pytest
 
-from icom_lan.audio import AudioState, AudioStream
-from icom_lan.radio import IcomRadio
-from icom_lan.exceptions import ConnectionError
+from rigplane.audio import AudioState, AudioStream
+from rigplane.radio import IcomRadio
+from rigplane.exceptions import ConnectionError
 
 from test_radio import MockTransport
 
@@ -67,8 +67,8 @@ class TestAudioStreamJitter:
     async def test_rx_with_jitter_buffer(self, mock_transport: MockTransport) -> None:
         """Packets should be delivered in order through jitter buffer."""
         import struct
-        from icom_lan.types import PacketType
-        from icom_lan.audio import AUDIO_HEADER_SIZE
+        from rigplane.types import PacketType
+        from rigplane.audio import AUDIO_HEADER_SIZE
 
         stream = AudioStream(mock_transport, jitter_depth=2)
         received = []
@@ -105,8 +105,8 @@ class TestAudioStreamJitter:
     async def test_rx_no_jitter(self, mock_transport: MockTransport) -> None:
         """With jitter_depth=0, packets are delivered immediately."""
         import struct
-        from icom_lan.types import PacketType
-        from icom_lan.audio import AUDIO_HEADER_SIZE
+        from rigplane.types import PacketType
+        from rigplane.audio import AUDIO_HEADER_SIZE
 
         stream = AudioStream(mock_transport, jitter_depth=0)
         received = []

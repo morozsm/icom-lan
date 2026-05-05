@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import IntEnum, StrEnum
 
-from icom_lan.core.env_config import get_audio_sample_rate
+from rigplane.core.env_config import get_audio_sample_rate
 
 __all__ = [
     "PacketType",
@@ -149,7 +149,7 @@ class ScopeFixedEdge:
 
 @dataclass(frozen=True, slots=True)
 class AudioCapabilities:
-    """Static icom-lan audio capability matrix and defaults."""
+    """Static rigplane audio capability matrix and defaults."""
 
     supported_codecs: tuple[AudioCodec, ...]
     supported_sample_rates_hz: tuple[int, ...]
@@ -239,7 +239,7 @@ _AUDIO_CAPABILITIES = _build_audio_capabilities()
 
 
 def get_audio_capabilities() -> AudioCapabilities:
-    """Return icom-lan audio capabilities with deterministic defaults.
+    """Return rigplane audio capabilities with deterministic defaults.
 
     Default selection rules:
     1. Codec: first supported codec from ``_DEFAULT_CODEC_PREFERENCE``.

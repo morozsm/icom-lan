@@ -48,7 +48,7 @@ class HamlibError(IntEnum):
 # Hamlib mode strings ↔ CI-V mode IDs
 # ---------------------------------------------------------------------------
 
-# rigctld uses these mode strings; map to icom-lan Mode enum values.
+# rigctld uses these mode strings; map to rigplane Mode enum values.
 HAMLIB_MODE_MAP: dict[str, int] = {
     "USB": 0x01,
     "LSB": 0x00,

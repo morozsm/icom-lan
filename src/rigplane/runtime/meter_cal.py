@@ -2,7 +2,7 @@
 
 Calibration tables themselves live in per-rig TOML
 (`rigs/*.toml` ``[[meters.<name>.calibration]]`` blocks) and are loaded at
-runtime via :class:`icom_lan.profiles.RadioProfile`. This module hosts the
+runtime via :class:`rigplane.profiles.RadioProfile`. This module hosts the
 algorithm consumed by every backend.
 """
 

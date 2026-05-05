@@ -4,12 +4,12 @@ from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import CONTROLLER_ADDR, build_civ_frame
-from icom_lan.commander import Priority
-from icom_lan.exceptions import CommandError, ConnectionError, TimeoutError
-from icom_lan.radio import IcomRadio
-from icom_lan.types import CivFrame, Mode, bcd_encode
+from rigplane import IC_7610_ADDR
+from rigplane.commands import CONTROLLER_ADDR, build_civ_frame
+from rigplane.commander import Priority
+from rigplane.exceptions import CommandError, ConnectionError, TimeoutError
+from rigplane.radio import IcomRadio
+from rigplane.types import CivFrame, Mode, bcd_encode
 
 # Reuse helpers from test_radio
 from test_radio import (

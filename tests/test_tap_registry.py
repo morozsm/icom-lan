@@ -6,7 +6,7 @@ import logging
 
 import pytest
 
-from icom_lan.dsp.tap_registry import TapHandle, TapRegistry
+from rigplane.dsp.tap_registry import TapHandle, TapRegistry
 
 
 class TestTapRegistry:
@@ -95,7 +95,7 @@ class TestSetPcmTapCompat:
 
     def test_set_tap_then_feed(self) -> None:
         """set_pcm_tap(cb) registers; feed delivers data."""
-        from icom_lan.web.handlers.audio import AudioBroadcaster
+        from rigplane.web.handlers.audio import AudioBroadcaster
 
         broadcaster = AudioBroadcaster(radio=None)
         received: list[bytes] = []
@@ -105,7 +105,7 @@ class TestSetPcmTapCompat:
 
     def test_set_tap_none_unregisters(self) -> None:
         """set_pcm_tap(None) unregisters the legacy tap."""
-        from icom_lan.web.handlers.audio import AudioBroadcaster
+        from rigplane.web.handlers.audio import AudioBroadcaster
 
         broadcaster = AudioBroadcaster(radio=None)
         received: list[bytes] = []
@@ -118,7 +118,7 @@ class TestSetPcmTapCompat:
 
     def test_set_tap_replaces_previous(self) -> None:
         """Calling set_pcm_tap twice replaces the previous legacy tap."""
-        from icom_lan.web.handlers.audio import AudioBroadcaster
+        from rigplane.web.handlers.audio import AudioBroadcaster
 
         broadcaster = AudioBroadcaster(radio=None)
         received_1: list[bytes] = []

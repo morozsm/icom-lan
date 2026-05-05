@@ -7,7 +7,7 @@ import enum
 import logging
 from typing import TYPE_CHECKING, Callable
 
-from icom_lan.audio import AudioPacket, AudioState
+from rigplane.audio import AudioPacket, AudioState
 
 if TYPE_CHECKING:
     from ._runtime_protocols import AudioRuntimeHost

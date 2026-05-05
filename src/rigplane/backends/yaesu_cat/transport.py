@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 _DEPENDENCY_HINT = (
     "Yaesu CAT serial backend requires optional dependencies pyserial and "
-    "pyserial-asyncio. Install with: pip install icom-lan[serial]"
+    "pyserial-asyncio. Install with: pip install rigplane[serial]"
 )
 
 # ── Defaults ──────────────────────────────────────────────────────────

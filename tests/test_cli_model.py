@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.cli import _build_backend_config, _build_parser
+from rigplane.cli import _build_backend_config, _build_parser
 
 
 @pytest.fixture()

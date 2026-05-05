@@ -124,8 +124,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan._civ_rx:_CivRxMixin._update_state_cache_from_frame",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane._civ_rx:_CivRxMixin._update_state_cache_from_frame",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_civ_rx_coverage.py::cmd 0x00"
@@ -143,8 +143,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan._civ_rx:_CivRxMixin._update_state_cache_from_frame",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane._civ_rx:_CivRxMixin._update_state_cache_from_frame",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_civ_rx_coverage.py::cmd 0x01"
@@ -162,9 +162,9 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_band_edge_freq",
-        "icom_lan.commands:parse_frequency_response",
-        "icom_lan.radio:IcomRadio.get_band_edge_freq"
+        "rigplane.commands:get_band_edge_freq",
+        "rigplane.commands:parse_frequency_response",
+        "rigplane.radio:IcomRadio.get_band_edge_freq"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_band_edge_freq",
@@ -184,8 +184,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_frequency",
-        "icom_lan.radio:CoreRadio.get_frequency"
+        "rigplane.commands:get_frequency",
+        "rigplane.radio:CoreRadio.get_frequency"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_frequency"
@@ -202,8 +202,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_mode",
-        "icom_lan.radio:CoreRadio.get_mode"
+        "rigplane.commands:get_mode",
+        "rigplane.radio:CoreRadio.get_mode"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_mode"
@@ -220,8 +220,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:set_frequency",
-        "icom_lan.radio:CoreRadio.set_frequency"
+        "rigplane.commands:set_frequency",
+        "rigplane.radio:CoreRadio.set_frequency"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_set_frequency_14mhz"
@@ -238,8 +238,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:set_mode",
-        "icom_lan.radio:CoreRadio.set_mode"
+        "rigplane.commands:set_mode",
+        "rigplane.radio:CoreRadio.set_mode"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_set_mode_usb"
@@ -256,8 +256,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:set_vfo",
-        "icom_lan.radio:CoreRadio.set_vfo_slot"
+        "rigplane.commands:set_vfo",
+        "rigplane.radio:CoreRadio.set_vfo_slot"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_main"
@@ -274,8 +274,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:vfo_swap",
-        "icom_lan.radio:CoreRadio.swap_main_sub"
+        "rigplane.commands:vfo_swap",
+        "rigplane.radio:CoreRadio.swap_main_sub"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_swap"
@@ -292,8 +292,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:vfo_a_equals_b",
-        "icom_lan.radio:CoreRadio.equalize_main_sub"
+        "rigplane.commands:vfo_a_equals_b",
+        "rigplane.radio:CoreRadio.equalize_main_sub"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_a_equals_b"
@@ -310,7 +310,7 @@
       "family": "vfo_dualwatch_scan",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_civ_rx_coverage.py::dual_watch"
@@ -328,7 +328,7 @@
       "family": "vfo_dualwatch_scan",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_civ_rx_coverage.py::dual_watch"
@@ -346,7 +346,7 @@
       "family": "vfo_dualwatch_scan",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_civ_rx_coverage.py::dual_watch"
@@ -364,8 +364,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:set_vfo",
-        "icom_lan.radio:CoreRadio.select_receiver"
+        "rigplane.commands:set_vfo",
+        "rigplane.radio:CoreRadio.select_receiver"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_main"
@@ -382,8 +382,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:set_vfo",
-        "icom_lan.radio:CoreRadio.select_receiver"
+        "rigplane.commands:set_vfo",
+        "rigplane.radio:CoreRadio.select_receiver"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_sub"
@@ -400,7 +400,7 @@
       "family": "vfo_dualwatch_scan",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_civ_rx_coverage.py::active_receiver"
@@ -418,8 +418,8 @@
       "family": "memory_bandstack",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:build_memory_mode_set",
-        "icom_lan.radio:IcomRadio.set_memory_mode"
+        "rigplane.commands:build_memory_mode_set",
+        "rigplane.radio:IcomRadio.set_memory_mode"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_build_memory_mode"
@@ -436,8 +436,8 @@
       "family": "memory_bandstack",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:build_memory_write",
-        "icom_lan.radio:IcomRadio.memory_write"
+        "rigplane.commands:build_memory_write",
+        "rigplane.radio:IcomRadio.memory_write"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_build_memory_write"
@@ -454,8 +454,8 @@
       "family": "memory_bandstack",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:build_memory_to_vfo",
-        "icom_lan.radio:IcomRadio.memory_to_vfo"
+        "rigplane.commands:build_memory_to_vfo",
+        "rigplane.radio:IcomRadio.memory_to_vfo"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_build_memory_to_vfo"
@@ -472,8 +472,8 @@
       "family": "memory_bandstack",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:build_memory_clear",
-        "icom_lan.radio:IcomRadio.memory_clear"
+        "rigplane.commands:build_memory_clear",
+        "rigplane.radio:IcomRadio.memory_clear"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_build_memory_clear"
@@ -490,9 +490,9 @@
       "family": "vfo_dualwatch_scan",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:start_scan",
-        "icom_lan.commands:stop_scan",
-        "icom_lan.radio:IcomRadio.start_scan"
+        "rigplane.commands:start_scan",
+        "rigplane.commands:stop_scan",
+        "rigplane.radio:IcomRadio.start_scan"
       ],
       "test_patterns": [
         "tests/test_vfo_dual_watch.py::test_start_scan_builds_correct_frame"
@@ -509,9 +509,9 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:set_split",
-        "icom_lan.radio:CoreRadio.set_split",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:set_split",
+        "rigplane.radio:CoreRadio.set_split",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_split_on",
@@ -529,9 +529,9 @@
       "family": "vfo_dualwatch_scan",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_tuning_step",
-        "icom_lan.commands:set_tuning_step",
-        "icom_lan.radio:IcomRadio.get_tuning_step"
+        "rigplane.commands:get_tuning_step",
+        "rigplane.commands:set_tuning_step",
+        "rigplane.radio:IcomRadio.get_tuning_step"
       ],
       "test_patterns": [
         "tests/test_vfo_dual_watch.py::test_get_tuning_step_builds_correct_frame"
@@ -548,10 +548,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_attenuator",
-        "icom_lan.commands:set_attenuator_level",
-        "icom_lan.radio:CoreRadio.get_attenuator_level",
-        "icom_lan.radio:CoreRadio.set_attenuator_level"
+        "rigplane.commands:get_attenuator",
+        "rigplane.commands:set_attenuator_level",
+        "rigplane.radio:CoreRadio.get_attenuator_level",
+        "rigplane.radio:CoreRadio.set_attenuator_level"
       ],
       "test_patterns": [
         "tests/test_commands.py::get_attenuator",
@@ -569,9 +569,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_antenna_1",
-        "icom_lan.commands:set_antenna_1",
-        "icom_lan.radio:IcomRadio.get_antenna_1"
+        "rigplane.commands:get_antenna_1",
+        "rigplane.commands:set_antenna_1",
+        "rigplane.radio:IcomRadio.get_antenna_1"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_antenna_1"
@@ -589,8 +589,8 @@
       "status": "implemented",
       "notes": "Speech voice synthesizer (0x13). Fire-and-forget SET only (0=all, 1=freq, 2=mode).",
       "runtime_symbols": [
-        "icom_lan.commands:speech",
-        "icom_lan.radio:IcomRadio.speech"
+        "rigplane.commands:speech",
+        "rigplane.radio:IcomRadio.speech"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_speech_all",
@@ -611,10 +611,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_af_level",
-        "icom_lan.commands:set_af_level",
-        "icom_lan.radio:CoreRadio.get_af_level",
-        "icom_lan.radio:CoreRadio.set_af_level"
+        "rigplane.commands:get_af_level",
+        "rigplane.commands:set_af_level",
+        "rigplane.radio:CoreRadio.get_af_level",
+        "rigplane.radio:CoreRadio.set_af_level"
       ],
       "test_patterns": [
         "tests/test_rf_gain_af_level.py::get_af_level",
@@ -632,10 +632,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_rf_gain",
-        "icom_lan.commands:set_rf_gain",
-        "icom_lan.radio:CoreRadio.get_rf_gain",
-        "icom_lan.radio:CoreRadio.set_rf_gain"
+        "rigplane.commands:get_rf_gain",
+        "rigplane.commands:set_rf_gain",
+        "rigplane.radio:CoreRadio.get_rf_gain",
+        "rigplane.radio:CoreRadio.set_rf_gain"
       ],
       "test_patterns": [
         "tests/test_rf_gain_af_level.py::get_rf_gain",
@@ -653,9 +653,9 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:set_squelch",
-        "icom_lan.radio:CoreRadio.set_squelch",
-        "icom_lan._civ_rx:_CivRxMixin._update_state_cache_from_frame"
+        "rigplane.commands:set_squelch",
+        "rigplane.radio:CoreRadio.set_squelch",
+        "rigplane._civ_rx:_CivRxMixin._update_state_cache_from_frame"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::set_squelch"
@@ -672,11 +672,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_apf_type_level",
-        "icom_lan.commands:set_apf_type_level",
-        "icom_lan.radio:CoreRadio.get_apf_type_level",
-        "icom_lan.radio:CoreRadio.set_apf_type_level",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_apf_type_level",
+        "rigplane.commands:set_apf_type_level",
+        "rigplane.radio:CoreRadio.get_apf_type_level",
+        "rigplane.radio:CoreRadio.set_apf_type_level",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
@@ -696,11 +696,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_nr_level",
-        "icom_lan.commands:set_nr_level",
-        "icom_lan.radio:CoreRadio.get_nr_level",
-        "icom_lan.radio:CoreRadio.set_nr_level",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_nr_level",
+        "rigplane.commands:set_nr_level",
+        "rigplane.radio:CoreRadio.get_nr_level",
+        "rigplane.radio:CoreRadio.set_nr_level",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
@@ -720,11 +720,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_pbt_inner",
-        "icom_lan.commands:set_pbt_inner",
-        "icom_lan.radio:CoreRadio.get_pbt_inner",
-        "icom_lan.radio:CoreRadio.set_pbt_inner",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_pbt_inner",
+        "rigplane.commands:set_pbt_inner",
+        "rigplane.radio:CoreRadio.get_pbt_inner",
+        "rigplane.radio:CoreRadio.set_pbt_inner",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
@@ -744,11 +744,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_pbt_outer",
-        "icom_lan.commands:set_pbt_outer",
-        "icom_lan.radio:CoreRadio.get_pbt_outer",
-        "icom_lan.radio:CoreRadio.set_pbt_outer",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_pbt_outer",
+        "rigplane.commands:set_pbt_outer",
+        "rigplane.radio:CoreRadio.get_pbt_outer",
+        "rigplane.radio:CoreRadio.set_pbt_outer",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
@@ -768,11 +768,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_cw_pitch",
-        "icom_lan.commands:set_cw_pitch",
-        "icom_lan.radio:CoreRadio.get_cw_pitch",
-        "icom_lan.radio:CoreRadio.set_cw_pitch",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_cw_pitch",
+        "rigplane.commands:set_cw_pitch",
+        "rigplane.radio:CoreRadio.get_cw_pitch",
+        "rigplane.radio:CoreRadio.set_cw_pitch",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -792,10 +792,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_rf_power",
-        "icom_lan.commands:set_rf_power",
-        "icom_lan.radio:CoreRadio.get_rf_power",
-        "icom_lan.radio:CoreRadio.set_rf_power"
+        "rigplane.commands:get_rf_power",
+        "rigplane.commands:set_rf_power",
+        "rigplane.radio:CoreRadio.get_rf_power",
+        "rigplane.radio:CoreRadio.set_rf_power"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_power",
@@ -815,11 +815,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_mic_gain",
-        "icom_lan.commands:set_mic_gain",
-        "icom_lan.radio:CoreRadio.get_mic_gain",
-        "icom_lan.radio:CoreRadio.set_mic_gain",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_mic_gain",
+        "rigplane.commands:set_mic_gain",
+        "rigplane.radio:CoreRadio.get_mic_gain",
+        "rigplane.radio:CoreRadio.set_mic_gain",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -841,11 +841,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_key_speed",
-        "icom_lan.commands:set_key_speed",
-        "icom_lan.radio:CoreRadio.get_key_speed",
-        "icom_lan.radio:CoreRadio.set_key_speed",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_key_speed",
+        "rigplane.commands:set_key_speed",
+        "rigplane.radio:CoreRadio.get_key_speed",
+        "rigplane.radio:CoreRadio.set_key_speed",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -867,11 +867,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_notch_filter",
-        "icom_lan.commands:set_notch_filter",
-        "icom_lan.radio:CoreRadio.get_notch_filter",
-        "icom_lan.radio:CoreRadio.set_notch_filter",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_notch_filter",
+        "rigplane.commands:set_notch_filter",
+        "rigplane.radio:CoreRadio.get_notch_filter",
+        "rigplane.radio:CoreRadio.set_notch_filter",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -893,11 +893,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_compressor_level",
-        "icom_lan.commands:set_compressor_level",
-        "icom_lan.radio:CoreRadio.get_compressor_level",
-        "icom_lan.radio:CoreRadio.set_compressor_level",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_compressor_level",
+        "rigplane.commands:set_compressor_level",
+        "rigplane.radio:CoreRadio.get_compressor_level",
+        "rigplane.radio:CoreRadio.set_compressor_level",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -919,11 +919,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_break_in_delay",
-        "icom_lan.commands:set_break_in_delay",
-        "icom_lan.radio:CoreRadio.get_break_in_delay",
-        "icom_lan.radio:CoreRadio.set_break_in_delay",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_break_in_delay",
+        "rigplane.commands:set_break_in_delay",
+        "rigplane.radio:CoreRadio.get_break_in_delay",
+        "rigplane.radio:CoreRadio.set_break_in_delay",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -943,11 +943,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_nb_level",
-        "icom_lan.commands:set_nb_level",
-        "icom_lan.radio:CoreRadio.get_nb_level",
-        "icom_lan.radio:CoreRadio.set_nb_level",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_nb_level",
+        "rigplane.commands:set_nb_level",
+        "rigplane.radio:CoreRadio.get_nb_level",
+        "rigplane.radio:CoreRadio.set_nb_level",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
@@ -967,11 +967,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_digisel_shift",
-        "icom_lan.commands:set_digisel_shift",
-        "icom_lan.radio:CoreRadio.get_digisel_shift",
-        "icom_lan.radio:CoreRadio.set_digisel_shift",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_digisel_shift",
+        "rigplane.commands:set_digisel_shift",
+        "rigplane.radio:CoreRadio.get_digisel_shift",
+        "rigplane.radio:CoreRadio.set_digisel_shift",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
@@ -993,11 +993,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_drive_gain",
-        "icom_lan.commands:set_drive_gain",
-        "icom_lan.radio:CoreRadio.get_drive_gain",
-        "icom_lan.radio:CoreRadio.set_drive_gain",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_drive_gain",
+        "rigplane.commands:set_drive_gain",
+        "rigplane.radio:CoreRadio.get_drive_gain",
+        "rigplane.radio:CoreRadio.set_drive_gain",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -1019,11 +1019,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_monitor_gain",
-        "icom_lan.commands:set_monitor_gain",
-        "icom_lan.radio:CoreRadio.get_monitor_gain",
-        "icom_lan.radio:CoreRadio.set_monitor_gain",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_monitor_gain",
+        "rigplane.commands:set_monitor_gain",
+        "rigplane.radio:CoreRadio.get_monitor_gain",
+        "rigplane.radio:CoreRadio.set_monitor_gain",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -1045,11 +1045,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_vox_gain",
-        "icom_lan.commands:set_vox_gain",
-        "icom_lan.radio:CoreRadio.get_vox_gain",
-        "icom_lan.radio:CoreRadio.set_vox_gain",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_vox_gain",
+        "rigplane.commands:set_vox_gain",
+        "rigplane.radio:CoreRadio.get_vox_gain",
+        "rigplane.radio:CoreRadio.set_vox_gain",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -1071,11 +1071,11 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_anti_vox_gain",
-        "icom_lan.commands:set_anti_vox_gain",
-        "icom_lan.radio:CoreRadio.get_anti_vox_gain",
-        "icom_lan.radio:CoreRadio.set_anti_vox_gain",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_anti_vox_gain",
+        "rigplane.commands:set_anti_vox_gain",
+        "rigplane.radio:CoreRadio.get_anti_vox_gain",
+        "rigplane.radio:CoreRadio.set_anti_vox_gain",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
@@ -1095,10 +1095,10 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_s_meter_sql_status",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_s_meter_sql_status",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_s_meter_sql_status",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_s_meter_sql_status",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_operator_getters",
@@ -1118,9 +1118,9 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_s_meter",
-        "icom_lan.commands:parse_meter_response",
-        "icom_lan.radio:CoreRadio.get_s_meter"
+        "rigplane.commands:get_s_meter",
+        "rigplane.commands:parse_meter_response",
+        "rigplane.radio:CoreRadio.get_s_meter"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_s_meter",
@@ -1138,9 +1138,9 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_various_squelch",
-        "icom_lan.radio:IcomRadio.get_various_squelch",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_various_squelch",
+        "rigplane.radio:IcomRadio.get_various_squelch",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_various_squelch_main",
@@ -1160,10 +1160,10 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_overflow_status",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_overflow_status",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_overflow_status",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_overflow_status",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_direct_operator_getters",
@@ -1183,10 +1183,10 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_power_meter",
-        "icom_lan.radio:IcomRadio.get_power_meter",
-        "icom_lan.web.radio_poller:RadioPoller._FAST_CMDS",
-        "icom_lan.web.server:WebServer._on_radio_state_change"
+        "rigplane.commands:get_power_meter",
+        "rigplane.radio:IcomRadio.get_power_meter",
+        "rigplane.web.radio_poller:RadioPoller._FAST_CMDS",
+        "rigplane.web.server:WebServer._on_radio_state_change"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_power_meter",
@@ -1205,8 +1205,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_swr",
-        "icom_lan.radio:CoreRadio.get_swr"
+        "rigplane.commands:get_swr",
+        "rigplane.radio:CoreRadio.get_swr"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_swr"
@@ -1223,8 +1223,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_alc",
-        "icom_lan.radio:CoreRadio.get_alc_meter"
+        "rigplane.commands:get_alc",
+        "rigplane.radio:CoreRadio.get_alc_meter"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_alc"
@@ -1241,10 +1241,10 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_comp_meter",
-        "icom_lan.radio:IcomRadio.get_comp_meter",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
-        "icom_lan.web.radio_poller:RadioPoller._FAST_CMDS"
+        "rigplane.commands:get_comp_meter",
+        "rigplane.radio:IcomRadio.get_comp_meter",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "rigplane.web.radio_poller:RadioPoller._FAST_CMDS"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_comp_meter",
@@ -1264,11 +1264,11 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_vd_meter",
-        "icom_lan.radio:IcomRadio.get_vd_meter",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
-        "icom_lan.web.radio_poller:RadioPoller._FAST_CMDS",
-        "icom_lan.web.server:WebServer._on_radio_state_change"
+        "rigplane.commands:get_vd_meter",
+        "rigplane.radio:IcomRadio.get_vd_meter",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "rigplane.web.radio_poller:RadioPoller._FAST_CMDS",
+        "rigplane.web.server:WebServer._on_radio_state_change"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_vd_meter",
@@ -1288,9 +1288,9 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_id_meter",
-        "icom_lan.radio:IcomRadio.get_id_meter",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_id_meter",
+        "rigplane.radio:IcomRadio.get_id_meter",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_id_meter",
@@ -1309,10 +1309,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_preamp",
-        "icom_lan.commands:set_preamp",
-        "icom_lan.radio:CoreRadio.get_preamp",
-        "icom_lan.radio:CoreRadio.set_preamp"
+        "rigplane.commands:get_preamp",
+        "rigplane.commands:set_preamp",
+        "rigplane.radio:CoreRadio.get_preamp",
+        "rigplane.radio:CoreRadio.set_preamp"
       ],
       "test_patterns": [
         "tests/test_commands.py::get_preamp",
@@ -1330,12 +1330,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_agc",
-        "icom_lan.commands:set_agc",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_agc",
-        "icom_lan.radio:CoreRadio.set_agc",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_agc",
+        "rigplane.commands:set_agc",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_agc",
+        "rigplane.radio:CoreRadio.set_agc",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_direct_operator_getters",
@@ -1358,10 +1358,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_nb",
-        "icom_lan.commands:set_nb",
-        "icom_lan.radio:CoreRadio.get_nb",
-        "icom_lan.radio:CoreRadio.set_nb"
+        "rigplane.commands:get_nb",
+        "rigplane.commands:set_nb",
+        "rigplane.radio:CoreRadio.get_nb",
+        "rigplane.radio:CoreRadio.set_nb"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_nb"
@@ -1378,12 +1378,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_audio_peak_filter",
-        "icom_lan.commands:set_audio_peak_filter",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_audio_peak_filter",
-        "icom_lan.radio:CoreRadio.set_audio_peak_filter",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_audio_peak_filter",
+        "rigplane.commands:set_audio_peak_filter",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_audio_peak_filter",
+        "rigplane.radio:CoreRadio.set_audio_peak_filter",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_operator_getters",
@@ -1404,10 +1404,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_nr",
-        "icom_lan.commands:set_nr",
-        "icom_lan.radio:CoreRadio.get_nr",
-        "icom_lan.radio:CoreRadio.set_nr"
+        "rigplane.commands:get_nr",
+        "rigplane.commands:set_nr",
+        "rigplane.radio:CoreRadio.get_nr",
+        "rigplane.radio:CoreRadio.set_nr"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_nr"
@@ -1424,12 +1424,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_auto_notch",
-        "icom_lan.commands:set_auto_notch",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_auto_notch",
-        "icom_lan.radio:CoreRadio.set_auto_notch",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_auto_notch",
+        "rigplane.commands:set_auto_notch",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_auto_notch",
+        "rigplane.radio:CoreRadio.set_auto_notch",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_operator_getters",
@@ -1451,9 +1451,9 @@
       "family": "tone_repeater",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_repeater_tone",
-        "icom_lan.commands:set_repeater_tone",
-        "icom_lan.radio:IcomRadio.get_repeater_tone"
+        "rigplane.commands:get_repeater_tone",
+        "rigplane.commands:set_repeater_tone",
+        "rigplane.radio:IcomRadio.get_repeater_tone"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_repeater_tone"
@@ -1470,9 +1470,9 @@
       "family": "tone_repeater",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_repeater_tsql",
-        "icom_lan.commands:set_repeater_tsql",
-        "icom_lan.radio:IcomRadio.get_repeater_tsql"
+        "rigplane.commands:get_repeater_tsql",
+        "rigplane.commands:set_repeater_tsql",
+        "rigplane.radio:IcomRadio.get_repeater_tsql"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_repeater_tsql"
@@ -1489,12 +1489,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_compressor",
-        "icom_lan.commands:set_compressor",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_compressor",
-        "icom_lan.radio:CoreRadio.set_compressor",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_compressor",
+        "rigplane.commands:set_compressor",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_compressor",
+        "rigplane.radio:CoreRadio.set_compressor",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_direct_operator_getters",
@@ -1516,12 +1516,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_monitor",
-        "icom_lan.commands:set_monitor",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_monitor",
-        "icom_lan.radio:CoreRadio.set_monitor",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_monitor",
+        "rigplane.commands:set_monitor",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_monitor",
+        "rigplane.radio:CoreRadio.set_monitor",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_direct_operator_getters",
@@ -1542,12 +1542,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_vox",
-        "icom_lan.commands:set_vox",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_vox",
-        "icom_lan.radio:CoreRadio.set_vox",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_vox",
+        "rigplane.commands:set_vox",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_vox",
+        "rigplane.radio:CoreRadio.set_vox",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_direct_operator_getters",
@@ -1568,12 +1568,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_break_in",
-        "icom_lan.commands:set_break_in",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_break_in",
-        "icom_lan.radio:CoreRadio.set_break_in",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_break_in",
+        "rigplane.commands:set_break_in",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_break_in",
+        "rigplane.radio:CoreRadio.set_break_in",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_direct_operator_getters",
@@ -1594,12 +1594,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_manual_notch",
-        "icom_lan.commands:set_manual_notch",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_manual_notch",
-        "icom_lan.radio:CoreRadio.set_manual_notch",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_manual_notch",
+        "rigplane.commands:set_manual_notch",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_manual_notch",
+        "rigplane.radio:CoreRadio.set_manual_notch",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_operator_getters",
@@ -1620,10 +1620,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_digisel",
-        "icom_lan.commands:set_digisel",
-        "icom_lan.radio:CoreRadio.get_digisel",
-        "icom_lan.radio:CoreRadio.set_digisel"
+        "rigplane.commands:get_digisel",
+        "rigplane.commands:set_digisel",
+        "rigplane.radio:CoreRadio.get_digisel",
+        "rigplane.radio:CoreRadio.set_digisel"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_digisel"
@@ -1640,12 +1640,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_twin_peak_filter",
-        "icom_lan.commands:set_twin_peak_filter",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_twin_peak_filter",
-        "icom_lan.radio:CoreRadio.set_twin_peak_filter",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_twin_peak_filter",
+        "rigplane.commands:set_twin_peak_filter",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_twin_peak_filter",
+        "rigplane.radio:CoreRadio.set_twin_peak_filter",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_operator_getters",
@@ -1666,12 +1666,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_dial_lock",
-        "icom_lan.commands:set_dial_lock",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_dial_lock",
-        "icom_lan.radio:CoreRadio.set_dial_lock",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_dial_lock",
+        "rigplane.commands:set_dial_lock",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_dial_lock",
+        "rigplane.radio:CoreRadio.set_dial_lock",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_direct_operator_getters",
@@ -1692,9 +1692,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_rx_antenna_ant1",
-        "icom_lan.commands:set_rx_antenna_ant1",
-        "icom_lan.radio:IcomRadio.get_rx_antenna_ant1"
+        "rigplane.commands:get_rx_antenna_ant1",
+        "rigplane.commands:set_rx_antenna_ant1",
+        "rigplane.radio:IcomRadio.get_rx_antenna_ant1"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_rx_antenna"
@@ -1711,12 +1711,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_filter_shape",
-        "icom_lan.commands:set_filter_shape",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_filter_shape",
-        "icom_lan.radio:CoreRadio.set_filter_shape",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_filter_shape",
+        "rigplane.commands:set_filter_shape",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_filter_shape",
+        "rigplane.radio:CoreRadio.set_filter_shape",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_operator_getters",
@@ -1738,12 +1738,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_ssb_tx_bandwidth",
-        "icom_lan.commands:set_ssb_tx_bandwidth",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_ssb_tx_bandwidth",
-        "icom_lan.radio:CoreRadio.set_ssb_tx_bandwidth",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_ssb_tx_bandwidth",
+        "rigplane.commands:set_ssb_tx_bandwidth",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_ssb_tx_bandwidth",
+        "rigplane.radio:CoreRadio.set_ssb_tx_bandwidth",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_direct_operator_getters",
@@ -1764,9 +1764,9 @@
       "family": "vfo_dualwatch_scan",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_main_sub_tracking",
-        "icom_lan.commands:set_main_sub_tracking",
-        "icom_lan.radio:IcomRadio.get_main_sub_tracking"
+        "rigplane.commands:get_main_sub_tracking",
+        "rigplane.commands:set_main_sub_tracking",
+        "rigplane.radio:IcomRadio.get_main_sub_tracking"
       ],
       "test_patterns": [
         "tests/test_main_sub_tracking.py::TestGetMainSubTracking"
@@ -1783,10 +1783,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_ip_plus",
-        "icom_lan.commands:set_ip_plus",
-        "icom_lan.radio:CoreRadio.get_ip_plus",
-        "icom_lan.radio:CoreRadio.set_ip_plus"
+        "rigplane.commands:get_ip_plus",
+        "rigplane.commands:set_ip_plus",
+        "rigplane.radio:CoreRadio.get_ip_plus",
+        "rigplane.radio:CoreRadio.set_ip_plus"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_ip_plus"
@@ -1803,10 +1803,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:send_cw",
-        "icom_lan.commands:stop_cw",
-        "icom_lan.radio:CoreRadio.send_cw_text",
-        "icom_lan.radio:CoreRadio.stop_cw_text"
+        "rigplane.commands:send_cw",
+        "rigplane.commands:stop_cw",
+        "rigplane.radio:CoreRadio.send_cw_text",
+        "rigplane.radio:CoreRadio.stop_cw_text"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_send_short",
@@ -1824,9 +1824,9 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:power_on",
-        "icom_lan.commands:power_off",
-        "icom_lan.radio:CoreRadio.power_control"
+        "rigplane.commands:power_on",
+        "rigplane.commands:power_off",
+        "rigplane.radio:CoreRadio.power_control"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_power_on",
@@ -1845,8 +1845,8 @@
       "status": "implemented",
       "notes": "Transceiver ID (0x19 0x00). GET only, returns 1-byte model ID (IC-7610=0x98).",
       "runtime_symbols": [
-        "icom_lan.commands:get_transceiver_id",
-        "icom_lan.radio:IcomRadio.get_transceiver_id"
+        "rigplane.commands:get_transceiver_id",
+        "rigplane.radio:IcomRadio.get_transceiver_id"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_transceiver_id",
@@ -1864,8 +1864,8 @@
       "family": "memory_bandstack",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:build_memory_contents_set",
-        "icom_lan.radio:IcomRadio.set_memory_contents"
+        "rigplane.commands:build_memory_contents_set",
+        "rigplane.radio:IcomRadio.set_memory_contents"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_build_memory_contents"
@@ -1882,8 +1882,8 @@
       "family": "memory_bandstack",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:build_band_stack_set",
-        "icom_lan.radio:IcomRadio.set_band_stack"
+        "rigplane.commands:build_band_stack_set",
+        "rigplane.radio:IcomRadio.set_band_stack"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_build_band_stack"
@@ -1900,8 +1900,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.radio:CoreRadio.get_filter",
-        "icom_lan.radio:CoreRadio.set_filter"
+        "rigplane.radio:CoreRadio.get_filter",
+        "rigplane.radio:CoreRadio.set_filter"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_filter",
@@ -1919,8 +1919,8 @@
       "family": "vfo_dualwatch_scan",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:quick_dual_watch",
-        "icom_lan.radio:IcomRadio.quick_dual_watch"
+        "rigplane.commands:quick_dual_watch",
+        "rigplane.radio:IcomRadio.quick_dual_watch"
       ],
       "test_patterns": [
         "tests/test_vfo_dual_watch.py::test_quick_dual_watch_builds_correct_frame"
@@ -1937,8 +1937,8 @@
       "family": "vfo_dualwatch_scan",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:quick_split",
-        "icom_lan.radio:IcomRadio.quick_split"
+        "rigplane.commands:quick_split",
+        "rigplane.radio:IcomRadio.quick_split"
       ],
       "test_patterns": [
         "tests/test_vfo_dual_watch.py::test_quick_split_builds_correct_frame"
@@ -1955,12 +1955,12 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_ref_adjust",
-        "icom_lan.commands:set_ref_adjust",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_ref_adjust",
-        "icom_lan.radio:CoreRadio.set_ref_adjust",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_ref_adjust",
+        "rigplane.commands:set_ref_adjust",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_ref_adjust",
+        "rigplane.radio:CoreRadio.set_ref_adjust",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_ctl_mem_level_builders",
@@ -1980,9 +1980,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_acc1_mod_level",
-        "icom_lan.commands:set_acc1_mod_level",
-        "icom_lan.radio:IcomRadio.get_acc1_mod_level"
+        "rigplane.commands:get_acc1_mod_level",
+        "rigplane.commands:set_acc1_mod_level",
+        "rigplane.radio:IcomRadio.get_acc1_mod_level"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_acc1_mod_level"
@@ -1999,9 +1999,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_usb_mod_level",
-        "icom_lan.commands:set_usb_mod_level",
-        "icom_lan.radio:IcomRadio.get_usb_mod_level"
+        "rigplane.commands:get_usb_mod_level",
+        "rigplane.commands:set_usb_mod_level",
+        "rigplane.radio:IcomRadio.get_usb_mod_level"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_usb_mod_level"
@@ -2018,9 +2018,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_lan_mod_level",
-        "icom_lan.commands:set_lan_mod_level",
-        "icom_lan.radio:IcomRadio.get_lan_mod_level"
+        "rigplane.commands:get_lan_mod_level",
+        "rigplane.commands:set_lan_mod_level",
+        "rigplane.radio:IcomRadio.get_lan_mod_level"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_lan_mod_level"
@@ -2037,9 +2037,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_data_off_mod_input",
-        "icom_lan.commands:set_data_off_mod_input",
-        "icom_lan.radio:IcomRadio.get_data_off_mod_input"
+        "rigplane.commands:get_data_off_mod_input",
+        "rigplane.commands:set_data_off_mod_input",
+        "rigplane.radio:IcomRadio.get_data_off_mod_input"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_data_off_mod_input"
@@ -2056,9 +2056,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_data1_mod_input",
-        "icom_lan.commands:set_data1_mod_input",
-        "icom_lan.radio:IcomRadio.get_data1_mod_input"
+        "rigplane.commands:get_data1_mod_input",
+        "rigplane.commands:set_data1_mod_input",
+        "rigplane.radio:IcomRadio.get_data1_mod_input"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_data1_mod_input"
@@ -2075,9 +2075,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_data2_mod_input",
-        "icom_lan.commands:set_data2_mod_input",
-        "icom_lan.radio:IcomRadio.get_data2_mod_input"
+        "rigplane.commands:get_data2_mod_input",
+        "rigplane.commands:set_data2_mod_input",
+        "rigplane.radio:IcomRadio.get_data2_mod_input"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_data2_mod_input"
@@ -2094,9 +2094,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_data3_mod_input",
-        "icom_lan.commands:set_data3_mod_input",
-        "icom_lan.radio:IcomRadio.get_data3_mod_input"
+        "rigplane.commands:get_data3_mod_input",
+        "rigplane.commands:set_data3_mod_input",
+        "rigplane.radio:IcomRadio.get_data3_mod_input"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_data3_mod_input"
@@ -2113,9 +2113,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_civ_transceive",
-        "icom_lan.commands:set_civ_transceive",
-        "icom_lan.radio:IcomRadio.get_civ_transceive"
+        "rigplane.commands:get_civ_transceive",
+        "rigplane.commands:set_civ_transceive",
+        "rigplane.radio:IcomRadio.get_civ_transceive"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_civ_transceive"
@@ -2132,9 +2132,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_system_date",
-        "icom_lan.commands:set_system_date",
-        "icom_lan.radio:IcomRadio.get_system_date"
+        "rigplane.commands:get_system_date",
+        "rigplane.commands:set_system_date",
+        "rigplane.radio:IcomRadio.get_system_date"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_system_date"
@@ -2151,9 +2151,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_system_time",
-        "icom_lan.commands:set_system_time",
-        "icom_lan.radio:IcomRadio.get_system_time"
+        "rigplane.commands:get_system_time",
+        "rigplane.commands:set_system_time",
+        "rigplane.radio:IcomRadio.get_system_time"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_system_time"
@@ -2170,9 +2170,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_utc_offset",
-        "icom_lan.commands:set_utc_offset",
-        "icom_lan.radio:IcomRadio.get_utc_offset"
+        "rigplane.commands:get_utc_offset",
+        "rigplane.commands:set_utc_offset",
+        "rigplane.radio:IcomRadio.get_utc_offset"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_utc_offset"
@@ -2189,12 +2189,12 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_dash_ratio",
-        "icom_lan.commands:set_dash_ratio",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_dash_ratio",
-        "icom_lan.radio:CoreRadio.set_dash_ratio",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_dash_ratio",
+        "rigplane.commands:set_dash_ratio",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_dash_ratio",
+        "rigplane.radio:CoreRadio.set_dash_ratio",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_ctl_mem_level_builders",
@@ -2214,12 +2214,12 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_nb_depth",
-        "icom_lan.commands:set_nb_depth",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_nb_depth",
-        "icom_lan.radio:CoreRadio.set_nb_depth",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_nb_depth",
+        "rigplane.commands:set_nb_depth",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_nb_depth",
+        "rigplane.radio:CoreRadio.set_nb_depth",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_ctl_mem_level_builders",
@@ -2239,12 +2239,12 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_nb_width",
-        "icom_lan.commands:set_nb_width",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_nb_width",
-        "icom_lan.radio:CoreRadio.set_nb_width",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_nb_width",
+        "rigplane.commands:set_nb_width",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_nb_width",
+        "rigplane.radio:CoreRadio.set_nb_width",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_ctl_mem_level_builders",
@@ -2266,10 +2266,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_data_mode",
-        "icom_lan.commands:set_data_mode",
-        "icom_lan.radio:CoreRadio.get_data_mode",
-        "icom_lan.radio:CoreRadio.set_data_mode"
+        "rigplane.commands:get_data_mode",
+        "rigplane.commands:set_data_mode",
+        "rigplane.radio:CoreRadio.get_data_mode",
+        "rigplane.radio:CoreRadio.set_data_mode"
       ],
       "test_patterns": [
         "tests/test_data_mode.py::get_data_mode",
@@ -2287,12 +2287,12 @@
       "family": "dsp_levels",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_af_mute",
-        "icom_lan.commands:set_af_mute",
-        "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:CoreRadio.get_af_mute",
-        "icom_lan.radio:CoreRadio.set_af_mute",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_af_mute",
+        "rigplane.commands:set_af_mute",
+        "rigplane.commands:parse_bool_response",
+        "rigplane.radio:CoreRadio.get_af_mute",
+        "rigplane.radio:CoreRadio.set_af_mute",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_af_mute_builders",
@@ -2312,12 +2312,12 @@
       "family": "operator_toggles",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_agc_time_constant",
-        "icom_lan.commands:set_agc_time_constant",
-        "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:CoreRadio.get_agc_time_constant",
-        "icom_lan.radio:CoreRadio.set_agc_time_constant",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_agc_time_constant",
+        "rigplane.commands:set_agc_time_constant",
+        "rigplane.commands:parse_level_response",
+        "rigplane.radio:CoreRadio.get_agc_time_constant",
+        "rigplane.radio:CoreRadio.set_agc_time_constant",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_operator_getters",
@@ -2339,9 +2339,9 @@
       "family": "tone_repeater",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_tone_freq",
-        "icom_lan.commands:set_tone_freq",
-        "icom_lan.radio:IcomRadio.get_tone_freq"
+        "rigplane.commands:get_tone_freq",
+        "rigplane.commands:set_tone_freq",
+        "rigplane.radio:IcomRadio.get_tone_freq"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_tone_freq"
@@ -2358,9 +2358,9 @@
       "family": "tone_repeater",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_tsql_freq",
-        "icom_lan.commands:set_tsql_freq",
-        "icom_lan.radio:IcomRadio.get_tsql_freq"
+        "rigplane.commands:get_tsql_freq",
+        "rigplane.commands:set_tsql_freq",
+        "rigplane.radio:IcomRadio.get_tsql_freq"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_tsql_freq"
@@ -2377,10 +2377,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:ptt_on",
-        "icom_lan.commands:ptt_off",
-        "icom_lan.radio:CoreRadio.set_ptt",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:ptt_on",
+        "rigplane.commands:ptt_off",
+        "rigplane.radio:CoreRadio.set_ptt",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_ptt_on",
@@ -2399,12 +2399,12 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_tuner_status",
-        "icom_lan.commands:set_tuner_status",
-        "icom_lan.radio:IcomRadio.get_tuner_status",
-        "icom_lan.radio:IcomRadio.set_tuner_status",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
-        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
+        "rigplane.commands:get_tuner_status",
+        "rigplane.commands:set_tuner_status",
+        "rigplane.radio:IcomRadio.get_tuner_status",
+        "rigplane.radio:IcomRadio.set_tuner_status",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "rigplane.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_tuner_status",
@@ -2426,10 +2426,10 @@
       "status": "implemented",
       "notes": "XFC Status (0x1C 0x02). GET/SET boolean (0=off, 1=on).",
       "runtime_symbols": [
-        "icom_lan.commands:get_xfc_status",
-        "icom_lan.commands:set_xfc_status",
-        "icom_lan.radio:IcomRadio.get_xfc_status",
-        "icom_lan.radio:IcomRadio.set_xfc_status"
+        "rigplane.commands:get_xfc_status",
+        "rigplane.commands:set_xfc_status",
+        "rigplane.radio:IcomRadio.get_xfc_status",
+        "rigplane.radio:IcomRadio.set_xfc_status"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_xfc_status",
@@ -2452,12 +2452,12 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_tx_freq_monitor",
-        "icom_lan.commands:set_tx_freq_monitor",
-        "icom_lan.radio:IcomRadio.get_tx_freq_monitor",
-        "icom_lan.radio:IcomRadio.set_tx_freq_monitor",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
-        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
+        "rigplane.commands:get_tx_freq_monitor",
+        "rigplane.commands:set_tx_freq_monitor",
+        "rigplane.radio:IcomRadio.get_tx_freq_monitor",
+        "rigplane.radio:IcomRadio.set_tx_freq_monitor",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "rigplane.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_tx_freq_monitor",
@@ -2478,9 +2478,9 @@
       "family": "system_config",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_civ_output_ant",
-        "icom_lan.commands:set_civ_output_ant",
-        "icom_lan.radio:IcomRadio.get_civ_output_ant"
+        "rigplane.commands:get_civ_output_ant",
+        "rigplane.commands:set_civ_output_ant",
+        "rigplane.radio:IcomRadio.get_civ_output_ant"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_civ_output_ant"
@@ -2497,13 +2497,13 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_rit_frequency",
-        "icom_lan.commands:set_rit_frequency",
-        "icom_lan.commands:parse_rit_frequency_response",
-        "icom_lan.radio:IcomRadio.get_rit_frequency",
-        "icom_lan.radio:IcomRadio.set_rit_frequency",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
-        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
+        "rigplane.commands:get_rit_frequency",
+        "rigplane.commands:set_rit_frequency",
+        "rigplane.commands:parse_rit_frequency_response",
+        "rigplane.radio:IcomRadio.get_rit_frequency",
+        "rigplane.radio:IcomRadio.set_rit_frequency",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "rigplane.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_rit_frequency",
@@ -2525,12 +2525,12 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_rit_status",
-        "icom_lan.commands:set_rit_status",
-        "icom_lan.radio:IcomRadio.get_rit_status",
-        "icom_lan.radio:IcomRadio.set_rit_status",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
-        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
+        "rigplane.commands:get_rit_status",
+        "rigplane.commands:set_rit_status",
+        "rigplane.radio:IcomRadio.get_rit_status",
+        "rigplane.radio:IcomRadio.set_rit_status",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "rigplane.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_rit_status",
@@ -2551,12 +2551,12 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_rit_tx_status",
-        "icom_lan.commands:set_rit_tx_status",
-        "icom_lan.radio:IcomRadio.get_rit_tx_status",
-        "icom_lan.radio:IcomRadio.set_rit_tx_status",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
-        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
+        "rigplane.commands:get_rit_tx_status",
+        "rigplane.commands:set_rit_tx_status",
+        "rigplane.radio:IcomRadio.get_rit_tx_status",
+        "rigplane.radio:IcomRadio.set_rit_tx_status",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "rigplane.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_rit_tx_status",
@@ -2577,7 +2577,7 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_civ_rx_coverage.py::cmd25"
@@ -2595,7 +2595,7 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_civ_rx_coverage.py::cmd26"
@@ -2613,8 +2613,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.scope:ScopeAssembler",
-        "icom_lan.radio:CoreRadio.scope_stream"
+        "rigplane.scope:ScopeAssembler",
+        "rigplane.radio:CoreRadio.scope_stream"
       ],
       "test_patterns": [
         "tests/test_scope.py::assembles_complete_frame",
@@ -2632,10 +2632,10 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_on",
-        "icom_lan.commands:scope_off",
-        "icom_lan.radio:CoreRadio.enable_scope",
-        "icom_lan.radio:CoreRadio.disable_scope"
+        "rigplane.commands:scope_on",
+        "rigplane.commands:scope_off",
+        "rigplane.radio:CoreRadio.enable_scope",
+        "rigplane.radio:CoreRadio.disable_scope"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_scope_on",
@@ -2655,9 +2655,9 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_data_output",
-        "icom_lan.radio:CoreRadio.enable_scope",
-        "icom_lan.radio:CoreRadio.disable_scope"
+        "rigplane.commands:scope_data_output",
+        "rigplane.radio:CoreRadio.enable_scope",
+        "rigplane.radio:CoreRadio.disable_scope"
       ],
       "test_patterns": [
         "tests/test_scope.py::scope_data_output_on",
@@ -2675,12 +2675,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_main_sub",
-        "icom_lan.commands:scope_main_sub",
-        "icom_lan.commands:parse_scope_main_sub_response",
-        "icom_lan.radio:CoreRadio.get_scope_receiver",
-        "icom_lan.radio:CoreRadio.set_scope_receiver",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_main_sub",
+        "rigplane.commands:scope_main_sub",
+        "rigplane.commands:parse_scope_main_sub_response",
+        "rigplane.radio:CoreRadio.get_scope_receiver",
+        "rigplane.radio:CoreRadio.set_scope_receiver",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_main_sub",
@@ -2700,12 +2700,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_single_dual",
-        "icom_lan.commands:scope_single_dual",
-        "icom_lan.commands:parse_scope_single_dual_response",
-        "icom_lan.radio:CoreRadio.get_scope_dual",
-        "icom_lan.radio:CoreRadio.set_scope_dual",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_single_dual",
+        "rigplane.commands:scope_single_dual",
+        "rigplane.commands:parse_scope_single_dual_response",
+        "rigplane.radio:CoreRadio.get_scope_dual",
+        "rigplane.radio:CoreRadio.set_scope_dual",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_single_dual",
@@ -2726,12 +2726,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_mode",
-        "icom_lan.commands:scope_set_mode",
-        "icom_lan.commands:parse_scope_mode_response",
-        "icom_lan.radio:CoreRadio.get_scope_mode",
-        "icom_lan.radio:CoreRadio.set_scope_mode",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_mode",
+        "rigplane.commands:scope_set_mode",
+        "rigplane.commands:parse_scope_mode_response",
+        "rigplane.radio:CoreRadio.get_scope_mode",
+        "rigplane.radio:CoreRadio.set_scope_mode",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_mode",
@@ -2753,12 +2753,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_span",
-        "icom_lan.commands:scope_set_span",
-        "icom_lan.commands:parse_scope_span_response",
-        "icom_lan.radio:CoreRadio.get_scope_span",
-        "icom_lan.radio:CoreRadio.set_scope_span",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_span",
+        "rigplane.commands:scope_set_span",
+        "rigplane.commands:parse_scope_span_response",
+        "rigplane.radio:CoreRadio.get_scope_span",
+        "rigplane.radio:CoreRadio.set_scope_span",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_span",
@@ -2780,12 +2780,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_edge",
-        "icom_lan.commands:scope_set_edge",
-        "icom_lan.commands:parse_scope_edge_response",
-        "icom_lan.radio:CoreRadio.get_scope_edge",
-        "icom_lan.radio:CoreRadio.set_scope_edge",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_edge",
+        "rigplane.commands:scope_set_edge",
+        "rigplane.commands:parse_scope_edge_response",
+        "rigplane.radio:CoreRadio.get_scope_edge",
+        "rigplane.radio:CoreRadio.set_scope_edge",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_edge",
@@ -2806,12 +2806,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_hold",
-        "icom_lan.commands:scope_set_hold",
-        "icom_lan.commands:parse_scope_hold_response",
-        "icom_lan.radio:CoreRadio.get_scope_hold",
-        "icom_lan.radio:CoreRadio.set_scope_hold",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_hold",
+        "rigplane.commands:scope_set_hold",
+        "rigplane.commands:parse_scope_hold_response",
+        "rigplane.radio:CoreRadio.get_scope_hold",
+        "rigplane.radio:CoreRadio.set_scope_hold",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_hold",
@@ -2832,12 +2832,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_ref",
-        "icom_lan.commands:scope_set_ref",
-        "icom_lan.commands:parse_scope_ref_response",
-        "icom_lan.radio:CoreRadio.get_scope_ref",
-        "icom_lan.radio:CoreRadio.set_scope_ref",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_ref",
+        "rigplane.commands:scope_set_ref",
+        "rigplane.commands:parse_scope_ref_response",
+        "rigplane.radio:CoreRadio.get_scope_ref",
+        "rigplane.radio:CoreRadio.set_scope_ref",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_ref",
@@ -2859,12 +2859,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_speed",
-        "icom_lan.commands:scope_set_speed",
-        "icom_lan.commands:parse_scope_speed_response",
-        "icom_lan.radio:CoreRadio.get_scope_speed",
-        "icom_lan.radio:CoreRadio.set_scope_speed",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_speed",
+        "rigplane.commands:scope_set_speed",
+        "rigplane.commands:parse_scope_speed_response",
+        "rigplane.radio:CoreRadio.get_scope_speed",
+        "rigplane.radio:CoreRadio.set_scope_speed",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_speed",
@@ -2885,12 +2885,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_during_tx",
-        "icom_lan.commands:scope_set_during_tx",
-        "icom_lan.commands:parse_scope_during_tx_response",
-        "icom_lan.radio:CoreRadio.get_scope_during_tx",
-        "icom_lan.radio:CoreRadio.set_scope_during_tx",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_during_tx",
+        "rigplane.commands:scope_set_during_tx",
+        "rigplane.commands:parse_scope_during_tx_response",
+        "rigplane.radio:CoreRadio.get_scope_during_tx",
+        "rigplane.radio:CoreRadio.set_scope_during_tx",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_during_tx",
@@ -2912,12 +2912,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_center_type",
-        "icom_lan.commands:scope_set_center_type",
-        "icom_lan.commands:parse_scope_center_type_response",
-        "icom_lan.radio:CoreRadio.get_scope_center_type",
-        "icom_lan.radio:CoreRadio.set_scope_center_type",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_center_type",
+        "rigplane.commands:scope_set_center_type",
+        "rigplane.commands:parse_scope_center_type_response",
+        "rigplane.radio:CoreRadio.get_scope_center_type",
+        "rigplane.radio:CoreRadio.set_scope_center_type",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_center_type",
@@ -2939,12 +2939,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_vbw",
-        "icom_lan.commands:scope_set_vbw",
-        "icom_lan.commands:parse_scope_vbw_response",
-        "icom_lan.radio:CoreRadio.get_scope_vbw",
-        "icom_lan.radio:CoreRadio.set_scope_vbw",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_vbw",
+        "rigplane.commands:scope_set_vbw",
+        "rigplane.commands:parse_scope_vbw_response",
+        "rigplane.radio:CoreRadio.get_scope_vbw",
+        "rigplane.radio:CoreRadio.set_scope_vbw",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_vbw",
@@ -2965,12 +2965,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_fixed_edge",
-        "icom_lan.commands:scope_set_fixed_edge",
-        "icom_lan.commands:parse_scope_fixed_edge_response",
-        "icom_lan.radio:CoreRadio.get_scope_fixed_edge",
-        "icom_lan.radio:CoreRadio.set_scope_fixed_edge",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_fixed_edge",
+        "rigplane.commands:scope_set_fixed_edge",
+        "rigplane.commands:parse_scope_fixed_edge_response",
+        "rigplane.radio:CoreRadio.get_scope_fixed_edge",
+        "rigplane.radio:CoreRadio.set_scope_fixed_edge",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_fixed_edge",
@@ -2992,12 +2992,12 @@
       "family": "advanced_scope",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_scope_rbw",
-        "icom_lan.commands:scope_set_rbw",
-        "icom_lan.commands:parse_scope_rbw_response",
-        "icom_lan.radio:CoreRadio.get_scope_rbw",
-        "icom_lan.radio:CoreRadio.set_scope_rbw",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "rigplane.commands:get_scope_rbw",
+        "rigplane.commands:scope_set_rbw",
+        "rigplane.commands:parse_scope_rbw_response",
+        "rigplane.radio:CoreRadio.get_scope_rbw",
+        "rigplane.radio:CoreRadio.set_scope_rbw",
+        "rigplane._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_get_scope_rbw",
@@ -3019,8 +3019,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:build_cmd29_frame",
-        "icom_lan.radio:CoreRadio._require_cmd29_route"
+        "rigplane.commands:build_cmd29_frame",
+        "rigplane.radio:CoreRadio._require_cmd29_route"
       ],
       "test_patterns": [
         "tests/test_commands.py::build_cmd29_frame",
@@ -3039,7 +3039,7 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:parse_ack_nak"
+        "rigplane.commands:parse_ack_nak"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_nak"
@@ -3056,7 +3056,7 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:parse_ack_nak"
+        "rigplane.commands:parse_ack_nak"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_ack"

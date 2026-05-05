@@ -7,10 +7,10 @@ import tomllib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from icom_lan.diagnostics.redaction import redact_credentials
+from rigplane.diagnostics.redaction import redact_credentials
 
 if TYPE_CHECKING:
-    from icom_lan.diagnostics.contributor import BundleContext
+    from rigplane.diagnostics.contributor import BundleContext
 
 
 # Keys whose values are NEVER recorded — entire key is dropped (not masked).

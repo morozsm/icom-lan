@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.capabilities import CAP_CW, CAP_TUNER
-from icom_lan.web.handlers.control import ControlHandler
+from rigplane.capabilities import CAP_CW, CAP_TUNER
+from rigplane.web.handlers.control import ControlHandler
 
 
 def _make_handler(

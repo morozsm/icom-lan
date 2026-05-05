@@ -251,7 +251,7 @@ def build_login_packet(
     receiver_id: int,
     tok_request: int = 0,
     auth_seq: int = 0,
-    computer_name: str = "icom-lan",
+    computer_name: str = "rigplane",
 ) -> bytes:
     """Build a 0x80-byte login packet.
 

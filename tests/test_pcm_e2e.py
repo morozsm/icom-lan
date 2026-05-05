@@ -13,8 +13,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.audio import AudioPacket, AudioState, AudioStats
-from icom_lan.radio import IcomRadio
+from rigplane.audio import AudioPacket, AudioState, AudioStats
+from rigplane.radio import IcomRadio
 
 
 # ---------------------------------------------------------------------------

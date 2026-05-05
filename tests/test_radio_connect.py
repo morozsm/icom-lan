@@ -6,18 +6,18 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from icom_lan.exceptions import (
+from rigplane.exceptions import (
     ConnectionError,
     TimeoutError,
 )
-from icom_lan.radio import (
+from rigplane.radio import (
     CONNINFO_SIZE,
     IcomRadio,
     STATUS_SIZE,
     TOKEN_ACK_SIZE,
 )
-from icom_lan.transport import ConnectionState
-from icom_lan.types import AudioCodec
+from rigplane.transport import ConnectionState
+from rigplane.types import AudioCodec
 
 from test_radio import MockTransport
 
@@ -193,7 +193,7 @@ class TestSendConninfo:
         codec, the conninfo ``txcodec`` byte at offset 0x73 must be mono
         (PCM_1CH_16BIT = 0x04).
         """
-        from icom_lan.types import AudioCodec
+        from rigplane.types import AudioCodec
 
         radio = IcomRadio(
             "192.168.1.100",
@@ -209,7 +209,7 @@ class TestSendConninfo:
         assert len(mt.sent_packets) == 1
         packet = mt.sent_packets[0]
         # Conninfo layout: rxcodec at byte 0x72, txcodec at byte 0x73
-        # (see ``src/icom_lan/auth.py`` ``build_conninfo_packet``).
+        # (see ``src/rigplane/auth.py`` ``build_conninfo_packet``).
         assert packet[0x72] == int(AudioCodec.PCM_2CH_16BIT), (
             f"rxcodec should reflect requested codec 0x10, got 0x{packet[0x72]:02X}"
         )
@@ -443,8 +443,8 @@ class TestConnectReadiness:
             patch.object(radio._civ_runtime, "start_pump"),
             patch.object(radio._civ_runtime, "start_data_watchdog"),
             patch.object(radio._civ_runtime, "start_worker"),
-            patch("icom_lan.transport.IcomTransport", return_value=fake_civ_transport),
-            patch("icom_lan._control_phase.asyncio.sleep", new=AsyncMock()),
+            patch("rigplane.transport.IcomTransport", return_value=fake_civ_transport),
+            patch("rigplane._control_phase.asyncio.sleep", new=AsyncMock()),
         ):
             radio._civ_ready_idle_timeout = 0.0
             with pytest.raises(ConnectionError, match="radio connect aborted"):
@@ -545,10 +545,10 @@ class TestConnectSessionRejection:
             patch.object(radio._civ_runtime, "start_data_watchdog"),
             patch.object(radio._civ_runtime, "start_worker"),
             patch(
-                "icom_lan.transport.IcomTransport",
+                "rigplane.transport.IcomTransport",
                 return_value=ConnectMockTransport(),
             ),
-            patch("icom_lan._control_phase.asyncio.sleep", new=AsyncMock()),
+            patch("rigplane._control_phase.asyncio.sleep", new=AsyncMock()),
         ):
             radio._civ_ready_idle_timeout = 0.0
             # Not interested in the connect path after CIV transport; only
@@ -672,10 +672,10 @@ class TestConnectSessionRejection:
             patch.object(radio._civ_runtime, "start_data_watchdog"),
             patch.object(radio._civ_runtime, "start_worker"),
             patch(
-                "icom_lan.transport.IcomTransport",
+                "rigplane.transport.IcomTransport",
                 return_value=ConnectMockTransport(),
             ),
-            patch("icom_lan._control_phase.asyncio.sleep", new=AsyncMock()),
+            patch("rigplane._control_phase.asyncio.sleep", new=AsyncMock()),
         ):
             radio._civ_ready_idle_timeout = 0.0
             try:
@@ -782,7 +782,7 @@ class TestWifiBindBehavior:
 
         with (
             patch(
-                "icom_lan._control_phase._socket.socket",
+                "rigplane._control_phase._socket.socket",
                 side_effect=[probe_sock, civ_sock, audio_sock],
             ),
             patch.object(
@@ -813,7 +813,7 @@ class TestWifiBindBehavior:
             patch.object(radio._civ_runtime, "start_pump"),
             patch.object(radio._civ_runtime, "start_data_watchdog"),
             patch.object(radio._civ_runtime, "start_worker"),
-            patch("icom_lan.transport.IcomTransport", return_value=fake_civ_transport),
+            patch("rigplane.transport.IcomTransport", return_value=fake_civ_transport),
             patch.object(radio, "_fetch_initial_state", new=AsyncMock()),
         ):
             await radio.connect()

@@ -1,4 +1,4 @@
-"""Tests for src/icom_lan/web/ — WebSocket server, protocol, and handlers.
+"""Tests for src/rigplane/web/ — WebSocket server, protocol, and handlers.
 
 Strategy
 --------
@@ -23,19 +23,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
-from icom_lan.radio_state import RadioState
-from icom_lan.rigctld.state_cache import StateCache
-from icom_lan.scope import ScopeFrame
-from icom_lan.web.protocol import (
+from rigplane.backends.icom7610.drivers.serial_stub import SerialMockRadio
+from rigplane.radio_state import RadioState
+from rigplane.rigctld.state_cache import StateCache
+from rigplane.scope import ScopeFrame
+from rigplane.web.protocol import (
     MSG_TYPE_SCOPE,
     SCOPE_HEADER_SIZE,
     decode_json,
     encode_json,
     encode_scope_frame,
 )
-from icom_lan.web.server import _DEFAULT_STATIC_DIR, WebConfig, WebServer
-from icom_lan.web.websocket import (
+from rigplane.web.server import _DEFAULT_STATIC_DIR, WebConfig, WebServer
+from rigplane.web.websocket import (
     WS_MAGIC,
     WS_OP_BINARY,
     WS_OP_PING,
@@ -49,14 +49,14 @@ from icom_lan.web.websocket import (
 # Frontend static build guard
 # ---------------------------------------------------------------------------
 
-# The web server serves `index.html` from `src/icom_lan/web/static/` at `GET /`.
+# The web server serves `index.html` from `src/rigplane/web/static/` at `GET /`.
 # In a fresh checkout without a frontend build, that directory is absent and
 # any test relying on the root route would fail deterministically. Skip such
 # tests when the built frontend is not present (see issue #953).
 _STATIC_INDEX_MISSING = not (_DEFAULT_STATIC_DIR / "index.html").is_file()
 _requires_static_index = pytest.mark.skipif(
     _STATIC_INDEX_MISSING,
-    reason="frontend build not present (src/icom_lan/web/static/index.html missing)",
+    reason="frontend build not present (src/rigplane/web/static/index.html missing)",
 )
 
 
@@ -588,7 +588,7 @@ class TestHttpEndpoints:
         _, _, body = await _http_get(host, port, "/api/v1/info")
         data = json.loads(body)
         assert "server" in data
-        assert data["server"] == "icom-lan"
+        assert data["server"] == "rigplane"
         assert "version" in data
         assert "proto" in data
         assert data["proto"] == 1
@@ -694,7 +694,7 @@ class TestControlChannel:
             msg = json.loads(payload)
             assert msg["type"] == "hello"
             assert msg["proto"] == 1
-            assert msg["server"] == "icom-lan"
+            assert msg["server"] == "rigplane"
             assert "version" in msg
             assert "radio" in msg
             assert "capabilities" in msg
@@ -967,8 +967,8 @@ class TestScopeFrameFormat:
 class TestBackpressure:
     def test_scope_frame_queue_drops_when_full(self) -> None:
         """When queue is full, old frames are dropped, not blocked."""
-        from icom_lan.web.handlers import HIGH_WATERMARK, ScopeHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.web.handlers import HIGH_WATERMARK, ScopeHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         # Mock WebSocket that never sends (simulates slow client)
         mock_ws = MagicMock(spec=WebSocketConnection)
@@ -988,8 +988,8 @@ class TestBackpressure:
 
     def test_scope_sequence_increments(self) -> None:
         """Sequence numbers increment with each frame."""
-        from icom_lan.web.handlers import ScopeHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.web.handlers import ScopeHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         handler = ScopeHandler(mock_ws, None)
@@ -1003,8 +1003,8 @@ class TestBackpressure:
 
     def test_scope_sequence_wraps_at_65536(self) -> None:
         """Sequence counter wraps at 16-bit boundary."""
-        from icom_lan.web.handlers import ScopeHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.web.handlers import ScopeHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         handler = ScopeHandler(mock_ws, None)
@@ -1027,25 +1027,25 @@ class TestBackpressure:
 
 class TestAudioFrameFormat:
     def test_audio_frame_header_size(self) -> None:
-        from icom_lan.web.protocol import AUDIO_HEADER_SIZE, encode_audio_frame
+        from rigplane.web.protocol import AUDIO_HEADER_SIZE, encode_audio_frame
 
         frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
         assert len(frame) == AUDIO_HEADER_SIZE
 
     def test_audio_rx_msg_type(self) -> None:
-        from icom_lan.web.protocol import encode_audio_frame
+        from rigplane.web.protocol import encode_audio_frame
 
         frame = encode_audio_frame(0x10, 0x01, 42, 480, 1, 20, b"\x00" * 100)
         assert frame[0] == 0x10
 
     def test_audio_tx_msg_type(self) -> None:
-        from icom_lan.web.protocol import encode_audio_frame
+        from rigplane.web.protocol import encode_audio_frame
 
         frame = encode_audio_frame(0x11, 0x01, 0, 480, 1, 20, b"\x00" * 50)
         assert frame[0] == 0x11
 
     def test_audio_codec_byte(self) -> None:
-        from icom_lan.web.protocol import AUDIO_CODEC_OPUS, encode_audio_frame
+        from rigplane.web.protocol import AUDIO_CODEC_OPUS, encode_audio_frame
 
         frame = encode_audio_frame(0x10, AUDIO_CODEC_OPUS, 0, 480, 1, 20, b"\x01")
         assert frame[1] == AUDIO_CODEC_OPUS
@@ -1053,7 +1053,7 @@ class TestAudioFrameFormat:
     def test_audio_sequence_le(self) -> None:
         import struct
 
-        from icom_lan.web.protocol import encode_audio_frame
+        from rigplane.web.protocol import encode_audio_frame
 
         frame = encode_audio_frame(0x10, 0x01, 0x1234, 480, 1, 20, b"")
         seq = struct.unpack_from("<H", frame, 2)[0]
@@ -1062,21 +1062,21 @@ class TestAudioFrameFormat:
     def test_audio_sample_rate_le(self) -> None:
         import struct
 
-        from icom_lan.web.protocol import encode_audio_frame
+        from rigplane.web.protocol import encode_audio_frame
 
         frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
         sr = struct.unpack_from("<H", frame, 4)[0]
         assert sr == 480
 
     def test_audio_channels_and_frame_ms(self) -> None:
-        from icom_lan.web.protocol import encode_audio_frame
+        from rigplane.web.protocol import encode_audio_frame
 
         frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
         assert frame[6] == 1  # mono
         assert frame[7] == 20  # 20ms
 
     def test_audio_payload_appended(self) -> None:
-        from icom_lan.web.protocol import AUDIO_HEADER_SIZE, encode_audio_frame
+        from rigplane.web.protocol import AUDIO_HEADER_SIZE, encode_audio_frame
 
         payload = b"\xaa\xbb\xcc\xdd"
         frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, payload)
@@ -1086,7 +1086,7 @@ class TestAudioFrameFormat:
     def test_audio_sequence_wraps(self) -> None:
         import struct
 
-        from icom_lan.web.protocol import encode_audio_frame
+        from rigplane.web.protocol import encode_audio_frame
 
         frame = encode_audio_frame(0x10, 0x01, 0x10000, 480, 1, 20, b"")
         seq = struct.unpack_from("<H", frame, 2)[0]
@@ -1148,7 +1148,7 @@ class TestProtocolConformance:
 
     def test_audio_opus_typical_frame(self) -> None:
         """Typical Opus frame: 48kHz, mono, 20ms, ~80-120 bytes payload."""
-        from icom_lan.web.protocol import (
+        from rigplane.web.protocol import (
             AUDIO_CODEC_OPUS,
             AUDIO_HEADER_SIZE,
             MSG_TYPE_AUDIO_RX,
@@ -1173,7 +1173,7 @@ class TestProtocolConformance:
                 {
                     "type": "hello",
                     "proto": 1,
-                    "server": "icom-lan",
+                    "server": "rigplane",
                     "version": "0.8.0",
                     "radio": "IC-7610",
                     "capabilities": ["scope", "audio", "tx"],
@@ -1319,10 +1319,10 @@ class TestAudioHandlerCodecDetection:
         self, audio_codec: object, sample_rate: int
     ) -> bytes:
         """Start RX via AudioBroadcaster (using AudioBus) and return first queued frame."""
-        from icom_lan.audio_bus import AudioBus
-        from icom_lan.radio_protocol import AudioCapable
-        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.audio_bus import AudioBus
+        from rigplane.radio_protocol import AudioCapable
+        from rigplane.web.handlers import AudioBroadcaster, AudioHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         mock_radio = MagicMock(spec=AudioCapable)
@@ -1354,8 +1354,8 @@ class TestAudioHandlerCodecDetection:
         return frame
 
     async def test_pcm_codec_produces_pcm16_web_frame(self) -> None:
-        from icom_lan.types import AudioCodec
-        from icom_lan.web.protocol import AUDIO_CODEC_PCM16
+        from rigplane.types import AudioCodec
+        from rigplane.web.protocol import AUDIO_CODEC_PCM16
 
         frame = await self._start_rx_and_capture(AudioCodec.PCM_1CH_16BIT, 48000)
         assert frame[1] == AUDIO_CODEC_PCM16, (
@@ -1364,8 +1364,8 @@ class TestAudioHandlerCodecDetection:
         )
 
     async def test_opus_codec_produces_opus_web_frame(self) -> None:
-        from icom_lan.types import AudioCodec
-        from icom_lan.web.protocol import AUDIO_CODEC_OPUS
+        from rigplane.types import AudioCodec
+        from rigplane.web.protocol import AUDIO_CODEC_OPUS
 
         frame = await self._start_rx_and_capture(AudioCodec.OPUS_1CH, 48000)
         assert frame[1] == AUDIO_CODEC_OPUS, (
@@ -1376,14 +1376,14 @@ class TestAudioHandlerCodecDetection:
     async def test_sample_rate_encoded_correctly(self) -> None:
         import struct
 
-        from icom_lan.types import AudioCodec
+        from rigplane.types import AudioCodec
 
         frame = await self._start_rx_and_capture(AudioCodec.PCM_1CH_16BIT, 48000)
         sr_field = struct.unpack_from("<H", frame, 4)[0]
         assert sr_field == 480, f"Expected 480 (48000//100) but got {sr_field}"
 
     async def test_unknown_codec_falls_back_to_pcm16(self) -> None:
-        from icom_lan.web.protocol import AUDIO_CODEC_PCM16
+        from rigplane.web.protocol import AUDIO_CODEC_PCM16
 
         # Pass a non-AudioCodec value (e.g. MagicMock) — must default to PCM16
         frame = await self._start_rx_and_capture(MagicMock(), 48000)
@@ -1402,10 +1402,10 @@ class TestBroadcasterFrameMsInvariant:
     async def _capture_with_payload(
         self, audio_codec: object, sample_rate: int, payload_size: int, channels: int
     ) -> bytes:
-        from icom_lan.audio_bus import AudioBus
-        from icom_lan.radio_protocol import AudioCapable
-        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.audio_bus import AudioBus
+        from rigplane.radio_protocol import AudioCapable
+        from rigplane.web.handlers import AudioBroadcaster, AudioHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         mock_radio = MagicMock(spec=AudioCapable)
@@ -1438,14 +1438,14 @@ class TestBroadcasterFrameMsInvariant:
         """Return (sr_hz, channels, frame_ms, payload_len)."""
         import struct
 
-        from icom_lan.web.protocol import AUDIO_HEADER_SIZE
+        from rigplane.web.protocol import AUDIO_HEADER_SIZE
 
         _, _, _seq, sr100, ch, frame_ms = struct.unpack_from("<BBHHBB", frame, 0)
         return sr100 * 100, ch, frame_ms, len(frame) - AUDIO_HEADER_SIZE
 
     async def test_frame_ms_matches_1364_byte_ic7610_packet(self) -> None:
         """IC-7610 real-world: 1364 B @ 48 kHz mono PCM16 → 14 ms (was 20)."""
-        from icom_lan.types import AudioCodec
+        from rigplane.types import AudioCodec
 
         frame = await self._capture_with_payload(
             AudioCodec.PCM_1CH_16BIT, 48000, 1364, channels=1
@@ -1460,7 +1460,7 @@ class TestBroadcasterFrameMsInvariant:
 
     async def test_frame_ms_matches_1920_byte_exact_20ms_packet(self) -> None:
         """Exactly 20 ms @ 48 kHz mono PCM16 = 1920 B → frame_ms == 20."""
-        from icom_lan.types import AudioCodec
+        from rigplane.types import AudioCodec
 
         frame = await self._capture_with_payload(
             AudioCodec.PCM_1CH_16BIT, 48000, 1920, channels=1
@@ -1470,7 +1470,7 @@ class TestBroadcasterFrameMsInvariant:
 
     async def test_frame_ms_matches_3840_byte_stereo_20ms_packet(self) -> None:
         """Stereo: 3840 B @ 48 kHz × 2ch × 2bytes = 20 ms."""
-        from icom_lan.types import AudioCodec
+        from rigplane.types import AudioCodec
 
         frame = await self._capture_with_payload(
             AudioCodec.PCM_2CH_16BIT, 48000, 3840, channels=2
@@ -1489,10 +1489,10 @@ class TestBroadcasterCodecInvalidation:
     def _setup(audio_codec: object, sample_rate: int) -> tuple[Any, Any, Any]:
         from types import SimpleNamespace
 
-        from icom_lan.audio_bus import AudioBus
-        from icom_lan.radio_protocol import AudioCapable
-        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.audio_bus import AudioBus
+        from rigplane.radio_protocol import AudioCapable
+        from rigplane.web.handlers import AudioBroadcaster, AudioHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         mock_ws.send_text = AsyncMock()
@@ -1513,7 +1513,7 @@ class TestBroadcasterCodecInvalidation:
         return handler, broadcaster, mock_radio
 
     async def test_invalidate_flag_triggers_refresh_on_next_packet(self) -> None:
-        from icom_lan.types import AudioCodec
+        from rigplane.types import AudioCodec
 
         handler, broadcaster, mock_radio = self._setup(AudioCodec.PCM_1CH_16BIT, 48000)
         await handler._start_rx()
@@ -1538,7 +1538,7 @@ class TestBroadcasterCodecInvalidation:
         assert broadcaster._codec_stale is False
 
     async def test_handler_invalidates_on_audio_config(self) -> None:
-        from icom_lan.types import AudioCodec
+        from rigplane.types import AudioCodec
 
         handler, broadcaster, _ = self._setup(AudioCodec.PCM_1CH_16BIT, 48000)
         assert broadcaster._codec_stale is False
@@ -1548,7 +1548,7 @@ class TestBroadcasterCodecInvalidation:
         assert broadcaster._codec_stale is True
 
     async def test_static_codec_refreshes_only_on_start(self) -> None:
-        from icom_lan.types import AudioCodec
+        from rigplane.types import AudioCodec
 
         handler, broadcaster, mock_radio = self._setup(AudioCodec.PCM_1CH_16BIT, 48000)
         with patch.object(
@@ -1574,9 +1574,9 @@ class TestDspOpusGateWarning:
     """
 
     def _pcm_broadcaster(self):
-        from icom_lan.types import AudioCodec
-        from icom_lan.web.handlers import AudioBroadcaster
-        from icom_lan.web.protocol import AUDIO_CODEC_PCM16
+        from rigplane.types import AudioCodec
+        from rigplane.web.handlers import AudioBroadcaster
+        from rigplane.web.protocol import AUDIO_CODEC_PCM16
 
         b = AudioBroadcaster(None)
         b._radio_codec = AudioCodec.PCM_1CH_16BIT
@@ -1584,9 +1584,9 @@ class TestDspOpusGateWarning:
         return b
 
     def _opus_broadcaster(self):
-        from icom_lan.types import AudioCodec
-        from icom_lan.web.handlers import AudioBroadcaster
-        from icom_lan.web.protocol import AUDIO_CODEC_OPUS
+        from rigplane.types import AudioCodec
+        from rigplane.web.handlers import AudioBroadcaster
+        from rigplane.web.protocol import AUDIO_CODEC_OPUS
 
         b = AudioBroadcaster(None)
         b._radio_codec = AudioCodec.OPUS_1CH
@@ -1597,7 +1597,7 @@ class TestDspOpusGateWarning:
         import logging
 
         b = self._pcm_broadcaster()
-        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+        with caplog.at_level(logging.WARNING, logger="rigplane.web.handlers.audio"):
             b.set_dsp_pipeline(MagicMock())
         assert not any("native codec is Opus" in r.message for r in caplog.records)
         assert b._dsp_opus_warned is False
@@ -1606,7 +1606,7 @@ class TestDspOpusGateWarning:
         import logging
 
         b = self._opus_broadcaster()
-        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+        with caplog.at_level(logging.WARNING, logger="rigplane.web.handlers.audio"):
             b.set_dsp_pipeline(MagicMock())
         matching = [r for r in caplog.records if "native codec is Opus" in r.message]
         assert len(matching) == 1, (
@@ -1618,7 +1618,7 @@ class TestDspOpusGateWarning:
         import logging
 
         b = self._opus_broadcaster()
-        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+        with caplog.at_level(logging.WARNING, logger="rigplane.web.handlers.audio"):
             b.set_dsp_pipeline(MagicMock())
             b.set_dsp_pipeline(MagicMock())
             b._maybe_warn_dsp_opus_gate()
@@ -1632,8 +1632,8 @@ class TestDspOpusGateWarning:
         the order was unfavourable.
         """
         import logging
-        from icom_lan.types import AudioCodec
-        from icom_lan.web.protocol import AUDIO_CODEC_OPUS
+        from rigplane.types import AudioCodec
+        from rigplane.web.protocol import AUDIO_CODEC_OPUS
 
         b = self._pcm_broadcaster()
         b.set_dsp_pipeline(MagicMock())
@@ -1643,7 +1643,7 @@ class TestDspOpusGateWarning:
         # Simulate a codec flip to Opus (e.g. config change mid-stream).
         b._radio_codec = AudioCodec.OPUS_1CH
         b._web_codec = AUDIO_CODEC_OPUS
-        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+        with caplog.at_level(logging.WARNING, logger="rigplane.web.handlers.audio"):
             b._maybe_warn_dsp_opus_gate()
         matching = [r for r in caplog.records if "native codec is Opus" in r.message]
         assert len(matching) == 1
@@ -1653,7 +1653,7 @@ class TestDspOpusGateWarning:
         import logging
 
         b = self._opus_broadcaster()
-        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+        with caplog.at_level(logging.WARNING, logger="rigplane.web.handlers.audio"):
             b.set_dsp_pipeline(None)
             b._maybe_warn_dsp_opus_gate()
         assert b._dsp_opus_warned is False
@@ -1670,9 +1670,9 @@ class TestAudioHandlerTxTranscoderRate:
 
     @staticmethod
     def _make_handler(sample_rate: int | None) -> Any:
-        from icom_lan.radio_protocol import AudioCapable
-        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.radio_protocol import AudioCapable
+        from rigplane.web.handlers import AudioBroadcaster, AudioHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         mock_radio = MagicMock(spec=AudioCapable)
@@ -1711,7 +1711,7 @@ class TestAudioHandlerTxTranscoderRate:
         handler = self._make_handler(24000)
         captured: list[int] = []
         with patch(
-            "icom_lan.web.handlers.audio.create_pcm_opus_transcoder",
+            "rigplane.web.handlers.audio.create_pcm_opus_transcoder",
             new=self._fake_transcoder_factory(captured),
         ):
             await self._start_tx(handler)
@@ -1723,7 +1723,7 @@ class TestAudioHandlerTxTranscoderRate:
         handler = self._make_handler(48000)
         captured: list[int] = []
         with patch(
-            "icom_lan.web.handlers.audio.create_pcm_opus_transcoder",
+            "rigplane.web.handlers.audio.create_pcm_opus_transcoder",
             new=self._fake_transcoder_factory(captured),
         ):
             await self._start_tx(handler)
@@ -1735,7 +1735,7 @@ class TestAudioHandlerTxTranscoderRate:
         handler = self._make_handler(None)
         captured: list[int] = []
         with patch(
-            "icom_lan.web.handlers.audio.create_pcm_opus_transcoder",
+            "rigplane.web.handlers.audio.create_pcm_opus_transcoder",
             new=self._fake_transcoder_factory(captured),
         ):
             await self._start_tx(handler)
@@ -1766,9 +1766,9 @@ class TestAudioConfigRouting:
     ) -> Any:
         from types import SimpleNamespace
 
-        from icom_lan.radio_protocol import AudioCapable
-        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.radio_protocol import AudioCapable
+        from rigplane.web.handlers import AudioBroadcaster, AudioHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         mock_ws.send_text = AsyncMock()
@@ -1902,8 +1902,8 @@ class TestBroadcasterPhonesMixInit:
     ) -> Any:
         from types import SimpleNamespace
 
-        from icom_lan.radio_protocol import AudioCapable
-        from icom_lan.web.handlers import AudioBroadcaster
+        from rigplane.radio_protocol import AudioCapable
+        from rigplane.web.handlers import AudioBroadcaster
 
         mock_radio = MagicMock(spec=AudioCapable)
         caps = {"audio"}
@@ -2061,7 +2061,7 @@ class TestScopeLifecycle:
         await asyncio.sleep(0.05)  # let async task complete
 
         # DisableScope goes through command queue, not direct radio call
-        from icom_lan.web.radio_poller import DisableScope
+        from rigplane.web.radio_poller import DisableScope
 
         cmds = server._command_queue.drain()
         assert any(isinstance(c, DisableScope) for c in cmds), (
@@ -2133,7 +2133,7 @@ class TestCacheControl:
         status, _, body = await _http_get(host, port, "/api/v1/info")
         assert status == 200
         data = json.loads(body)
-        assert data["server"] == "icom-lan"
+        assert data["server"] == "rigplane"
 
 
 # ---------------------------------------------------------------------------
@@ -2146,8 +2146,8 @@ class TestScopeHandlerPushFrame:
 
     def test_push_frame_does_not_raise(self) -> None:
         """push_frame() was calling self._on_scope_frame which doesn't exist."""
-        from icom_lan.web.handlers import ScopeHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.web.handlers import ScopeHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         handler = ScopeHandler(mock_ws, None)
@@ -2159,8 +2159,8 @@ class TestScopeHandlerPushFrame:
 
     def test_push_frame_not_running_is_noop(self) -> None:
         """push_frame() when not running must be a no-op."""
-        from icom_lan.web.handlers import ScopeHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.web.handlers import ScopeHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         handler = ScopeHandler(mock_ws, None)
@@ -2171,8 +2171,8 @@ class TestScopeHandlerPushFrame:
         assert handler._frame_queue.qsize() == 0
 
     def test_push_frame_increments_sequence(self) -> None:
-        from icom_lan.web.handlers import ScopeHandler
-        from icom_lan.web.websocket import WebSocketConnection
+        from rigplane.web.handlers import ScopeHandler
+        from rigplane.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         handler = ScopeHandler(mock_ws, None)
@@ -2193,7 +2193,7 @@ class TestConfigurableKeepalive:
     """WebConfig.keepalive_interval is honoured by the server (#45)."""
 
     def test_webconfig_has_keepalive_interval(self) -> None:
-        from icom_lan.web.websocket import WS_KEEPALIVE_INTERVAL
+        from rigplane.web.websocket import WS_KEEPALIVE_INTERVAL
 
         cfg = WebConfig()
         assert hasattr(cfg, "keepalive_interval")
@@ -2251,7 +2251,7 @@ class TestScopeEnableAtomic:
         await asyncio.gather(*[server.ensure_scope_enabled(h) for h in handlers])
 
         # EnableScope goes through command queue
-        from icom_lan.web.radio_poller import EnableScope
+        from rigplane.web.radio_poller import EnableScope
 
         cmds = server._command_queue.drain()
         enable_cmds = [c for c in cmds if isinstance(c, EnableScope)]
@@ -2308,7 +2308,7 @@ class TestScopeEnableAtomic:
         await server.ensure_scope_enabled(h3)
 
         # EnableScope goes through command queue
-        from icom_lan.web.radio_poller import EnableScope
+        from rigplane.web.radio_poller import EnableScope
 
         cmds = server._command_queue.drain()
         enable_cmds = [c for c in cmds if isinstance(c, EnableScope)]
@@ -2339,7 +2339,7 @@ class TestScopeReconnect:
         server.unregister_scope_handler(h)
         await asyncio.sleep(0.05)
 
-        from icom_lan.web.radio_poller import DisableScope
+        from rigplane.web.radio_poller import DisableScope
 
         cmds = server._command_queue.drain()
         assert any(isinstance(c, DisableScope) for c in cmds)
@@ -2355,7 +2355,7 @@ class TestScopeReconnect:
         server = WebServer(radio)
         server._scope_disable_grace = 0
 
-        from icom_lan.web.radio_poller import EnableScope
+        from rigplane.web.radio_poller import EnableScope
 
         # First connect
         h1 = MagicMock()
@@ -2438,7 +2438,7 @@ class TestRadioPoller:
     """RadioPoller polls all params and executes commands via single task (#72)."""
 
     def _make_radio(self) -> MagicMock:
-        from icom_lan.profiles import resolve_radio_profile
+        from rigplane.profiles import resolve_radio_profile
 
         profile = resolve_radio_profile(model="IC-7610")
         radio = MagicMock()
@@ -2471,7 +2471,7 @@ class TestRadioPoller:
 
     async def test_poller_starts_and_stops(self) -> None:
         """RadioPoller start/stop lifecycle."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller
 
         radio = self._make_radio()
         cache = StateCache()
@@ -2487,7 +2487,7 @@ class TestRadioPoller:
 
     async def test_poller_polls_freq(self) -> None:
         """RadioPoller updates state cache with polled frequency."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller
 
         radio = self._make_radio()
         cache = StateCache()
@@ -2510,7 +2510,7 @@ class TestRadioPoller:
 
     async def test_command_queue_dedup(self) -> None:
         """Last-write-wins dedup for freq commands; PTT never deduped."""
-        from icom_lan.web.radio_poller import CommandQueue, PttOff, PttOn, SetFreq
+        from rigplane.web.radio_poller import CommandQueue, PttOff, PttOn, SetFreq
 
         queue = CommandQueue()
         queue.put(SetFreq(14000000))
@@ -2528,7 +2528,7 @@ class TestRadioPoller:
 
     async def test_poller_executes_commands(self) -> None:
         """Commands queued are executed by the poller."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetFreq
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetFreq
 
         radio = self._make_radio()
         cache = StateCache()
@@ -2544,7 +2544,7 @@ class TestRadioPoller:
 
     async def test_poller_broadcasts_meter_readings(self) -> None:
         """RadioPoller polls meters via send_civ."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller
 
         radio = self._make_radio()
         cache = StateCache()
@@ -2566,7 +2566,7 @@ class TestRadioPoller:
 
     async def test_poller_idempotent_start(self) -> None:
         """Calling start() twice does not create duplicate tasks."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller
 
         radio = self._make_radio()
         cache = StateCache()
@@ -2583,7 +2583,7 @@ class TestRadioPoller:
 
     async def test_set_key_speed_updates_radio_and_state(self) -> None:
         """SetKeySpeed(speed) calls radio.set_key_speed and updates RadioState.key_speed."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetKeySpeed
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetKeySpeed
 
         radio = self._make_radio()
         radio.set_key_speed = AsyncMock()
@@ -2602,7 +2602,7 @@ class TestRadioPoller:
 
     async def test_set_break_in_updates_radio_and_state(self) -> None:
         """SetBreakIn(mode) calls radio.set_break_in and updates RadioState.break_in."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetBreakIn
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetBreakIn
 
         radio = self._make_radio()
         radio.set_break_in = AsyncMock()
@@ -2629,7 +2629,7 @@ class TestSwitchScopeReceiver:
     """SwitchScopeReceiver command sends scope_main_sub CI-V frame."""
 
     def _make_radio(self) -> MagicMock:
-        from icom_lan.profiles import resolve_radio_profile
+        from rigplane.profiles import resolve_radio_profile
 
         profile = resolve_radio_profile(model="IC-7610")
         radio = MagicMock()
@@ -2673,7 +2673,7 @@ class TestSwitchScopeReceiver:
 
     async def test_switch_scope_receiver_main_sends_civ(self) -> None:
         """SwitchScopeReceiver(0) sends 0x27/0x12/0x00 CI-V command."""
-        from icom_lan.web.radio_poller import (
+        from rigplane.web.radio_poller import (
             CommandQueue,
             RadioPoller,
             SwitchScopeReceiver,
@@ -2696,7 +2696,7 @@ class TestSwitchScopeReceiver:
 
     async def test_switch_scope_receiver_sub_sends_civ(self) -> None:
         """SwitchScopeReceiver(1) sends 0x27/0x12/0x01 CI-V command."""
-        from icom_lan.web.radio_poller import (
+        from rigplane.web.radio_poller import (
             CommandQueue,
             RadioPoller,
             SwitchScopeReceiver,
@@ -2719,7 +2719,7 @@ class TestSwitchScopeReceiver:
 
     async def test_switch_scope_receiver_rejects_out_of_range_receiver(self) -> None:
         """Out-of-range receiver value must not be masked into a valid target."""
-        from icom_lan.web.radio_poller import (
+        from rigplane.web.radio_poller import (
             CommandQueue,
             RadioPoller,
             SwitchScopeReceiver,
@@ -2748,7 +2748,7 @@ class TestSwitchScopeReceiver:
         mock emits as a side-effect (back-compat with downstream
         test scaffolding that watches ``send_civ``).
         """
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SelectVfo
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SelectVfo
 
         radio = self._make_radio()
         queue = CommandQueue()
@@ -2790,7 +2790,7 @@ class TestSwitchScopeReceiver:
 
     async def test_select_vfo_main_noop_when_already_main(self) -> None:
         """SelectVfo("MAIN") emits no CI-V when already on MAIN."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SelectVfo
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SelectVfo
 
         radio = self._make_radio()
         queue = CommandQueue()
@@ -2813,7 +2813,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_split_updates_radio_and_state(self) -> None:
         """SetSplit(on) calls radio.set_split and updates RadioState.split."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetSplit
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetSplit
 
         radio = self._make_radio()
         radio.set_split = AsyncMock()
@@ -2832,7 +2832,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_rit_status_updates_radio_and_state(self) -> None:
         """SetRitStatus(on) calls radio.set_rit_status and updates RadioState.rit_on."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetRitStatus
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetRitStatus
 
         radio = self._make_radio()
         radio.set_rit_status = AsyncMock()
@@ -2851,7 +2851,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_rit_tx_status_updates_radio_and_state(self) -> None:
         """SetRitTxStatus(on) calls radio.set_rit_tx_status and updates RadioState.rit_tx."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetRitTxStatus
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetRitTxStatus
 
         radio = self._make_radio()
         radio.set_rit_tx_status = AsyncMock()
@@ -2870,7 +2870,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_rit_frequency_updates_radio_and_state(self) -> None:
         """SetRitFrequency(freq) calls radio.set_rit_frequency and updates RadioState.rit_freq."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetRitFrequency
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetRitFrequency
 
         radio = self._make_radio()
         radio.set_rit_frequency = AsyncMock()
@@ -2889,7 +2889,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_pbt_inner_updates_radio_and_state(self) -> None:
         """SetPbtInner(level) calls radio.set_pbt_inner and updates receiver state."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetPbtInner
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetPbtInner
 
         radio = self._make_radio()
         radio.set_pbt_inner = AsyncMock()
@@ -2908,7 +2908,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_pbt_outer_updates_radio_and_state(self) -> None:
         """SetPbtOuter(level) calls radio.set_pbt_outer and updates receiver state."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetPbtOuter
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetPbtOuter
 
         radio = self._make_radio()
         radio.set_pbt_outer = AsyncMock()
@@ -2927,7 +2927,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_nr_level_updates_radio_and_state(self) -> None:
         """SetNRLevel(level) calls radio.set_nr_level and updates receiver state."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetNRLevel
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetNRLevel
 
         radio = self._make_radio()
         radio.set_nr_level = AsyncMock()
@@ -2946,7 +2946,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_nb_level_updates_radio_and_state(self) -> None:
         """SetNBLevel(level) calls radio.set_nb_level and updates receiver state."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetNBLevel
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetNBLevel
 
         radio = self._make_radio()
         radio.set_nb_level = AsyncMock()
@@ -2965,7 +2965,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_auto_notch_updates_radio_and_state(self) -> None:
         """SetAutoNotch(on) calls radio.set_auto_notch and updates receiver state."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetAutoNotch
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetAutoNotch
 
         radio = self._make_radio()
         radio.set_auto_notch = AsyncMock()
@@ -2984,7 +2984,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_manual_notch_updates_radio_and_state(self) -> None:
         """SetManualNotch(on) calls radio.set_manual_notch and updates receiver state."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetManualNotch
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetManualNotch
 
         radio = self._make_radio()
         radio.set_manual_notch = AsyncMock()
@@ -3003,7 +3003,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_notch_filter_updates_radio_and_state(self) -> None:
         """SetNotchFilter(level) calls radio.set_notch_filter and updates RadioState.notch_filter."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetNotchFilter
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetNotchFilter
 
         radio = self._make_radio()
         radio.set_notch_filter = AsyncMock()
@@ -3022,7 +3022,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_agc_time_constant_updates_radio_and_state(self) -> None:
         """SetAgcTimeConstant(value) calls radio.set_agc_time_constant and updates receiver state."""
-        from icom_lan.web.radio_poller import (
+        from rigplane.web.radio_poller import (
             CommandQueue,
             RadioPoller,
             SetAgcTimeConstant,
@@ -3045,7 +3045,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_cw_pitch_updates_radio_and_state(self) -> None:
         """SetCwPitch(value) calls radio.set_cw_pitch and updates RadioState.cw_pitch."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetCwPitch
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetCwPitch
 
         radio = self._make_radio()
         radio.set_cw_pitch = AsyncMock()
@@ -3064,7 +3064,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_mic_gain_updates_radio_and_state(self) -> None:
         """SetMicGain(level) calls radio.set_mic_gain and updates RadioState.mic_gain."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetMicGain
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetMicGain
 
         radio = self._make_radio()
         radio.set_mic_gain = AsyncMock()
@@ -3083,7 +3083,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_vox_updates_radio_and_state(self) -> None:
         """SetVox(on) calls radio.set_vox and updates RadioState.vox_on."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetVox
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetVox
 
         radio = self._make_radio()
         radio.set_vox = AsyncMock()
@@ -3102,7 +3102,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_compressor_level_updates_radio_and_state(self) -> None:
         """SetCompressorLevel(level) calls radio.set_compressor_level and updates RadioState.compressor_level."""
-        from icom_lan.web.radio_poller import (
+        from rigplane.web.radio_poller import (
             CommandQueue,
             RadioPoller,
             SetCompressorLevel,
@@ -3125,7 +3125,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_monitor_updates_radio_and_state(self) -> None:
         """SetMonitor(on) calls radio.set_monitor and updates RadioState.monitor_on."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetMonitor
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetMonitor
 
         radio = self._make_radio()
         radio.set_monitor = AsyncMock()
@@ -3144,7 +3144,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_monitor_gain_updates_radio_and_state(self) -> None:
         """SetMonitorGain(level) calls radio.set_monitor_gain and updates RadioState.monitor_gain."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetMonitorGain
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetMonitorGain
 
         radio = self._make_radio()
         radio.set_monitor_gain = AsyncMock()
@@ -3163,7 +3163,7 @@ class TestSwitchScopeReceiver:
 
     async def test_set_dial_lock_updates_radio_and_state(self) -> None:
         """SetDialLock(on) calls radio.set_dial_lock and updates RadioState.dial_lock."""
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetDialLock
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller, SetDialLock
 
         radio = self._make_radio()
         radio.set_dial_lock = AsyncMock()
@@ -3399,7 +3399,7 @@ class TestGetProfileRouting:
 
     def test_resolves_ftx1_from_radio_model(self):
         """_get_profile() uses radio.model when radio has no .profile property."""
-        from icom_lan.profiles import RadioProfile
+        from rigplane.profiles import RadioProfile
 
         radio = SimpleNamespace(
             model="FTX-1", capabilities={"audio", "scope"}
@@ -3414,7 +3414,7 @@ class TestGetProfileRouting:
 
     def test_icom_radio_profile_property_takes_precedence(self):
         """_get_profile() uses radio.profile directly when present (regression)."""
-        from icom_lan.profiles import RadioProfile, resolve_radio_profile
+        from rigplane.profiles import RadioProfile, resolve_radio_profile
 
         ic7610_profile = resolve_radio_profile(model="IC-7610")
         # Simulate IcomRadio: has .profile (RadioProfile) but .model would differ
@@ -3429,7 +3429,7 @@ class TestGetProfileRouting:
 
     def test_config_fallback_when_no_radio(self):
         """_get_profile() falls back to config radio_model when radio is None."""
-        from icom_lan.profiles import RadioProfile
+        from rigplane.profiles import RadioProfile
 
         srv = self._make_server(radio=None, radio_model="IC-7610")
         profile = srv._get_profile()

@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from icom_lan.web.server import WebServer
+from rigplane.web.server import WebServer
 
 
 class _FakeWriter:
@@ -42,8 +42,8 @@ def _parse_json_body(writer: _FakeWriter) -> dict:
 
 def _make_radio(model: str = "IC-7610", caps: set[str] | None = None):
     """Build a fake radio with a real RadioProfile resolved by model name."""
-    from icom_lan.profiles import resolve_radio_profile
-    from icom_lan.radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
+    from rigplane.profiles import resolve_radio_profile
+    from rigplane.radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
 
     profile = resolve_radio_profile(model=model)
 
@@ -245,7 +245,7 @@ class TestCommandGuards:
 
     def test_dual_watch_guard_single_receiver(self):
         """set_dual_watch on IC-7300 (no dual_rx) should raise ValueError."""
-        from icom_lan.web.handlers import ControlHandler
+        from rigplane.web.handlers import ControlHandler
 
         radio = _make_radio("IC-7300")
         handler = ControlHandler.__new__(ControlHandler)
@@ -256,7 +256,7 @@ class TestCommandGuards:
 
     def test_digisel_guard_ic7300(self):
         """set_digisel on IC-7300 (no digisel) should raise ValueError."""
-        from icom_lan.web.handlers import ControlHandler
+        from rigplane.web.handlers import ControlHandler
 
         radio = _make_radio("IC-7300")
         handler = ControlHandler.__new__(ControlHandler)
@@ -267,7 +267,7 @@ class TestCommandGuards:
 
     def test_ip_plus_allowed_ic7300(self):
         """IC-7300 profile includes ip_plus (wfview CI-V 0x16 0x65)."""
-        from icom_lan.web.handlers import ControlHandler
+        from rigplane.web.handlers import ControlHandler
 
         radio = _make_radio("IC-7300")
         handler = ControlHandler.__new__(ControlHandler)
@@ -277,7 +277,7 @@ class TestCommandGuards:
 
     def test_capability_passes_when_supported(self):
         """_ensure_capability does NOT raise for supported capabilities."""
-        from icom_lan.web.handlers import ControlHandler
+        from rigplane.web.handlers import ControlHandler
 
         radio = _make_radio("IC-7610")
         handler = ControlHandler.__new__(ControlHandler)

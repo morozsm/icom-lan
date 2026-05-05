@@ -1,4 +1,4 @@
-"""Tests for ``icom_lan.diagnostics.bundle.build_bundle``."""
+"""Tests for ``rigplane.diagnostics.bundle.build_bundle``."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from typing import Any
 
 import pytest
 
-from icom_lan.diagnostics import (
+from rigplane.diagnostics import (
     BundleContext,
     build_bundle,
     register,
 )
-from icom_lan.diagnostics import _discovery
+from rigplane.diagnostics import _discovery
 
 
 @pytest.fixture(autouse=True)

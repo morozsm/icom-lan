@@ -35,9 +35,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # All tests in this module use MockIcomRadio and require no real hardware.
 pytestmark = pytest.mark.mock_integration
 
-from icom_lan.commands import RECEIVER_MAIN, RECEIVER_SUB  # noqa: E402
-from icom_lan.radio import IcomRadio  # noqa: E402, TID251
-from icom_lan.types import AgcMode, AudioPeakFilter, BreakInMode  # noqa: E402
+from rigplane.commands import RECEIVER_MAIN, RECEIVER_SUB  # noqa: E402
+from rigplane.radio import IcomRadio  # noqa: E402, TID251
+from rigplane.types import AgcMode, AudioPeakFilter, BreakInMode  # noqa: E402
 from _perf_helpers import fast_connect  # noqa: E402
 from mock_server import MockIcomRadio  # noqa: E402
 
@@ -889,7 +889,7 @@ class TestNakHandling:
         ToggleMockRadio.get_agc works, but a command aimed at an unhandled
         sub (0xFF) on a plain MockIcomRadio triggers NAK → radio raises.
         """
-        from icom_lan.exceptions import TimeoutError as IcomTimeoutError
+        from rigplane.exceptions import TimeoutError as IcomTimeoutError
 
         # Use a plain MockIcomRadio (no toggle support) to get NAK for 0x16 cmds.
         nak_mock = MockIcomRadio()

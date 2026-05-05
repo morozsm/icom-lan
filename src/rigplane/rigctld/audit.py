@@ -1,7 +1,7 @@
 """Structured per-command audit logging for the rigctld server.
 
 Emits one JSON line per executed command to a dedicated audit logger
-(``icom_lan.rigctld.audit``), kept separate from the main server logger
+(``rigplane.rigctld.audit``), kept separate from the main server logger
 so operators can route it to a file independently.
 """
 
@@ -18,7 +18,7 @@ __all__ = [
     "log_command",
 ]
 
-AUDIT_LOGGER_NAME = "icom_lan.rigctld.audit"
+AUDIT_LOGGER_NAME = "rigplane.rigctld.audit"
 
 
 @dataclass(slots=True)

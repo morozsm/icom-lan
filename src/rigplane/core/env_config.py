@@ -1,4 +1,4 @@
-"""Environment variable configuration helpers for icom-lan.
+"""Environment variable configuration helpers for rigplane.
 
 Reads tunable parameters from the process environment so users on
 high-latency or constrained links (VPN, cloud VMs) can adjust audio

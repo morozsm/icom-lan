@@ -1,4 +1,4 @@
-"""WebSocket + HTTP server for the icom-lan Web UI.
+"""WebSocket + HTTP server for the rigplane Web UI.
 
 Implements:
 - Minimal asyncio HTTP server (no external deps)
@@ -309,7 +309,7 @@ class ConnectionManager:
 
 
 class WebServer:
-    """Asyncio HTTP + WebSocket server for the icom-lan Web UI.
+    """Asyncio HTTP + WebSocket server for the rigplane Web UI.
 
     Args:
         radio: Connected Radio protocol instance (optional; needed for live data).
@@ -1241,7 +1241,7 @@ class WebServer:
         body = json.dumps(
             {
                 # Backward-compatible legacy fields
-                "server": "icom-lan",
+                "server": "rigplane",
                 "version": __version__,
                 "proto": 1,
                 "radio": model,
@@ -1916,7 +1916,7 @@ class WebServer:
                 {
                     "status": "error",
                     "code": "webrtc_unavailable",
-                    "message": "WebRTC backend unavailable; install icom-lan[webrtc].",
+                    "message": "WebRTC backend unavailable; install rigplane[webrtc].",
                 },
                 separators=(",", ":"),
             ).encode()
@@ -2040,8 +2040,8 @@ class WebServer:
         """
         import platformdirs
 
-        config_dir = pathlib.Path(platformdirs.user_config_path("icom-lan"))
-        log_dir = pathlib.Path(platformdirs.user_cache_path("icom-lan")) / "logs"
+        config_dir = pathlib.Path(platformdirs.user_config_path("rigplane"))
+        log_dir = pathlib.Path(platformdirs.user_cache_path("rigplane")) / "logs"
         return config_dir, log_dir
 
     async def _handle_diagnose_preview(
@@ -2086,7 +2086,7 @@ class WebServer:
             _ClientError,
             check_origin_or_loopback,
         )
-        from icom_lan.diagnostics import (
+        from rigplane.diagnostics import (
             BundleTooLarge,
             DiagnosticUploadError,
             ForbiddenContent,

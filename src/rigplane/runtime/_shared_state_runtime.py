@@ -20,10 +20,10 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Final
 
-from icom_lan.core._state_cache import CacheField, StateCache
+from rigplane.core._state_cache import CacheField, StateCache
 
 if TYPE_CHECKING:
-    from icom_lan.radio_protocol import Radio
+    from rigplane.radio_protocol import Radio
 
 __all__ = [
     "DEFAULT_STATE_CACHE_TTL",
@@ -163,7 +163,7 @@ async def poll_powerstat(
     Returns:
         True if powered on, False if powered off, or ``None`` if the radio call failed.
     """
-    from icom_lan.capabilities import CAP_POWER_CONTROL
+    from rigplane.capabilities import CAP_POWER_CONTROL
 
     if is_cache_fresh(cache, "powerstat", ttl):
         return cache.powerstat

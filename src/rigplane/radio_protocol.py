@@ -1,27 +1,27 @@
 """Re-export shim for backwards compatibility.
 
-Canonical location: icom_lan.core.radio_protocol
+Canonical location: rigplane.core.radio_protocol
 Do not add new symbols here — add them at the canonical location.
 
 This file uses the sys.modules-alias pattern: importing this shim
-makes ``icom_lan.radio_protocol`` literally the same module object as
-``icom_lan.core.radio_protocol``. This preserves attribute walks (incl.
+makes ``rigplane.radio_protocol`` literally the same module object as
+``rigplane.core.radio_protocol``. This preserves attribute walks (incl.
 stdlib names not in ``__all__``) and monkeypatch targets such as
-``unittest.mock.patch('icom_lan.radio_protocol.…', …)``.
+``unittest.mock.patch('rigplane.radio_protocol.…', …)``.
 
 The two import lines below are BOTH load-bearing — do not remove
 either:
 
-* ``from icom_lan.core.radio_protocol import *`` — static-analysis
+* ``from rigplane.core.radio_protocol import *`` — static-analysis
   adapter. Mypy and ruff resolve re-exported names through
   star-imports; they do not model the ``sys.modules`` mutation.
   Without this line, every consumer of
-  ``from icom_lan.radio_protocol import X`` triggers ``attr-defined``
+  ``from rigplane.radio_protocol import X`` triggers ``attr-defined``
   errors. At runtime this populates the temporary module object,
   which is immediately superseded by the swap below.
 
 * ``sys.modules[__name__] = _canonical`` — the runtime invariant.
-  Makes ``icom_lan.radio_protocol`` and ``icom_lan.core.radio_protocol``
+  Makes ``rigplane.radio_protocol`` and ``rigplane.core.radio_protocol``
   the same module object so attribute lookups (including stdlib
   names imported by the canonical module) flow to the canonical
   module.
@@ -29,7 +29,7 @@ either:
 
 import sys
 
-from icom_lan.core.radio_protocol import *  # noqa: F401, F403
-import icom_lan.core.radio_protocol as _canonical
+from rigplane.core.radio_protocol import *  # noqa: F401, F403
+import rigplane.core.radio_protocol as _canonical
 
 sys.modules[__name__] = _canonical

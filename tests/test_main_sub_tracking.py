@@ -1,9 +1,9 @@
 """Tests for Main/Sub Tracking command (CI-V 0x16 0x5E)."""
 
-import icom_lan.commands as raw_commands
+import rigplane.commands as raw_commands
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     get_main_sub_tracking,
     set_main_sub_tracking,
     parse_civ_frame,
@@ -70,14 +70,14 @@ class TestMainSubTrackingState:
     """Test that RadioState and _CivRxMixin handle 0x16 0x5E frames."""
 
     def test_radio_state_has_field(self) -> None:
-        from icom_lan.radio_state import RadioState
+        from rigplane.radio_state import RadioState
 
         rs = RadioState()
         assert hasattr(rs, "main_sub_tracking")
         assert rs.main_sub_tracking is False
 
     def test_radio_state_to_dict_includes_field(self) -> None:
-        from icom_lan.radio_state import RadioState
+        from rigplane.radio_state import RadioState
 
         rs = RadioState()
         d = rs.to_dict()
@@ -85,7 +85,7 @@ class TestMainSubTrackingState:
         assert d["main_sub_tracking"] is False
 
     def test_radio_state_field_set(self) -> None:
-        from icom_lan.radio_state import RadioState
+        from rigplane.radio_state import RadioState
 
         rs = RadioState()
         rs.main_sub_tracking = True

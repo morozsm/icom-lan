@@ -184,7 +184,7 @@ async def _try_baud(
 
 def _default_open_serial() -> _OpenSerial:
     """Return the real serial_asyncio opener, or raise ImportError with hint."""
-    from icom_lan._optional_deps import _require_pyserial_asyncio
+    from rigplane._optional_deps import _require_pyserial_asyncio
 
     _require_pyserial_asyncio()
     import serial_asyncio  # type: ignore[import-untyped]
@@ -511,7 +511,7 @@ async def discover_serial_radios(
     Returns:
         List of :class:`RadioDiscoveryResult` for all detected radios.
     """
-    from icom_lan.radios import CIV_PROFILE_MAP, identify_radio
+    from rigplane.radios import CIV_PROFILE_MAP, identify_radio
 
     candidates = enumerate_serial_ports()
     results: list[RadioDiscoveryResult] = []

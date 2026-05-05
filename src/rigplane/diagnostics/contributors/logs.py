@@ -7,23 +7,23 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from icom_lan.diagnostics.redaction import (
+from rigplane.diagnostics.redaction import (
     redact_credentials,
     redact_ips,
     redact_paths,
 )
 
 if TYPE_CHECKING:
-    from icom_lan.diagnostics.contributor import BundleContext
+    from rigplane.diagnostics.contributor import BundleContext
 
 
 logger = logging.getLogger(__name__)
 
 
 _LOG_BASENAMES: tuple[str, ...] = (
-    "icom-lan.log",
-    "icom-lan.log.1",
-    "icom-lan.log.2",
+    "rigplane.log",
+    "rigplane.log.1",
+    "rigplane.log.2",
 )
 
 
@@ -32,7 +32,7 @@ def _redact_line(line: str) -> str:
 
 
 class LogsContributor:
-    """Emits ``logs/icom-lan.log{,.1,.2}`` — copies of rotating logs, redacted line-by-line."""
+    """Emits ``logs/rigplane.log{,.1,.2}`` — copies of rotating logs, redacted line-by-line."""
 
     name = "logs"
 

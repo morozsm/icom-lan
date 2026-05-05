@@ -4,11 +4,11 @@ Renders ScopeFrame data as PNG images: spectrum plot and waterfall display.
 
 Requires Pillow (optional dependency)::
 
-    pip install icom-lan[scope]
+    pip install rigplane[scope]
 
 Example::
 
-    from icom_lan.scope_render import render_scope_image
+    from rigplane.scope_render import render_scope_image
     img = render_scope_image(frames, output="waterfall.png")
 """
 
@@ -17,12 +17,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
-from icom_lan.core._optional_deps import _require_pillow
+from rigplane.core._optional_deps import _require_pillow
 
 if TYPE_CHECKING:
     from PIL.Image import Image as PILImage
 
-    from icom_lan.scope import ScopeFrame
+    from rigplane.scope import ScopeFrame
 
 
 class _ThemeSpec(TypedDict):

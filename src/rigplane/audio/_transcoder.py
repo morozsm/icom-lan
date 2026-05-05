@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from icom_lan.core.exceptions import (
+from rigplane.core.exceptions import (
     AudioCodecBackendError,
     AudioFormatError,
     AudioTranscodeError,
@@ -22,7 +22,7 @@ __all__ = [
     "create_pcm_opus_transcoder",
 ]
 
-_INSTALL_HINT = "Audio codec backend unavailable; install icom-lan[audio]."
+_INSTALL_HINT = "Audio codec backend unavailable; install rigplane[audio]."
 _VALID_SAMPLE_RATES = {8000, 12000, 16000, 24000, 48000}
 _VALID_CHANNELS = {1, 2}
 _VALID_FRAME_MS = {10, 20, 40, 60}
@@ -120,7 +120,7 @@ class PcmOpusTranscoder:
         except Exception as exc:
             raise AudioCodecBackendError(
                 "Failed to initialize Opus codec backend. "
-                "Ensure icom-lan[audio] is installed and functional."
+                "Ensure rigplane[audio] is installed and functional."
             ) from exc
 
     @property

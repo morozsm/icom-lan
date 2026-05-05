@@ -296,7 +296,7 @@ class EiBiStation:
         }
 
 
-def _download_url(url: str, ua: str = "icom-lan/1.0") -> bytes:
+def _download_url(url: str, ua: str = "rigplane/1.0") -> bytes:
     """Blocking download helper (run in a thread)."""
     req = Request(url, headers={"User-Agent": ua})
     with urlopen(req, timeout=_FETCH_TIMEOUT) as resp:
@@ -387,7 +387,7 @@ def _curl_download(url: str) -> str:
             "--max-time",
             "15",
             "-H",
-            "User-Agent: Mozilla/5.0 (icom-lan)",
+            "User-Agent: Mozilla/5.0 (rigplane)",
             url,
         ],
         capture_output=True,
@@ -474,7 +474,7 @@ class EiBiProvider:
         if self._cache_dir:
             d = self._cache_dir
         else:
-            d = Path.home() / ".cache" / "icom-lan"
+            d = Path.home() / ".cache" / "rigplane"
         d.mkdir(parents=True, exist_ok=True)
         return d
 

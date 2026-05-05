@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from icom_lan import PowerControlCapable
+from rigplane import PowerControlCapable
 
 
 class _RawIcomLikeRadio:
@@ -74,14 +74,14 @@ def test_watts_stub_satisfies_protocol() -> None:
 
 def test_icom_core_radio_declares_raw_255() -> None:
     """The shipping Icom :class:`CoreRadio` declares ``"raw_255"``."""
-    from icom_lan.runtime.radio import CoreRadio
+    from rigplane.runtime.radio import CoreRadio
 
     assert CoreRadio.native_power_unit == "raw_255"
 
 
 def test_yaesu_cat_radio_declares_watts() -> None:
     """The shipping :class:`YaesuCatRadio` declares ``"watts"``."""
-    from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
+    from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
 
     assert YaesuCatRadio.native_power_unit == "watts"
 
@@ -99,7 +99,7 @@ def test_yaesu_cat_radio_satisfies_power_control_capable() -> None:
     ``native_power_unit``, so ``issubclass`` is unsupported by Python's
     runtime Protocol machinery — verify on an instance.
     """
-    from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
+    from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
 
     radio = YaesuCatRadio("/dev/null")
     assert isinstance(radio, PowerControlCapable)

@@ -7,12 +7,12 @@ from unittest.mock import AsyncMock, call
 
 import pytest
 
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
-from icom_lan.backends.yaesu_cat.parser import CatParseError
-from icom_lan.backends.yaesu_cat.transport import CatTimeoutError
-from icom_lan.exceptions import CommandError
-from icom_lan.exceptions import ConnectionError as RadioConnectionError
-from icom_lan.rig_loader import load_rig
+from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
+from rigplane.backends.yaesu_cat.parser import CatParseError
+from rigplane.backends.yaesu_cat.transport import CatTimeoutError
+from rigplane.exceptions import CommandError
+from rigplane.exceptions import ConnectionError as RadioConnectionError
+from rigplane.rig_loader import load_rig
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -354,7 +354,7 @@ async def test_parse_error_propagates(connected_radio):
 
 def test_radio_state_initially_default(radio):
     """radio_state is a RadioState with default values."""
-    from icom_lan.radio_state import RadioState
+    from rigplane.radio_state import RadioState
 
     assert isinstance(radio.radio_state, RadioState)
     assert radio.radio_state.ptt is False
@@ -853,7 +853,7 @@ async def test_set_break_in_delay(connected_radio):
 
 @pytest.mark.asyncio
 async def test_get_break_in(connected_radio):
-    from icom_lan.types import BreakInMode
+    from rigplane.types import BreakInMode
 
     connected_radio._transport.query = AsyncMock(return_value="BI1")
     result = await connected_radio.get_break_in()
@@ -864,7 +864,7 @@ async def test_get_break_in(connected_radio):
 
 @pytest.mark.asyncio
 async def test_get_break_in_off_maps_to_off(connected_radio):
-    from icom_lan.types import BreakInMode
+    from rigplane.types import BreakInMode
 
     connected_radio._transport.query = AsyncMock(return_value="BI0")
     result = await connected_radio.get_break_in()
@@ -874,7 +874,7 @@ async def test_get_break_in_off_maps_to_off(connected_radio):
 
 @pytest.mark.asyncio
 async def test_set_break_in_accepts_break_in_mode(connected_radio):
-    from icom_lan.types import BreakInMode
+    from rigplane.types import BreakInMode
 
     connected_radio._transport.write = AsyncMock()
     await connected_radio.set_break_in(BreakInMode.SEMI)
@@ -883,7 +883,7 @@ async def test_set_break_in_accepts_break_in_mode(connected_radio):
 
 @pytest.mark.asyncio
 async def test_set_break_in_full_maps_to_on(connected_radio):
-    from icom_lan.types import BreakInMode
+    from rigplane.types import BreakInMode
 
     connected_radio._transport.write = AsyncMock()
     await connected_radio.set_break_in(BreakInMode.FULL)
@@ -892,7 +892,7 @@ async def test_set_break_in_full_maps_to_on(connected_radio):
 
 @pytest.mark.asyncio
 async def test_set_break_in_off_maps_to_off(connected_radio):
-    from icom_lan.types import BreakInMode
+    from rigplane.types import BreakInMode
 
     connected_radio._transport.write = AsyncMock()
     await connected_radio.set_break_in(BreakInMode.OFF)
@@ -1270,7 +1270,7 @@ async def test_set_agc(connected_radio):
 
 def test_profile_property_returns_radio_profile(radio):
     """YaesuCatRadio.profile returns a RadioProfile instance."""
-    from icom_lan.profiles import RadioProfile
+    from rigplane.profiles import RadioProfile
 
     p = radio.profile
     assert isinstance(p, RadioProfile)
@@ -1850,9 +1850,9 @@ class TestIFBulkQuery:
 # ---------------------------------------------------------------------------
 
 
-from icom_lan.backends.yaesu_cat.parser import CatCommandParser  # noqa: E402
-from icom_lan.command_spec import CatCommandSpec  # noqa: E402
-from icom_lan.radio_protocol import (  # noqa: E402
+from rigplane.backends.yaesu_cat.parser import CatCommandParser  # noqa: E402
+from rigplane.command_spec import CatCommandSpec  # noqa: E402
+from rigplane.radio_protocol import (  # noqa: E402
     ReceiverBankCapable,
     VfoSlotCapable,
 )
@@ -2232,7 +2232,7 @@ async def test_get_meter_voltage_string(connected_radio):
 @pytest.mark.asyncio
 async def test_get_meter_accepts_meter_type_enum(connected_radio):
     """get_meter also accepts a MeterType enum value."""
-    from icom_lan.meter_cal import MeterType
+    from rigplane.meter_cal import MeterType
 
     connected_radio._transport.query = AsyncMock(return_value="SM0100")
     val = await connected_radio.get_meter(MeterType.SMETER)

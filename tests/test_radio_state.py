@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from icom_lan.radio_state import (
+from rigplane.radio_state import (
     RadioState,
     ReceiverState,
     VfoSlotState,

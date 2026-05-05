@@ -6,7 +6,7 @@ Works with any radio that exposes a standard USB Audio Class device:
 Icom (IC-7300, IC-705, IC-9700), Yaesu (FTX-1, FT-710, FT-991A),
 Kenwood (TS-890S, TS-590SG), etc.
 
-See :mod:`icom_lan.usb_audio_resolve` for the topology-based resolution logic.
+See :mod:`rigplane.usb_audio_resolve` for the topology-based resolution logic.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 _DEPENDENCY_HINT = (
     "USB audio backend requires optional dependencies sounddevice and numpy. "
-    "Install with: pip install icom-lan[bridge]"
+    "Install with: pip install rigplane[bridge]"
 )
 _USB_NAME_PATTERNS: tuple[str, ...] = (
     "usb audio codec",
@@ -203,7 +203,7 @@ def _get_uid_map() -> dict[str, str]:
     if sys.platform != "darwin":
         return {}
     try:
-        from icom_lan.audio._macos_uid import get_device_uid_map
+        from rigplane.audio._macos_uid import get_device_uid_map
 
         return get_device_uid_map()
     except Exception:

@@ -7,7 +7,7 @@ import contextlib
 
 import pytest
 
-from icom_lan.backends.icom7610.drivers.serial_civ_link import (
+from rigplane.backends.icom7610.drivers.serial_civ_link import (
     SerialCivLink,
     SerialFrameCodec,
     SerialFrameOverflowError,
@@ -219,11 +219,11 @@ async def test_dependency_missing_hint(monkeypatch: pytest.MonkeyPatch) -> None:
     def _raise_missing() -> None:
         raise ImportError(
             "Serial backend requires optional dependencies pyserial and "
-            "pyserial-asyncio. Install with: pip install icom-lan[serial]"
+            "pyserial-asyncio. Install with: pip install rigplane[serial]"
         )
 
     monkeypatch.setattr(link, "_ensure_serial_dependencies", _raise_missing)
-    with pytest.raises(ImportError, match="icom-lan\\[serial\\]"):
+    with pytest.raises(ImportError, match="rigplane\\[serial\\]"):
         await link.connect()
 
 

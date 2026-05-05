@@ -8,12 +8,12 @@ from unittest.mock import AsyncMock
 import pytest
 
 from _caps import FULL_ICOM_CAPS
-from icom_lan.exceptions import ConnectionError as IcomConnectionError
-from icom_lan.exceptions import TimeoutError as IcomTimeoutError
-from icom_lan.radio_state import RadioState
-from icom_lan.rigctld.contract import HamlibError, RigctldCommand, RigctldConfig
-from icom_lan.rigctld.handler import RigctldHandler
-from icom_lan.types import CivFrame, Mode
+from rigplane.exceptions import ConnectionError as IcomConnectionError
+from rigplane.exceptions import TimeoutError as IcomTimeoutError
+from rigplane.radio_state import RadioState
+from rigplane.rigctld.contract import HamlibError, RigctldCommand, RigctldConfig
+from rigplane.rigctld.handler import RigctldHandler
+from rigplane.types import CivFrame, Mode
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -1021,55 +1021,55 @@ async def test_timeout_error_on_set_ptt_becomes_etimeout(
 
 
 def test_passband_to_filter_zero_gives_none() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(0) is None
 
 
 def test_passband_to_filter_negative_gives_none() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(-1) is None
 
 
 def test_passband_to_filter_wide_gives_fil1() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(3000) == 1
 
 
 def test_passband_to_filter_medium_gives_fil2() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(2400) == 2
 
 
 def test_passband_to_filter_narrow_gives_fil3() -> None:
-    from icom_lan.rigctld.handler import _passband_to_filter
+    from rigplane.rigctld.handler import _passband_to_filter
 
     assert _passband_to_filter(1800) == 3
 
 
 def test_filter_to_passband_none_gives_zero() -> None:
-    from icom_lan.rigctld.handler import _filter_to_passband
+    from rigplane.rigctld.handler import _filter_to_passband
 
     assert _filter_to_passband(None) == 0
 
 
 def test_filter_to_passband_fil1() -> None:
-    from icom_lan.rigctld.handler import _filter_to_passband
+    from rigplane.rigctld.handler import _filter_to_passband
 
     assert _filter_to_passband(1) == 3000
 
 
 def test_filter_to_passband_fil2() -> None:
-    from icom_lan.rigctld.handler import _filter_to_passband
+    from rigplane.rigctld.handler import _filter_to_passband
 
     assert _filter_to_passband(2) == 2400
 
 
 def test_filter_to_passband_fil3() -> None:
-    from icom_lan.rigctld.handler import _filter_to_passband
+    from rigplane.rigctld.handler import _filter_to_passband
 
     assert _filter_to_passband(3) == 1800
     assert _filter_to_passband(3) == 1800
@@ -1823,7 +1823,7 @@ async def test_send_raw_no_send_civ_raw_returns_enimpl(config: RigctldConfig) ->
 # Yaesu-specific level/func routing
 # ---------------------------------------------------------------------------
 
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio  # noqa: E402
+from rigplane.backends.yaesu_cat.radio import YaesuCatRadio  # noqa: E402
 
 
 class _FakeYaesuRadio(YaesuCatRadio):
@@ -1843,7 +1843,7 @@ def yaesu_radio() -> AsyncMock:
     end-to-end (``AsyncMock(spec=…)`` would otherwise return a bare
     MagicMock with non-awaitable ``get_level``/``get_func`` methods).
     """
-    from icom_lan.rigctld.routing import YaesuRouting
+    from rigplane.rigctld.routing import YaesuRouting
 
     mock = AsyncMock(spec=_FakeYaesuRadio)
     mock.backend_id = "yaesu_cat"
@@ -2425,7 +2425,7 @@ async def test_icom_dump_state_unchanged(
 
 
 class _FakeProfile:
-    """Minimal stand-in for ``icom_lan.profiles.RadioProfile`` for tests."""
+    """Minimal stand-in for ``rigplane.profiles.RadioProfile`` for tests."""
 
     def __init__(self, *, receiver_count: int, vfo_scheme: str) -> None:
         self.receiver_count = receiver_count
@@ -2809,7 +2809,7 @@ async def test_get_split_vfo_dual_rx_returns_tracked_tx_vfo(
 
 def _yaesu_handler(get_attenuator_value: bool) -> RigctldHandler:
     """Build a handler with a Yaesu-tagged radio so create_routing returns YaesuRouting."""
-    from icom_lan.rigctld.routing import YaesuRouting
+    from rigplane.rigctld.routing import YaesuRouting
 
     radio = AsyncMock(spec=_FakeYaesuRadio)
     radio.backend_id = "yaesu_cat"

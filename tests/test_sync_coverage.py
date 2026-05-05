@@ -1,4 +1,4 @@
-"""Additional coverage tests for icom_lan.sync."""
+"""Additional coverage tests for rigplane.sync."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.runtime._connection_state import RadioConnectionState
-from icom_lan.sync import IcomRadio
+from rigplane.runtime._connection_state import RadioConnectionState
+from rigplane.sync import IcomRadio
 
 
 def _radio() -> IcomRadio:
@@ -220,7 +220,7 @@ def test_audio_wrappers_canonical_only() -> None:
     ],
 )
 def test_removed_audio_aliases_raise_attribute_error(name: str) -> None:
-    """Sync aliases removed in #1111 must not exist on icom_lan.sync.IcomRadio."""
+    """Sync aliases removed in #1111 must not exist on rigplane.sync.IcomRadio."""
     r = _radio()
     try:
         assert not hasattr(r, name)

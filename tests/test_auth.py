@@ -4,7 +4,7 @@ import struct
 
 import pytest
 
-from icom_lan.auth import (
+from rigplane.auth import (
     PASSCODE_SEQUENCE,
     build_conninfo_packet,
     build_login_packet,
@@ -12,7 +12,7 @@ from icom_lan.auth import (
     parse_auth_response,
     parse_status_response,
 )
-from icom_lan.protocol import parse_header
+from rigplane.protocol import parse_header
 
 
 class TestEncodeCredentials:

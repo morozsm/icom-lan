@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 
-from icom_lan.profiles import RadioProfile
+from rigplane.profiles import RadioProfile
 
 logger = logging.getLogger(__name__)
 

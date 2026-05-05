@@ -9,17 +9,17 @@ import struct
 import time
 from typing import TYPE_CHECKING
 
-from icom_lan.core.auth import (
+from rigplane.core.auth import (
     build_conninfo_packet,
     build_login_packet,
     parse_auth_response,
     parse_status_response,
 )
 from ._connection_state import RadioConnectionState
-from icom_lan.core.exceptions import AuthenticationError, ConnectionError, TimeoutError
+from rigplane.core.exceptions import AuthenticationError, ConnectionError, TimeoutError
 from .startup_checks import wait_for_radio_startup_ready
-from icom_lan.core.transport import ConnectionState, IcomTransport
-from icom_lan.core.types import AudioCodec
+from rigplane.core.transport import ConnectionState, IcomTransport
+from rigplane.core.types import AudioCodec
 
 if TYPE_CHECKING:
     from ._runtime_protocols import ControlPhaseHost
@@ -287,7 +287,7 @@ class ControlPhaseRuntime:
             logger.debug("No status packet received, using default ports")
             logger.warning("Audio port not in status, using default %d", h._audio_port)
 
-        from icom_lan.transport import IcomTransport
+        from rigplane.transport import IcomTransport
 
         h._civ_transport = IcomTransport()
         h._civ_transport._scope_shed_callback = h._scope_assembler.shed_incomplete
@@ -443,7 +443,7 @@ class ControlPhaseRuntime:
         h._civ_stream_ready = False
         h._civ_recovering = True
 
-        from icom_lan.transport import IcomTransport
+        from rigplane.transport import IcomTransport
 
         h._civ_transport = IcomTransport()
         try:

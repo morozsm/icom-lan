@@ -15,12 +15,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from icom_lan.audio import (
+from rigplane.audio import (
     AUDIO_HEADER_SIZE,
     AudioStream,
     AudioState,
 )
-from icom_lan.types import PacketType
+from rigplane.types import PacketType
 
 # Match test_audio.py
 SENDER_ID = 0xAABBCCDD

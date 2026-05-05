@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.meter_cal import interpolate_swr
-from icom_lan.rig_loader import load_rig
+from rigplane.meter_cal import interpolate_swr
+from rigplane.rig_loader import load_rig
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
 

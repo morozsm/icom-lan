@@ -16,10 +16,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.radio_state import RadioState
-from icom_lan.rigctld.state_cache import StateCache
-from icom_lan.web.radio_poller import (
+from rigplane.profiles import resolve_radio_profile
+from rigplane.radio_state import RadioState
+from rigplane.rigctld.state_cache import StateCache
+from rigplane.web.radio_poller import (
     CommandQueue,
     RadioPoller,
     SetBand,
@@ -39,14 +39,14 @@ class TestCivExpectsResponseBSR:
 
     def test_bsr_read_expects_response(self) -> None:
         """BSR read (1A 01 with 2 data bytes) should expect a response."""
-        from icom_lan.runtime._civ_rx import CivRuntime
+        from rigplane.runtime._civ_rx import CivRuntime
 
         frame = self._make_frame(cmd=0x1A, sub=0x01, data=bytes([0x05, 0x01]))
         assert CivRuntime._civ_expects_response(frame) is True
 
     def test_bsr_write_does_not_expect_response(self) -> None:
         """BSR write (1A 01 with >2 data bytes = full content) → fire-and-forget."""
-        from icom_lan.runtime._civ_rx import CivRuntime
+        from rigplane.runtime._civ_rx import CivRuntime
 
         # Write: band(1) + register(1) + freq(5) + mode(1) + filter(1) = 9 bytes
         data = bytes([0x05, 0x01, 0x00, 0x40, 0x26, 0x14, 0x00, 0x01, 0x01])
@@ -55,7 +55,7 @@ class TestCivExpectsResponseBSR:
 
     def test_config_read_still_works(self) -> None:
         """Existing 1A 05 (config read, 2 data bytes) still expects response."""
-        from icom_lan.runtime._civ_rx import CivRuntime
+        from rigplane.runtime._civ_rx import CivRuntime
 
         frame = self._make_frame(cmd=0x1A, sub=0x05, data=bytes([0x00, 0x71]))
         assert CivRuntime._civ_expects_response(frame) is True

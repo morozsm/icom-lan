@@ -17,18 +17,18 @@ from unittest.mock import AsyncMock
 import numpy as np
 import pytest
 
-from icom_lan.audio.backend import (
+from rigplane.audio.backend import (
     AudioDeviceId,
     AudioDeviceInfo,
     FakeAudioBackend,
 )
-from icom_lan.audio.lan_stream import AudioPacket
-from icom_lan.audio_bridge import (
+from rigplane.audio.lan_stream import AudioPacket
+from rigplane.audio_bridge import (
     AudioBridge,
     SAMPLE_RATE,
     SAMPLES_PER_FRAME,
 )
-from icom_lan.types import AudioCodec
+from rigplane.types import AudioCodec
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ def _bridge_backend() -> FakeAudioBackend:
 
 
 def _make_radio(codec: AudioCodec | None) -> types.SimpleNamespace:
-    from icom_lan.audio_bus import AudioBus
+    from rigplane.audio_bus import AudioBus
 
     radio: types.SimpleNamespace = types.SimpleNamespace(
         audio_codec=codec,
@@ -329,7 +329,7 @@ async def test_bridge_logs_codec_resolution_at_start(
     bridge = AudioBridge(
         radio, device_name="BlackHole", tx_enabled=False, backend=backend
     )
-    with caplog.at_level(logging.INFO, logger="icom_lan.audio.bridge"):
+    with caplog.at_level(logging.INFO, logger="rigplane.audio.bridge"):
         await bridge.start()
     try:
         joined = "\n".join(r.getMessage() for r in caplog.records)

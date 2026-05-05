@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
-from icom_lan.radio import CoreRadio
-from icom_lan.rig_loader import load_rig
+from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
+from rigplane.radio import CoreRadio
+from rigplane.rig_loader import load_rig
 
 _RIGS_DIR = Path(__file__).parents[1] / "rigs"
 
@@ -127,25 +127,25 @@ class TestSerialBackendsSupportsCommand:
     """Serial backends inherit supports_command from CoreRadio."""
 
     def test_ic7300_serial(self):
-        from icom_lan.backends.ic7300.serial import Ic7300SerialRadio
+        from rigplane.backends.ic7300.serial import Ic7300SerialRadio
 
         assert hasattr(Ic7300SerialRadio, "supports_command")
         assert Ic7300SerialRadio.supports_command is CoreRadio.supports_command
 
     def test_ic705_serial(self):
-        from icom_lan.backends.ic705.serial import Ic705SerialRadio
+        from rigplane.backends.ic705.serial import Ic705SerialRadio
 
         assert hasattr(Ic705SerialRadio, "supports_command")
         assert Ic705SerialRadio.supports_command is CoreRadio.supports_command
 
     def test_ic9700_serial(self):
-        from icom_lan.backends.ic9700.serial import Ic9700SerialRadio
+        from rigplane.backends.ic9700.serial import Ic9700SerialRadio
 
         assert hasattr(Ic9700SerialRadio, "supports_command")
         assert Ic9700SerialRadio.supports_command is CoreRadio.supports_command
 
     def test_icom7610_serial(self):
-        from icom_lan.backends.icom7610.serial import Icom7610SerialRadio
+        from rigplane.backends.icom7610.serial import Icom7610SerialRadio
 
         assert hasattr(Icom7610SerialRadio, "supports_command")
         assert Icom7610SerialRadio.supports_command is CoreRadio.supports_command

@@ -3,10 +3,10 @@
 This test enforces two invariants for the tier-1 public API as defined in
 ``docs/api/public-api-surface.md``:
 
-1. Every tier-1 symbol is importable directly via ``from icom_lan import …``
+1. Every tier-1 symbol is importable directly via ``from rigplane import …``
    and resolves to a non-None object.
 2. Importing tier-1 symbols does NOT transitively pull tier-3 modules
-   (``icom_lan.web``, ``icom_lan.cli``, ``icom_lan.rigctld``) into
+   (``rigplane.web``, ``rigplane.cli``, ``rigplane.rigctld``) into
    ``sys.modules``.
 
 The second invariant requires a fresh interpreter, because pytest itself
@@ -69,7 +69,7 @@ TIER1_SYMBOLS: tuple[str, ...] = (
     "SplitCapable",
     "UsbAudioCapable",
     # Exceptions
-    "IcomLanError",
+    "RigplaneError",
     "AudioCodecBackendError",
     "AudioError",
     "AudioFormatError",
@@ -91,9 +91,9 @@ TIER1_SYMBOLS: tuple[str, ...] = (
 
 # Tier-3 module prefixes that must NOT be loaded transitively by tier-1 imports.
 TIER3_PREFIXES: tuple[str, ...] = (
-    "icom_lan.web",
-    "icom_lan.cli",
-    "icom_lan.rigctld",
+    "rigplane.web",
+    "rigplane.cli",
+    "rigplane.rigctld",
 )
 
 _SUBPROCESS_TIMEOUT = 30.0
@@ -102,27 +102,27 @@ _SUBPROCESS_TIMEOUT = 30.0
 @pytest.mark.parametrize("symbol", TIER1_SYMBOLS, ids=list(TIER1_SYMBOLS))
 def test_tier1_symbol_importable(symbol: str) -> None:
     """Every tier-1 symbol must import cleanly and resolve to a real object."""
-    import icom_lan
+    import rigplane
 
-    assert hasattr(icom_lan, symbol), (
-        f"tier-1 symbol {symbol!r} missing from icom_lan; either restore the "
-        f"export in src/icom_lan/__init__.py or remove it from "
+    assert hasattr(rigplane, symbol), (
+        f"tier-1 symbol {symbol!r} missing from rigplane; either restore the "
+        f"export in src/rigplane/__init__.py or remove it from "
         f"docs/api/public-api-surface.md"
     )
-    obj = getattr(icom_lan, symbol)
+    obj = getattr(rigplane, symbol)
     assert obj is not None, f"tier-1 symbol {symbol!r} resolved to None"
 
 
 def test_tier1_symbols_listed_in_dunder_all() -> None:
-    """Tier-1 symbols (except __version__) should appear in ``icom_lan.__all__``."""
-    import icom_lan
+    """Tier-1 symbols (except __version__) should appear in ``rigplane.__all__``."""
+    import rigplane
 
-    public_all = set(icom_lan.__all__)
+    public_all = set(rigplane.__all__)
     # ``__version__`` is conventionally not in __all__.
     expected = set(TIER1_SYMBOLS) - {"__version__"}
     missing = sorted(expected - public_all)
     assert not missing, (
-        f"tier-1 symbols missing from icom_lan.__all__: {missing}. "
+        f"tier-1 symbols missing from rigplane.__all__: {missing}. "
         f"Add them to __all__ or remove from docs/api/public-api-surface.md."
     )
 
@@ -138,7 +138,7 @@ def test_tier1_imports_do_not_pull_tier3() -> None:
     forbidden_check = " or ".join(f"m.startswith({p!r})" for p in TIER3_PREFIXES)
     code = (
         "import sys\n"
-        "from icom_lan import (\n"
+        "from rigplane import (\n"
         f"    {import_lines},\n"
         ")\n"
         f"leaked = sorted(m for m in sys.modules if {forbidden_check})\n"
@@ -166,10 +166,10 @@ def test_tier1_imports_do_not_pull_tier3() -> None:
 
 
 def test_bare_import_does_not_pull_tier3() -> None:
-    """Even ``import icom_lan`` alone must not load tier-3 submodules."""
+    """Even ``import rigplane`` alone must not load tier-3 submodules."""
     code = (
         "import sys\n"
-        "import icom_lan  # noqa: F401\n"
+        "import rigplane  # noqa: F401\n"
         + "leaked = sorted(m for m in sys.modules if "
         + " or ".join(f"m.startswith({p!r})" for p in TIER3_PREFIXES)
         + ")\nprint('|'.join(leaked))\n"
@@ -188,5 +188,5 @@ def test_bare_import_does_not_pull_tier3() -> None:
     )
     leaked = result.stdout.strip()
     assert leaked == "", (
-        f"`import icom_lan` leaked tier-3 modules: {leaked.split('|')!r}"
+        f"`import rigplane` leaked tier-3 modules: {leaked.split('|')!r}"
     )

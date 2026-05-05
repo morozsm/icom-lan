@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-from icom_lan.web.tls import build_ssl_context, generate_self_signed
+from rigplane.web.tls import build_ssl_context, generate_self_signed
 
 
 class TestGenerateSelfSigned:
@@ -57,7 +57,7 @@ class TestGenerateSelfSigned:
         with patch.dict("sys.modules", {"cryptography": None}):
             # Need to also block submodules
             with patch(
-                "icom_lan.web.tls._generate_with_cryptography",
+                "rigplane.web.tls._generate_with_cryptography",
                 side_effect=ImportError("no cryptography"),
             ):
                 generate_self_signed(cert, key, hostname="localhost")
@@ -72,7 +72,7 @@ class TestBuildSslContext:
         cert = tmp_path / "cert.pem"
         key = tmp_path / "key.pem"
         with patch(
-            "icom_lan.web.tls.generate_self_signed",
+            "rigplane.web.tls.generate_self_signed",
             side_effect=lambda **kw: generate_self_signed(
                 cert, key, hostname="localhost"
             ),
@@ -101,13 +101,13 @@ class TestWebConfigTls:
     """Test WebConfig TLS fields."""
 
     def test_tls_enabled(self) -> None:
-        from icom_lan.web.server import WebConfig
+        from rigplane.web.server import WebConfig
 
         config = WebConfig(tls=True)
         assert config.tls is True
 
     def test_tls_defaults_off(self) -> None:
-        from icom_lan.web.server import WebConfig
+        from rigplane.web.server import WebConfig
 
         config = WebConfig()
         assert config.tls is False

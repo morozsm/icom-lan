@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.web._delta_encoder import DeltaEncoder, apply_delta
+from rigplane.web._delta_encoder import DeltaEncoder, apply_delta
 
 
 class TestDeltaEncoder:

@@ -1,6 +1,6 @@
 """FakeAudioStream — deterministic double for AudioStream in tests.
 
-Implements the public surface of :class:`icom_lan.audio.lan_stream.AudioStream`
+Implements the public surface of :class:`rigplane.audio.lan_stream.AudioStream`
 that production code and tests interact with:
 
     start_rx(callback, *, jitter_depth=None)
@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from icom_lan.audio import AudioState
+from rigplane.audio import AudioState
 
 
 class FakeAudioStream:

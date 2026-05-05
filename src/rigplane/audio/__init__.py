@@ -1,4 +1,4 @@
-"""Universal audio subsystem for icom-lan.
+"""Universal audio subsystem for rigplane.
 
 Provides:
 - LAN audio streaming (IC-7610 UDP) — from :mod:`.lan_stream`
@@ -8,10 +8,10 @@ Eager block is intentionally limited to :mod:`.lan_stream` symbols. Heavier
 abstractions (audio backends, DSP, USB driver, resampler) are loaded lazily
 via :pep:`562` ``__getattr__`` so consumers that only touch
 ``AudioPacket``/``AudioStream`` (the wire-protocol types used by
-:mod:`icom_lan.radio` and :mod:`icom_lan.transport`) don't drag in
+:mod:`rigplane.radio` and :mod:`rigplane.transport`) don't drag in
 PortAudio, ``numpy``-backed DSP, or platform USB plumbing.
 
-Direct submodule imports (``from icom_lan.audio.backend import ...``)
+Direct submodule imports (``from rigplane.audio.backend import ...``)
 remain the canonical path for callers that want the heavier abstractions.
 """
 
@@ -37,52 +37,52 @@ from .lan_stream import (  # noqa: F401
 # ``globals()`` so subsequent lookups skip this hook.
 _LAZY_MAP: dict[str, tuple[str, str]] = {
     # Audio backend abstraction (protocol + implementations)
-    "AudioBackend": ("icom_lan.audio.backend", "AudioBackend"),
-    "AudioDeviceId": ("icom_lan.audio.backend", "AudioDeviceId"),
-    "AudioDeviceInfo": ("icom_lan.audio.backend", "AudioDeviceInfo"),
-    "FakeAudioBackend": ("icom_lan.audio.backend", "FakeAudioBackend"),
-    "FakeRxStream": ("icom_lan.audio.backend", "FakeRxStream"),
-    "FakeTxStream": ("icom_lan.audio.backend", "FakeTxStream"),
-    "PortAudioBackend": ("icom_lan.audio.backend", "PortAudioBackend"),
-    "RxStream": ("icom_lan.audio.backend", "RxStream"),
-    "TxStream": ("icom_lan.audio.backend", "TxStream"),
+    "AudioBackend": ("rigplane.audio.backend", "AudioBackend"),
+    "AudioDeviceId": ("rigplane.audio.backend", "AudioDeviceId"),
+    "AudioDeviceInfo": ("rigplane.audio.backend", "AudioDeviceInfo"),
+    "FakeAudioBackend": ("rigplane.audio.backend", "FakeAudioBackend"),
+    "FakeRxStream": ("rigplane.audio.backend", "FakeRxStream"),
+    "FakeTxStream": ("rigplane.audio.backend", "FakeTxStream"),
+    "PortAudioBackend": ("rigplane.audio.backend", "PortAudioBackend"),
+    "RxStream": ("rigplane.audio.backend", "RxStream"),
+    "TxStream": ("rigplane.audio.backend", "TxStream"),
     # Configuration
-    "AudioConfig": ("icom_lan.audio.config", "AudioConfig"),
-    "load_audio_config": ("icom_lan.audio.config", "load_audio_config"),
-    "save_audio_config": ("icom_lan.audio.config", "save_audio_config"),
+    "AudioConfig": ("rigplane.audio.config", "AudioConfig"),
+    "load_audio_config": ("rigplane.audio.config", "load_audio_config"),
+    "save_audio_config": ("rigplane.audio.config", "save_audio_config"),
     # DSP pipeline
-    "DspPipeline": ("icom_lan.audio.dsp", "DspPipeline"),
-    "DspStage": ("icom_lan.audio.dsp", "DspStage"),
-    "Limiter": ("icom_lan.audio.dsp", "Limiter"),
-    "NoiseGate": ("icom_lan.audio.dsp", "NoiseGate"),
-    "RmsNormalizer": ("icom_lan.audio.dsp", "RmsNormalizer"),
+    "DspPipeline": ("rigplane.audio.dsp", "DspPipeline"),
+    "DspStage": ("rigplane.audio.dsp", "DspStage"),
+    "Limiter": ("rigplane.audio.dsp", "Limiter"),
+    "NoiseGate": ("rigplane.audio.dsp", "NoiseGate"),
+    "RmsNormalizer": ("rigplane.audio.dsp", "RmsNormalizer"),
     # Resampling
-    "PcmResampler": ("icom_lan.audio.resample", "PcmResampler"),
+    "PcmResampler": ("rigplane.audio.resample", "PcmResampler"),
     "SampleRateNegotiation": (
-        "icom_lan.audio.resample",
+        "rigplane.audio.resample",
         "SampleRateNegotiation",
     ),
     "negotiate_sample_rate": (
-        "icom_lan.audio.resample",
+        "rigplane.audio.resample",
         "negotiate_sample_rate",
     ),
     # USB audio driver
     "AudioDeviceSelectionError": (
-        "icom_lan.audio.usb_driver",
+        "rigplane.audio.usb_driver",
         "AudioDeviceSelectionError",
     ),
     "AudioDriverLifecycleError": (
-        "icom_lan.audio.usb_driver",
+        "rigplane.audio.usb_driver",
         "AudioDriverLifecycleError",
     ),
-    "UsbAudioDevice": ("icom_lan.audio.usb_driver", "UsbAudioDevice"),
-    "UsbAudioDriver": ("icom_lan.audio.usb_driver", "UsbAudioDriver"),
+    "UsbAudioDevice": ("rigplane.audio.usb_driver", "UsbAudioDevice"),
+    "UsbAudioDriver": ("rigplane.audio.usb_driver", "UsbAudioDriver"),
     "list_usb_audio_devices": (
-        "icom_lan.audio.usb_driver",
+        "rigplane.audio.usb_driver",
         "list_usb_audio_devices",
     ),
     "select_usb_audio_devices": (
-        "icom_lan.audio.usb_driver",
+        "rigplane.audio.usb_driver",
         "select_usb_audio_devices",
     ),
 }

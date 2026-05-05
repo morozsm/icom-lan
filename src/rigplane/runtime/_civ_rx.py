@@ -7,14 +7,14 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from icom_lan.core.civ import (
+from rigplane.core.civ import (
     CivEvent,
     CivEventType,
     iter_civ_frames,
     request_key_from_frame,
 )
-from icom_lan.commands.commander import IcomCommander, Priority
-from icom_lan.commands import (
+from rigplane.commands.commander import IcomCommander, Priority
+from rigplane.commands import (
     CONTROLLER_ADDR,
     parse_bool_response,
     parse_civ_frame,
@@ -35,13 +35,13 @@ from icom_lan.commands import (
     parse_scope_speed_response,
     parse_scope_vbw_response,
 )
-from icom_lan.core.exceptions import ConnectionError, TimeoutError
-from icom_lan.scope import ScopeFrame
-from icom_lan.core.types import CivFrame
+from rigplane.core.exceptions import ConnectionError, TimeoutError
+from rigplane.scope import ScopeFrame
+from rigplane.core.types import CivFrame
 
 if TYPE_CHECKING:
     from ._runtime_protocols import CivRuntimeHost
-    from icom_lan.radio_state import RadioState
+    from rigplane.radio_state import RadioState
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +293,7 @@ class CivRuntime:
         """Monitor CI-V data flow; recover with open_close then soft_reconnect.
 
         OpenClose is retried patiently (wfview icomudpcivdata.cpp:31 pattern —
-        never escalates). icom-lan keeps a safety-net deadline at
+        never escalates). rigplane keeps a safety-net deadline at
         _OPENCLOSE_DEADLINE before handing recovery off to a detached
         reconnect task. The task is detached so its cooldown sleep survives
         the watchdog loop exiting.
@@ -694,7 +694,7 @@ class CivRuntime:
                 and frame.data
                 and _rx is not None
             ):
-                from icom_lan.commands import _bcd_decode_value, filter_index_to_hz
+                from rigplane.commands import _bcd_decode_value, filter_index_to_hz
 
                 filter_index = _bcd_decode_value(frame.data)
                 profile = getattr(host, "_profile", None)
@@ -728,7 +728,7 @@ class CivRuntime:
                     self._notify_change("dual_watch_changed", {"on": bool(val07)})
             elif frame.command == 0x21:
                 if frame.sub == 0x00 and len(frame.data) >= 3:
-                    from icom_lan.commands import parse_rit_frequency_response
+                    from rigplane.commands import parse_rit_frequency_response
 
                     hz = parse_rit_frequency_response(frame.data)
                     self._notify_change("rit_freq_changed", {"hz": hz})
@@ -1060,7 +1060,7 @@ class CivRuntime:
                 bcd_bytes=1,
             )
         if sub == 0x03 and frame.data:
-            from icom_lan.commands import _bcd_decode_value, filter_index_to_hz
+            from rigplane.commands import _bcd_decode_value, filter_index_to_hz
 
             filter_index = _bcd_decode_value(frame.data)
             profile = getattr(self._host, "_profile", None)
@@ -1113,7 +1113,7 @@ class CivRuntime:
     ) -> None:
         # cmd 0x1B: tone/TSQL freq (frequency-encoded).
         if len(frame.data) >= 3:
-            from icom_lan.commands import _decode_tone_freq
+            from rigplane.commands import _decode_tone_freq
 
             freq_hz = _decode_tone_freq(frame.data)
             freq_centihz = round(freq_hz * 100)
@@ -1149,8 +1149,8 @@ class CivRuntime:
     ) -> None:
         # cmd 0x1E: TX band edge (sub 0x01, payload ≥ 10 bytes).
         if frame.sub == 0x01 and len(frame.data) >= 10:
-            from icom_lan.commands.tx_band import parse_tx_band_edge_response
-            from icom_lan.radio_state import TxBandEdge
+            from rigplane.commands.tx_band import parse_tx_band_edge_response
+            from rigplane.radio_state import TxBandEdge
 
             start_hz, end_hz = parse_tx_band_edge_response(frame.data)
             tx_edge = TxBandEdge(start_hz=start_hz, end_hz=end_hz)
@@ -1166,7 +1166,7 @@ class CivRuntime:
     ) -> None:
         # cmd 0x21: RIT freq, on/off, tx status.
         if frame.sub == 0x00 and len(frame.data) >= 3:
-            from icom_lan.commands import parse_rit_frequency_response
+            from rigplane.commands import parse_rit_frequency_response
 
             rs.rit_freq = parse_rit_frequency_response(frame.data)
         elif frame.sub == 0x01 and frame.data:
@@ -1183,7 +1183,7 @@ class CivRuntime:
     ) -> None:
         # cmd 0x25: dual-RX freq by receiver ID.
         if len(frame.data) >= 6:
-            from icom_lan.types import bcd_decode
+            from rigplane.types import bcd_decode
 
             rcvr_byte = frame.data[0]
             which = "MAIN" if rcvr_byte == 0x00 else "SUB"
@@ -1198,7 +1198,7 @@ class CivRuntime:
     ) -> None:
         # cmd 0x26: dual-RX mode by receiver ID + optional data_mode + filter.
         if len(frame.data) >= 2:
-            from icom_lan.types import Mode
+            from rigplane.types import Mode
 
             rcvr_byte = frame.data[0]
             which = "MAIN" if rcvr_byte == 0x00 else "SUB"

@@ -9,9 +9,9 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from icom_lan.diagnostics._discovery import discover
-from icom_lan.diagnostics._manifest import _Manifest
-from icom_lan.diagnostics.contributor import BundleContext
+from rigplane.diagnostics._discovery import discover
+from rigplane.diagnostics._manifest import _Manifest
+from rigplane.diagnostics.contributor import BundleContext
 
 logger = logging.getLogger(__name__)
 

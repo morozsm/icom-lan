@@ -236,8 +236,8 @@
     "description": "get_info — returns IC-7610 description string",
     "input": "\\get_info",
     "mock": {},
-    "expected_output": "Icom IC-7610 (icom-lan)\n",
-    "extended_output": "get_info:\nIcom IC-7610 (icom-lan)\nRPRT 0\n"
+    "expected_output": "Icom IC-7610 (rigplane)\n",
+    "extended_output": "get_info:\nIcom IC-7610 (rigplane)\nRPRT 0\n"
   },
   {
     "id": "chk_vfo",

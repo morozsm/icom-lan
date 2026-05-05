@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.commands import parse_frequency_response
+from rigplane.commands import parse_frequency_response
 
 
 pytestmark = pytest.mark.integration

@@ -6,18 +6,18 @@ import asyncio
 
 import pytest
 
-from icom_lan import IcomRadio, RadioConnectionState
-from icom_lan.backends.icom7610 import Icom7610SerialRadio
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IcomRadio, RadioConnectionState
+from rigplane.backends.icom7610 import Icom7610SerialRadio
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     CONTROLLER_ADDR,
     _CMD_FREQ_GET,
     build_civ_frame,
     parse_civ_frame,
 )
-from icom_lan.exceptions import CommandError, ConnectionError
-from icom_lan.types import AudioCodec
-from icom_lan.types import bcd_encode
+from rigplane.exceptions import CommandError, ConnectionError
+from rigplane.types import AudioCodec
+from rigplane.types import bcd_encode
 
 
 def _freq_response_frame(freq_hz: int) -> bytes:

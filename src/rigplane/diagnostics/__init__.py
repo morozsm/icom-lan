@@ -1,14 +1,14 @@
-"""icom-lan diagnostic infrastructure (logging, contributors, bundle, upload).
+"""rigplane diagnostic infrastructure (logging, contributors, bundle, upload).
 
 Subsequent issues (#1388-#1401) build on this package.
 
 Note (issue #1413): the ``upload`` submodule imports ``aiohttp``, which is a
 dev-only dependency (declared in ``[dependency-groups].dev``, not in
 ``[project].dependencies``). Eagerly importing it here would break ``import
-icom_lan`` for runtime-only installs, so the four upload-related names
+rigplane`` for runtime-only installs, so the four upload-related names
 (``DEFAULT_ENDPOINT``, ``HeaderProvider``, ``ReportSubmitted``,
 ``upload_bundle``) are exposed lazily via :pep:`562` ``__getattr__``. They
-remain importable as ``from icom_lan.diagnostics import upload_bundle``;
+remain importable as ``from rigplane.diagnostics import upload_bundle``;
 the ``aiohttp`` import only fires on first access.
 """
 
@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from icom_lan.diagnostics._discovery import discover, register
-from icom_lan.diagnostics._errors import (
+from rigplane.diagnostics._discovery import discover, register
+from rigplane.diagnostics._errors import (
     BundleTooLarge,
     DiagnosticUploadError,
     ForbiddenContent,
@@ -26,13 +26,13 @@ from icom_lan.diagnostics._errors import (
     RateLimited,
     UploadFailed,
 )
-from icom_lan.diagnostics._logging import (
+from rigplane.diagnostics._logging import (
     SafeRotatingFileHandler,
     configure_diagnostic_logging,
 )
-from icom_lan.diagnostics.bundle import build_bundle
-from icom_lan.diagnostics.contributor import BundleContext, DiagnosticContributor
-from icom_lan.diagnostics.redaction import (
+from rigplane.diagnostics.bundle import build_bundle
+from rigplane.diagnostics.contributor import BundleContext, DiagnosticContributor
+from rigplane.diagnostics.redaction import (
     REDACTORS,
     redact_credentials,
     redact_ips,
@@ -40,7 +40,7 @@ from icom_lan.diagnostics.redaction import (
     redact_tokens,
 )
 
-# Lazy re-exports from ``icom_lan.diagnostics.upload`` (which imports aiohttp).
+# Lazy re-exports from ``rigplane.diagnostics.upload`` (which imports aiohttp).
 # Map: public name → attribute on ``upload`` module.
 _LAZY_UPLOAD: dict[str, str] = {
     "DEFAULT_ENDPOINT": "DEFAULT_ENDPOINT",
@@ -51,7 +51,7 @@ _LAZY_UPLOAD: dict[str, str] = {
 
 if TYPE_CHECKING:
     # Make these names visible to typecheckers without triggering aiohttp.
-    from icom_lan.diagnostics.upload import (  # noqa: F401
+    from rigplane.diagnostics.upload import (  # noqa: F401
         DEFAULT_ENDPOINT,
         HeaderProvider,
         ReportSubmitted,
@@ -70,7 +70,7 @@ def __getattr__(name: str) -> Any:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     import importlib
 
-    module = importlib.import_module("icom_lan.diagnostics.upload")
+    module = importlib.import_module("rigplane.diagnostics.upload")
     attr = getattr(module, target)
     globals()[name] = attr  # cache so __getattr__ isn't called again
     return attr

@@ -14,16 +14,16 @@ import asyncio
 from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 if TYPE_CHECKING:
-    from icom_lan._bounded_queue import BoundedQueue
-    from icom_lan._civ_rx import CivRuntime
-    from icom_lan._state_cache import StateCache
-    from icom_lan.audio import AudioPacket, AudioStream
-    from icom_lan.civ import CivEvent, CivRequestTracker
-    from icom_lan.commander import IcomCommander
-    from icom_lan.radio_state import RadioState
-    from icom_lan.scope import ScopeAssembler, ScopeFrame
-    from icom_lan.transport import IcomTransport
-    from icom_lan.types import Mode
+    from rigplane._bounded_queue import BoundedQueue
+    from rigplane._civ_rx import CivRuntime
+    from rigplane._state_cache import StateCache
+    from rigplane.audio import AudioPacket, AudioStream
+    from rigplane.civ import CivEvent, CivRequestTracker
+    from rigplane.commander import IcomCommander
+    from rigplane.radio_state import RadioState
+    from rigplane.scope import ScopeAssembler, ScopeFrame
+    from rigplane.transport import IcomTransport
+    from rigplane.types import Mode
 
 
 __all__ = [

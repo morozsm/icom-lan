@@ -1,6 +1,6 @@
 """Regression tests for issue #141 (IC-7610 core extraction)."""
 
-from icom_lan.radio import CoreRadio, IcomRadio
+from rigplane.radio import CoreRadio, IcomRadio
 
 
 def test_icom_radio_is_thin_wrapper_over_core() -> None:

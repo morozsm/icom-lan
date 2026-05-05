@@ -10,9 +10,9 @@ import asyncio
 
 import pytest
 
-from icom_lan.exceptions import AuthenticationError
-from icom_lan.radio import IcomRadio
-from icom_lan.types import Mode
+from rigplane.exceptions import AuthenticationError
+from rigplane.radio import IcomRadio
+from rigplane.types import Mode
 
 from _perf_helpers import fast_connect
 from mock_server import MockIcomRadio

@@ -1,4 +1,4 @@
-"""Unit tests for ``icom_lan._bounded_queue.BoundedQueue``."""
+"""Unit tests for ``rigplane._bounded_queue.BoundedQueue``."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from icom_lan.core._bounded_queue import BoundedQueue
+from rigplane.core._bounded_queue import BoundedQueue
 
 
 def test_put_get_preserves_fifo_order() -> None:

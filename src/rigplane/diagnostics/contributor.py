@@ -12,7 +12,7 @@ class DiagnosticContributor(Protocol):
     """A pluggable source of diagnostic data.
 
     Discovered by the bundle generator via setuptools entry points
-    (``icom_lan.diagnostics`` group) or runtime ``register()``.
+    (``rigplane.diagnostics`` group) or runtime ``register()``.
 
     Implementations should be cheap to instantiate (no heavy work in
     ``__init__``) and idempotent on ``contribute()``.
@@ -33,8 +33,8 @@ class BundleContext:
     """Read-only context handed to every contributor.
 
     ``radio`` is typed as ``Any | None`` to avoid a circular import
-    between ``icom_lan.diagnostics`` and ``icom_lan.runtime`` /
-    ``icom_lan.radio_protocol``. Contributors that need radio-specific
+    between ``rigplane.diagnostics`` and ``rigplane.runtime`` /
+    ``rigplane.radio_protocol``. Contributors that need radio-specific
     behaviour do ``isinstance(ctx.radio, AudioCapable)`` themselves.
     """
 

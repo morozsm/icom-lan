@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.profiles import RadioProfile
-from icom_lan.rig_loader import (
+from rigplane.profiles import RadioProfile
+from rigplane.rig_loader import (
     VALID_CONTROL_STYLES,
     VALID_PROTOCOL_TYPES,
     VALID_VFO_SCHEMES,

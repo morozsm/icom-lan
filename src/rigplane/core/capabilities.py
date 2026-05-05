@@ -1,6 +1,6 @@
 """Unified capability constants and known-capability registry.
 
-Every capability tag used by icom-lan rig profiles lives here.
+Every capability tag used by rigplane rig profiles lives here.
 Import constants from this module instead of using bare strings.
 """
 

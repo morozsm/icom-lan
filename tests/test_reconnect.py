@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from icom_lan.runtime._connection_state import RadioConnectionState
-from icom_lan.exceptions import AuthenticationError
-from icom_lan.radio import IcomRadio
+from rigplane.runtime._connection_state import RadioConnectionState
+from rigplane.exceptions import AuthenticationError
+from rigplane.radio import IcomRadio
 
 from test_radio import MockTransport
 

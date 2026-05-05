@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from icom_lan.dsp.exceptions import DSPBackendUnavailable
+from rigplane.dsp.exceptions import DSPBackendUnavailable
 
 if TYPE_CHECKING:
     import numpy as np

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from icom_lan.transport import (
+from rigplane.transport import (
     CONTROL_SIZE,
     PING_SIZE,
     ConnectionState,
@@ -15,7 +15,7 @@ from icom_lan.transport import (
     PACKET_QUEUE_MAXSIZE,
     PRESSURE_THRESHOLD,
 )
-from icom_lan.types import HEADER_SIZE, PacketType
+from rigplane.types import HEADER_SIZE, PacketType
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ class TestConnectionState:
         loop = _FakeLoop(("192.168.2.194", 50002))
 
         with (
-            patch("icom_lan.transport.asyncio.get_running_loop", return_value=loop),
+            patch("rigplane.transport.asyncio.get_running_loop", return_value=loop),
             patch.object(t, "_discover", new=AsyncMock()),
             patch.object(t, "_ready_handshake", new=AsyncMock()),
         ):
@@ -166,7 +166,7 @@ class TestConnectionState:
         sock.bind(("0.0.0.0", 0))
 
         with (
-            patch("icom_lan.transport.asyncio.get_running_loop", return_value=loop),
+            patch("rigplane.transport.asyncio.get_running_loop", return_value=loop),
             patch.object(t, "_discover", new=AsyncMock()),
             patch.object(t, "_ready_handshake", new=AsyncMock()),
         ):
@@ -191,7 +191,7 @@ class TestConnectionState:
         loop = _FakeLoop(("192.168.2.194", 50001))
 
         with (
-            patch("icom_lan.transport.asyncio.get_running_loop", return_value=loop),
+            patch("rigplane.transport.asyncio.get_running_loop", return_value=loop),
             patch.object(t, "_ready_handshake", new=AsyncMock()),
         ):
             await t.reconnect(
@@ -272,7 +272,7 @@ class TestTrackSent:
         assert transport.tx_buffer[1] == b"packet1"
 
     def test_track_evicts_oldest(self, transport: IcomTransport) -> None:
-        from icom_lan.transport import BUFSIZE
+        from rigplane.transport import BUFSIZE
 
         for i in range(BUFSIZE + 10):
             transport._track_sent(i, f"pkt{i}".encode())
@@ -283,7 +283,7 @@ class TestTrackSent:
     def test_track_evicts_by_send_order_across_rollover(
         self, transport: IcomTransport
     ) -> None:
-        from icom_lan.transport import BUFSIZE
+        from rigplane.transport import BUFSIZE
 
         start = 0xFFF0
         for i in range(BUFSIZE):
@@ -346,7 +346,7 @@ class TestRxSequence:
         assert 3 in transport.rx_missing
 
     def test_large_gap_resets(self, transport: IcomTransport) -> None:
-        from icom_lan.transport import MAX_MISSING
+        from rigplane.transport import MAX_MISSING
 
         transport._record_rx_seq(1)
         transport._record_rx_seq(1 + MAX_MISSING + 10)

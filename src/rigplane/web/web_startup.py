@@ -1,4 +1,4 @@
-"""Startup/shutdown orchestration for :class:`icom_lan.web.server.WebServer`.
+"""Startup/shutdown orchestration for :class:`rigplane.web.server.WebServer`.
 
 Extracted from ``web/server.py`` to keep ``WebServer.start()`` /
 ``WebServer.stop()`` as thin delegators (issue #1261, Tier 3 wave 4 of #1063).

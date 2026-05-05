@@ -1,10 +1,10 @@
-"""Backward-compatible re-export — driver moved to icom_lan.audio.usb_driver.
+"""Backward-compatible re-export — driver moved to rigplane.audio.usb_driver.
 
 All public symbols are re-exported so existing imports continue to work.
-New code should import from :mod:`icom_lan.audio` directly.
+New code should import from :mod:`rigplane.audio` directly.
 """
 
-from icom_lan.audio.usb_driver import (  # noqa: F401
+from rigplane.audio.usb_driver import (  # noqa: F401
     AudioDeviceSelectionError,
     AudioDriverLifecycleError,
     UsbAudioDevice,

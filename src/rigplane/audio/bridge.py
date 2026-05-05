@@ -8,7 +8,7 @@ device as their sound card.
 
 Architecture::
 
-    Radio ←(LAN/Opus)→ icom-lan ←(PCM)→ AudioBackend ←(PortAudio)→ Loopback device ←→ WSJT-X
+    Radio ←(LAN/Opus)→ rigplane ←(PCM)→ AudioBackend ←(PortAudio)→ Loopback device ←→ WSJT-X
 
 Supported loopback drivers:
     - **macOS**: BlackHole (``brew install blackhole-2ch``) or Rogue Amoeba Loopback
@@ -16,7 +16,7 @@ Supported loopback drivers:
     - **Windows**: VB-Cable (https://vb-audio.com/Cable/)
 
 Requirements:
-    - ``sounddevice`` and ``numpy`` (``pip install icom-lan[bridge]``)
+    - ``sounddevice`` and ``numpy`` (``pip install rigplane[bridge]``)
     - A virtual audio loopback driver (see above)
 
 Usage::
@@ -38,8 +38,8 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import math
 
-from icom_lan.core._optional_deps import _require_opuslib, _require_sounddevice
-from icom_lan.core.types import _AUDIO_CODEC_CHANNELS
+from rigplane.core._optional_deps import _require_opuslib, _require_sounddevice
+from rigplane.core.types import _AUDIO_CODEC_CHANNELS
 
 from ._bridge_metrics import BridgeMetrics
 from ._bridge_state import BridgeState, BridgeStateChange
@@ -52,7 +52,7 @@ from .backend import (
 )
 
 if TYPE_CHECKING:
-    from icom_lan.radio_protocol import AudioCapable
+    from rigplane.radio_protocol import AudioCapable
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +146,12 @@ def derive_bridge_label(radio: Any, explicit: str | None = None) -> str:
         explicit: Caller-supplied label. Returned as-is when truthy.
 
     Returns:
-        ``"icom-lan (<model>)"`` when the model is known, otherwise ``"icom-lan"``.
+        ``"rigplane (<model>)"`` when the model is known, otherwise ``"rigplane"``.
     """
     if explicit:
         return explicit
     model = getattr(radio, "model", None)
-    return f"icom-lan ({model})" if isinstance(model, str) and model else "icom-lan"
+    return f"rigplane ({model})" if isinstance(model, str) and model else "rigplane"
 
 
 def find_loopback_device(name: str | None = None) -> dict[str, Any] | None:
@@ -209,7 +209,7 @@ class AudioBridge:
         frame_ms: PCM frame duration in milliseconds (default 20).
         tx_enabled: Whether to bridge TX audio (device → radio). Default True.
         tx_executor: Deprecated — backend now owns threading.
-        label: Descriptive label used in log messages (default ``"icom-lan"``).
+        label: Descriptive label used in log messages (default ``"rigplane"``).
         backend: Audio backend for device discovery and stream I/O.
         max_retries: Maximum reconnect attempts (0 = infinite).
         retry_base_delay: Initial backoff delay in seconds.
@@ -228,7 +228,7 @@ class AudioBridge:
         frame_ms: int = FRAME_MS,
         tx_enabled: bool = True,
         tx_executor: Executor | None = None,
-        label: str = "icom-lan",
+        label: str = "rigplane",
         backend: AudioBackend | None = None,
         max_retries: int = 5,
         retry_base_delay: float = 1.0,
@@ -423,7 +423,7 @@ class AudioBridge:
         await self._rx_stream.start()
 
         # Codec detection
-        from icom_lan.types import AudioCodec
+        from rigplane.types import AudioCodec
 
         _codec = getattr(self._radio, "audio_codec", None)
         self._is_opus = isinstance(_codec, AudioCodec) and _codec in (

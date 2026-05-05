@@ -4,7 +4,7 @@ Resamples float32 audio arrays between nodes that require different sample
 rates.  Uses ``scipy.signal.resample_poly`` when available, falling back to
 linear interpolation (numpy only).
 
-This module is distinct from ``icom_lan.audio.resample`` which operates on
+This module is distinct from ``rigplane.audio.resample`` which operates on
 s16le bytes for the audio bridge.
 """
 

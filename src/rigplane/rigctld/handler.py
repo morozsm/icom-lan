@@ -4,7 +4,7 @@ Responsibilities:
 - Command dispatch table (long_cmd → async handler method)
 - Read-only gate (reject set commands with RPRT -22)
 - RadioState-first reads with a small handler-local fallback cache
-- Error translation (icom-lan exceptions → Hamlib error codes)
+- Error translation (rigplane exceptions → Hamlib error codes)
 
 This module receives RigctldCommand from protocol.py and returns
 RigctldResponse. It calls IcomRadio methods but knows nothing about
@@ -1272,7 +1272,7 @@ class RigctldHandler:
             return RigctldResponse(values=[self._routing.get_info()])
         raw_model = getattr(self._radio, "model", "IC-7610")
         model = raw_model if isinstance(raw_model, str) and raw_model else "IC-7610"
-        return RigctldResponse(values=[f"Icom {model} (icom-lan)"])
+        return RigctldResponse(values=[f"Icom {model} (rigplane)"])
 
     async def _cmd_chk_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
         """Hamlib chk_vfo handshake.

@@ -10,7 +10,7 @@ Implements:
   the security boundary).
 - Background sweeper that purges expired previews every 60s.
 - API auth inheritance: the existing top-level token check in
-  :func:`icom_lan.web.web_routing.dispatch_http_request` already gates
+  :func:`rigplane.web.web_routing.dispatch_http_request` already gates
   every ``/api/`` path, so this module does not duplicate it.
 
 See spec §4.9 in
@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from icom_lan.diagnostics import (
+from rigplane.diagnostics import (
     REDACTORS,
     BundleContext,
     BundleTooLarge,
@@ -44,7 +44,7 @@ from icom_lan.diagnostics import (
     build_bundle,
     upload_bundle,
 )
-from icom_lan.diagnostics.upload import _resolve_endpoint  # noqa: TID251
+from rigplane.diagnostics.upload import _resolve_endpoint  # noqa: TID251
 
 __all__ = ["DiagnosticsHandler"]
 
@@ -163,7 +163,7 @@ def _coerce_str_list(value: Any) -> list[str]:
 
 def _bundle_filename(now_unix: int) -> str:
     ts = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(now_unix))
-    return f"icom-lan-report-{ts}.zip"
+    return f"rigplane-report-{ts}.zip"
 
 
 class DiagnosticsHandler:
@@ -280,7 +280,7 @@ class DiagnosticsHandler:
             generated_at_unix=now_unix,
         )
 
-        staging_dir = Path(tempfile.mkdtemp(prefix="icom-lan-report-"))
+        staging_dir = Path(tempfile.mkdtemp(prefix="rigplane-report-"))
         filename = _bundle_filename(now_unix)
         bundle_path = staging_dir / filename
 

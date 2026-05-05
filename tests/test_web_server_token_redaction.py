@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from icom_lan.web.server import _redact_token_in_path
+from rigplane.web.server import _redact_token_in_path
 
 
 def test_redact_token_simple() -> None:

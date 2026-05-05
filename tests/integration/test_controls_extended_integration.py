@@ -6,9 +6,9 @@ import asyncio
 
 import pytest
 
-from icom_lan import IcomRadio
-from icom_lan.exceptions import CommandError
-from icom_lan.types import Mode
+from rigplane import IcomRadio
+from rigplane.exceptions import CommandError
+from rigplane.types import Mode
 
 
 pytestmark = pytest.mark.integration

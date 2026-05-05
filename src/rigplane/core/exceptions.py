@@ -1,7 +1,7 @@
-"""Custom exception hierarchy for icom-lan."""
+"""Custom exception hierarchy for rigplane."""
 
 __all__ = [
-    "IcomLanError",
+    "RigplaneError",
     "ConnectionError",
     "AuthenticationError",
     "CommandError",
@@ -13,27 +13,27 @@ __all__ = [
 ]
 
 
-class IcomLanError(Exception):
-    """Base exception for all icom-lan errors."""
+class RigplaneError(Exception):
+    """Base exception for all rigplane errors."""
 
 
-class ConnectionError(IcomLanError):
+class ConnectionError(RigplaneError):
     """Raised when a connection to the radio fails or is lost."""
 
 
-class AuthenticationError(IcomLanError):
+class AuthenticationError(RigplaneError):
     """Raised when authentication with the radio fails."""
 
 
-class CommandError(IcomLanError):
+class CommandError(RigplaneError):
     """Raised when a CI-V command fails or returns an error."""
 
 
-class TimeoutError(IcomLanError):
+class TimeoutError(RigplaneError):
     """Raised when an operation times out."""
 
 
-class AudioError(IcomLanError):
+class AudioError(RigplaneError):
     """Base exception for audio codec/transcoding failures."""
 
 

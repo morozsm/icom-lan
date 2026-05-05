@@ -7,15 +7,15 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from icom_lan.diagnostics._error_ring import get_ring
-from icom_lan.diagnostics.redaction import (
+from rigplane.diagnostics._error_ring import get_ring
+from rigplane.diagnostics.redaction import (
     redact_credentials,
     redact_ips,
     redact_paths,
 )
 
 if TYPE_CHECKING:
-    from icom_lan.diagnostics.contributor import BundleContext
+    from rigplane.diagnostics.contributor import BundleContext
 
 
 def _redact_traceback_lines(lines: list[str]) -> list[str]:

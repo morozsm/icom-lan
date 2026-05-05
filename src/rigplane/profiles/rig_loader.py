@@ -9,12 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from icom_lan.core.capabilities import KNOWN_CAPABILITIES
-from icom_lan.commands.command_map import CommandMap
+from rigplane.core.capabilities import KNOWN_CAPABILITIES
+from rigplane.commands.command_map import CommandMap
 
 __all__ = ["RigConfig", "RigLoadError", "load_rig", "discover_rigs"]
-from icom_lan.commands.command_spec import CatCommandSpec, CivCommandSpec, CommandSpec
-from icom_lan.profiles import (
+from rigplane.commands.command_spec import CatCommandSpec, CivCommandSpec, CommandSpec
+from rigplane.profiles import (
     BandInfo,
     ControlSpec,
     FilterWidthRule,
@@ -757,7 +757,7 @@ def load_rig(path: Path) -> RigConfig:
                     f"{filename}: [audio].codec_preference must not be empty"
                 )
             # Validate entries against AudioCodec enum to fail fast on typos.
-            from icom_lan.types import AudioCodec
+            from rigplane.types import AudioCodec
 
             valid_names = {c.name for c in AudioCodec}
             unknown = [c for c in codec_raw if c not in valid_names]

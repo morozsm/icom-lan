@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from icom_lan.usb_audio_resolve import (
+from rigplane.usb_audio_resolve import (
     AudioDeviceMapping,
     _extract_tty_suffix,
     _find_audio_codec_locations,
@@ -446,14 +446,14 @@ class TestResolveYaesu:
 class TestResolvePlatformDispatch:
     """Test that resolve_audio_for_serial_port dispatches correctly."""
 
-    @patch("icom_lan.usb_audio_resolve.platform")
+    @patch("rigplane.usb_audio_resolve.platform")
     def test_non_darwin_returns_none(self, mock_platform: MagicMock) -> None:
         mock_platform.system.return_value = "Linux"
         result = resolve_audio_for_serial_port("/dev/ttyUSB0")
         assert result is None
 
-    @patch("icom_lan.usb_audio_resolve.platform")
-    @patch("icom_lan.usb_audio_resolve._resolve_macos")
+    @patch("rigplane.usb_audio_resolve.platform")
+    @patch("rigplane.usb_audio_resolve._resolve_macos")
     def test_darwin_delegates(
         self, mock_resolve: MagicMock, mock_platform: MagicMock
     ) -> None:

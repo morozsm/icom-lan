@@ -1,4 +1,4 @@
-"""Tests for ``icom_lan.diagnostics`` contributor protocol and discovery."""
+"""Tests for ``rigplane.diagnostics`` contributor protocol and discovery."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from typing import Any
 
 import pytest
 
-from icom_lan.diagnostics import (
+from rigplane.diagnostics import (
     BundleContext,
     DiagnosticContributor,
     discover,
     register,
 )
-from icom_lan.diagnostics import _discovery
+from rigplane.diagnostics import _discovery
 
 
 @pytest.fixture(autouse=True)

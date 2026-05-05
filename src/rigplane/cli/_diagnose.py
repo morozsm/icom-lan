@@ -1,4 +1,4 @@
-"""``icom-lan diagnose`` subcommand — local-bundle generator with opt-in upload.
+"""``rigplane diagnose`` subcommand — local-bundle generator with opt-in upload.
 
 Privacy posture (spec §4.8):
 
@@ -35,16 +35,16 @@ from typing import TYPE_CHECKING, Any
 
 import platformdirs
 
-# NOTE: ``icom_lan.diagnostics`` re-exports ``upload_bundle`` from
+# NOTE: ``rigplane.diagnostics`` re-exports ``upload_bundle`` from
 # ``upload.py``, which imports ``aiohttp`` at module level. ``aiohttp`` is a
 # dev-only / optional dependency, so importing it eagerly here would crash
-# every CLI invocation (``icom-lan status``, ``icom-lan freq`` …) for users
-# who installed only the runtime requirements. All ``icom_lan.diagnostics``
+# every CLI invocation (``rigplane status``, ``rigplane freq`` …) for users
+# who installed only the runtime requirements. All ``rigplane.diagnostics``
 # imports are therefore deferred into the helpers/coroutine that actually
 # need them — the ``diagnose`` subcommand path. ``add_subparser`` stays
 # argparse-only and never touches diagnostics symbols.
 if TYPE_CHECKING:
-    from icom_lan.diagnostics import BundleContext, ReportSubmitted
+    from rigplane.diagnostics import BundleContext, ReportSubmitted
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def add_subparser(sub: Any) -> argparse.ArgumentParser:
         "--output",
         type=Path,
         default=None,
-        help="Output zip path (default: ~/icom-lan-report-<timestamp>.zip).",
+        help="Output zip path (default: ~/rigplane-report-<timestamp>.zip).",
     )
     p.add_argument(
         "--include",
@@ -108,7 +108,7 @@ def add_subparser(sub: Any) -> argparse.ArgumentParser:
     p.add_argument(
         "--endpoint",
         default=None,
-        help="Upload endpoint URL (overrides ICOM_LAN_REPORT_ENDPOINT).",
+        help="Upload endpoint URL (overrides RIGPLANE_REPORT_ENDPOINT).",
     )
     p.add_argument(
         "--no-confirm",
@@ -133,15 +133,15 @@ def add_subparser(sub: Any) -> argparse.ArgumentParser:
 
 def _default_output_path() -> Path:
     ts = time.strftime("%Y%m%d-%H%M%S")
-    return Path.home() / f"icom-lan-report-{ts}.zip"
+    return Path.home() / f"rigplane-report-{ts}.zip"
 
 
 def _default_log_dir() -> Path:
-    return Path(platformdirs.user_cache_path("icom-lan")) / "logs"
+    return Path(platformdirs.user_cache_path("rigplane")) / "logs"
 
 
 def _default_config_dir() -> Path:
-    return Path(platformdirs.user_config_path("icom-lan"))
+    return Path(platformdirs.user_config_path("rigplane"))
 
 
 _FALLBACK_ENDPOINT = "https://reports.msmsoft.net/v1/diagnostics/upload"
@@ -150,19 +150,19 @@ _FALLBACK_ENDPOINT = "https://reports.msmsoft.net/v1/diagnostics/upload"
 def _resolve_endpoint(endpoint_arg: str | None) -> str:
     if endpoint_arg:
         return endpoint_arg
-    env = os.environ.get("ICOM_LAN_REPORT_ENDPOINT")
+    env = os.environ.get("RIGPLANE_REPORT_ENDPOINT")
     if env:
         return env
     # Try the canonical constant from the diagnostics package. On installs that
     # omit ``aiohttp`` (a dev-only dep) the lazy ``__getattr__`` hook in
-    # ``icom_lan.diagnostics.__init__`` raises ``ImportError`` while loading
+    # ``rigplane.diagnostics.__init__`` raises ``ImportError`` while loading
     # ``upload.py`` — silently fall back to the well-known default URL so
     # endpoint resolution still works in the preview / save-locally display
     # path. The actual upload (which DOES need aiohttp) will fail later with
     # a friendly message; the duplicated string is the price of decoupling
     # the CLI's display path from the upload module's import requirements.
     try:
-        from icom_lan.diagnostics import DEFAULT_ENDPOINT
+        from rigplane.diagnostics import DEFAULT_ENDPOINT
     except ImportError:
         return _FALLBACK_ENDPOINT
     return str(DEFAULT_ENDPOINT)
@@ -180,7 +180,7 @@ def _prompt(prompt: str) -> str:
 
 def _make_context(args: argparse.Namespace) -> BundleContext:
     # Lazy import — see module-level NOTE about deferring diagnostics imports.
-    from icom_lan.diagnostics import BundleContext
+    from rigplane.diagnostics import BundleContext
 
     submission_id = args.bundle_id or str(uuid.uuid4())
     return BundleContext(
@@ -266,13 +266,13 @@ async def _run_async(args: argparse.Namespace) -> int:
     # error classes live in non-aiohttp submodules, so importing them here is
     # cheap. ``upload_bundle`` (and the other ``upload``-module re-exports)
     # transitively imports ``aiohttp`` via the lazy hook in
-    # ``icom_lan.diagnostics.__init__``; that import is deferred into the
-    # ``args.upload`` branch below so ``icom-lan diagnose`` (save-only) works
+    # ``rigplane.diagnostics.__init__``; that import is deferred into the
+    # ``args.upload`` branch below so ``rigplane diagnose`` (save-only) works
     # for runtime-only installs without ``aiohttp``.
     # These names land in the local scope, so test fixtures must patch
-    # ``icom_lan.diagnostics`` (the source module) rather than
-    # ``icom_lan.cli._diagnose``.
-    from icom_lan.diagnostics import build_bundle
+    # ``rigplane.diagnostics`` (the source module) rather than
+    # ``rigplane.cli._diagnose``.
+    from rigplane.diagnostics import build_bundle
 
     if args.include or args.exclude:
         print(
@@ -333,14 +333,14 @@ async def _run_async(args: argparse.Namespace) -> int:
 
     # Upload (either --no-confirm path or user typed y/yes after preview).
     # Lazy import — accessing ``upload_bundle`` is what triggers the aiohttp
-    # import via the :pep:`562` hook in ``icom_lan.diagnostics.__init__``.
-    # Keeping it inside the ``args.upload`` branch lets ``icom-lan diagnose``
+    # import via the :pep:`562` hook in ``rigplane.diagnostics.__init__``.
+    # Keeping it inside the ``args.upload`` branch lets ``rigplane diagnose``
     # (save-only) run on installs that omit aiohttp. The error classes are
     # imported alongside for symmetry; they live in non-aiohttp submodules
     # and would be cheap to hoist, but bundling them here keeps the upload
     # path self-contained.
     try:
-        from icom_lan.diagnostics import (
+        from rigplane.diagnostics import (
             BundleTooLarge,
             ForbiddenContent,
             MetadataInvalid,

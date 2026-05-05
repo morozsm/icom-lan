@@ -34,12 +34,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import CONTROLLER_ADDR, build_civ_frame
-from icom_lan.exceptions import CommandError, ConnectionError, TimeoutError
-from icom_lan.radio import IcomRadio
-from icom_lan.scope import ScopeFrame
-from icom_lan.types import Mode
+from rigplane import IC_7610_ADDR
+from rigplane.commands import CONTROLLER_ADDR, build_civ_frame
+from rigplane.exceptions import CommandError, ConnectionError, TimeoutError
+from rigplane.radio import IcomRadio
+from rigplane.scope import ScopeFrame
+from rigplane.types import Mode
 
 # Re-use the low-level helpers from test_radio
 from test_radio import MockTransport, _ack_response, _nak_response, _wrap_civ_in_udp
@@ -119,7 +119,7 @@ def radio(mock_transport: MockTransport):
 
 
 def test_conn_state_returns_current_state(radio: IcomRadio) -> None:
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     assert radio.conn_state == RadioConnectionState.CONNECTED
 
@@ -158,7 +158,7 @@ def test_radio_ready_false_when_civ_data_is_stale(radio: IcomRadio) -> None:
 def test_intentional_disconnect_property_reflects_disconnected_state(
     radio: IcomRadio,
 ) -> None:
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     # CONNECTED → not intentional disconnect
     assert radio._intentional_disconnect is False
@@ -168,7 +168,7 @@ def test_intentional_disconnect_property_reflects_disconnected_state(
 
 
 def test_intentional_disconnect_setter_true_sets_disconnected(radio: IcomRadio) -> None:
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._intentional_disconnect = True
     assert radio._conn_state == RadioConnectionState.DISCONNECTED
@@ -177,7 +177,7 @@ def test_intentional_disconnect_setter_true_sets_disconnected(radio: IcomRadio) 
 def test_intentional_disconnect_setter_false_when_disconnected_sets_reconnecting(
     radio: IcomRadio,
 ) -> None:
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._conn_state = RadioConnectionState.DISCONNECTED
     radio._intentional_disconnect = False
@@ -201,7 +201,7 @@ def test_civ_stats_returns_dict(radio: IcomRadio) -> None:
 
 
 async def test_soft_disconnect_when_not_connected_is_noop(radio: IcomRadio) -> None:
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._conn_state = RadioConnectionState.DISCONNECTED
     # Should not raise
@@ -248,7 +248,7 @@ async def test_soft_reconnect_warns_when_civ_transport_already_open(
     import logging
 
     # _civ_transport is already set (the mock)
-    with caplog.at_level(logging.WARNING, logger="icom_lan.runtime.radio"):
+    with caplog.at_level(logging.WARNING, logger="rigplane.runtime.radio"):
         await radio.soft_reconnect()
 
     assert any("already open" in r.message for r in caplog.records)
@@ -301,7 +301,7 @@ def test_removed_audio_aliases_raise_attribute_error(
 def test_get_pcm_transcoder_creates_new_on_cache_miss(radio: IcomRadio) -> None:
     """_get_pcm_transcoder() creates a fresh transcoder on first call."""
     with patch(
-        "icom_lan._audio_runtime_mixin.create_pcm_opus_transcoder"
+        "rigplane._audio_runtime_mixin.create_pcm_opus_transcoder"
     ) as mock_create:
         mock_create.return_value = MagicMock()
         tc = radio._get_pcm_transcoder(sample_rate=48000, channels=1, frame_ms=20)
@@ -312,7 +312,7 @@ def test_get_pcm_transcoder_creates_new_on_cache_miss(radio: IcomRadio) -> None:
 def test_get_pcm_transcoder_returns_cached_on_same_params(radio: IcomRadio) -> None:
     """Second call with same params returns cached transcoder."""
     with patch(
-        "icom_lan._audio_runtime_mixin.create_pcm_opus_transcoder"
+        "rigplane._audio_runtime_mixin.create_pcm_opus_transcoder"
     ) as mock_create:
         mock_create.return_value = MagicMock()
         tc1 = radio._get_pcm_transcoder(sample_rate=48000, channels=1, frame_ms=20)
@@ -629,8 +629,8 @@ async def test_set_ip_plus_sends_command(
 async def test_snapshot_state_returns_dict_with_basics(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
-    from icom_lan.types import bcd_encode
-    from icom_lan.commands import (
+    from rigplane.types import bcd_encode
+    from rigplane.commands import (
         _CMD_FREQ_GET,
         _CMD_LEVEL,
         _CMD_MODE_GET,
@@ -910,7 +910,7 @@ async def test_enable_scope_fast_policy_no_wait(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """FAST policy sends commands without waiting for ACK or verification."""
-    from icom_lan.types import ScopeCompletionPolicy
+    from rigplane.types import ScopeCompletionPolicy
 
     await radio.enable_scope(policy=ScopeCompletionPolicy.FAST)
     assert len(mock_transport.sent_packets) >= 1
@@ -920,7 +920,7 @@ async def test_enable_scope_fast_no_output(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """enable_scope(output=False) should only send the on command."""
-    from icom_lan.types import ScopeCompletionPolicy
+    from rigplane.types import ScopeCompletionPolicy
 
     await radio.enable_scope(output=False, policy=ScopeCompletionPolicy.FAST)
     # Only the scope-on command sent (not the data output command)
@@ -936,7 +936,7 @@ async def test_enable_scope_strict_sends_and_acks(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """STRICT policy waits for ACK from each command."""
-    from icom_lan.types import ScopeCompletionPolicy
+    from rigplane.types import ScopeCompletionPolicy
 
     # Queue two ACK responses (one for scope-on, one for scope-output)
     mock_transport.queue_response(_ack_response())
@@ -948,7 +948,7 @@ async def test_enable_scope_strict_nak_raises(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """STRICT policy should raise CommandError on NAK."""
-    from icom_lan.types import ScopeCompletionPolicy
+    from rigplane.types import ScopeCompletionPolicy
 
     mock_transport.queue_response(_nak_response())
     with pytest.raises(CommandError, match="scope enable"):
@@ -964,7 +964,7 @@ async def test_enable_scope_verify_times_out(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """VERIFY policy raises TimeoutError if no scope data arrives."""
-    from icom_lan.types import ScopeCompletionPolicy
+    from rigplane.types import ScopeCompletionPolicy
 
     # No scope data will arrive → event never set
     with pytest.raises(TimeoutError, match="Scope enable"):
@@ -975,7 +975,7 @@ async def test_enable_scope_verify_succeeds_when_event_fires(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """VERIFY policy succeeds when scope activity event fires."""
-    from icom_lan.types import ScopeCompletionPolicy
+    from rigplane.types import ScopeCompletionPolicy
 
     async def _set_event_soon() -> None:
         await asyncio.sleep(0.02)
@@ -1000,7 +1000,7 @@ async def test_enable_scope_verify_succeeds_when_event_fires(
 async def test_disable_scope_fast_sends_command(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
-    from icom_lan.types import ScopeCompletionPolicy
+    from rigplane.types import ScopeCompletionPolicy
 
     await radio.disable_scope(policy=ScopeCompletionPolicy.FAST)
     assert len(mock_transport.sent_packets) >= 1
@@ -1009,7 +1009,7 @@ async def test_disable_scope_fast_sends_command(
 async def test_disable_scope_strict_nak_raises(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
-    from icom_lan.types import ScopeCompletionPolicy
+    from rigplane.types import ScopeCompletionPolicy
 
     mock_transport.queue_response(_nak_response())
     with pytest.raises(CommandError, match="scope data output disable"):
@@ -1019,7 +1019,7 @@ async def test_disable_scope_strict_nak_raises(
 async def test_disable_scope_strict_ack_succeeds(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
-    from icom_lan.types import ScopeCompletionPolicy
+    from rigplane.types import ScopeCompletionPolicy
 
     mock_transport.queue_response(_ack_response())
     await radio.disable_scope(policy=ScopeCompletionPolicy.STRICT)
@@ -1279,7 +1279,7 @@ async def test_force_cleanup_civ_tears_down_transport(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """_force_cleanup_civ disconnects transport unconditionally (lines 407-417)."""
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     with (
         patch.object(radio._civ_runtime, "stop_data_watchdog", new=AsyncMock()),
@@ -1331,7 +1331,7 @@ async def test_soft_reconnect_reconnects_civ_when_ctrl_alive(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """soft_reconnect() opens new CI-V transport when ctrl is still alive (lines 434-472)."""
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._civ_transport = None
     # Make ctrl transport appear alive
@@ -1345,7 +1345,7 @@ async def test_soft_reconnect_reconnects_civ_when_ctrl_alive(
     fake_civ_transport._udp_error_count = 0
 
     with (
-        patch("icom_lan.transport.IcomTransport", return_value=fake_civ_transport),
+        patch("rigplane.transport.IcomTransport", return_value=fake_civ_transport),
         patch.object(radio, "_send_open_close", new=AsyncMock()),
         patch.object(radio._civ_runtime, "stop_pump", new=AsyncMock()),
         patch.object(radio._civ_runtime, "start_pump"),
@@ -1380,7 +1380,7 @@ async def test_soft_reconnect_calls_on_reconnect_callback(
     radio._on_reconnect = mock_on_reconnect
 
     with (
-        patch("icom_lan.transport.IcomTransport", return_value=fake_civ_transport),
+        patch("rigplane.transport.IcomTransport", return_value=fake_civ_transport),
         patch.object(radio, "_send_open_close", new=AsyncMock()),
         patch.object(radio._civ_runtime, "stop_pump", new=AsyncMock()),
         patch.object(radio._civ_runtime, "start_pump"),
@@ -1394,15 +1394,15 @@ async def test_soft_reconnect_calls_on_reconnect_callback(
 
 async def test_soft_reconnect_handles_connect_failure(radio: IcomRadio) -> None:
     """soft_reconnect() raises ConnectionError when transport.connect() fails (lines 444-447)."""
-    from icom_lan.transport import IcomTransport
+    from rigplane.transport import IcomTransport
 
     radio._civ_transport = None
     radio._ctrl_transport._udp_transport = MagicMock()  # type: ignore[attr-defined]
 
     # Patch IcomTransport constructor to return a mock that fails on connect.
-    # The patch target must be "icom_lan.transport.IcomTransport" because
+    # The patch target must be "rigplane.transport.IcomTransport" because
     # _control_phase.soft_reconnect() does a local `from .transport import IcomTransport`
-    # inside the function body, which resolves via icom_lan.transport, not the
+    # inside the function body, which resolves via rigplane.transport, not the
     # _control_phase module namespace.
     async def failing_connect(*args, **kwargs):
         raise OSError("connection refused")
@@ -1410,7 +1410,7 @@ async def test_soft_reconnect_handles_connect_failure(radio: IcomRadio) -> None:
     fake_transport = AsyncMock(spec=IcomTransport)
     fake_transport.connect = failing_connect
 
-    with patch("icom_lan.transport.IcomTransport", return_value=fake_transport):
+    with patch("rigplane.transport.IcomTransport", return_value=fake_transport):
         with pytest.raises(ConnectionError, match="Failed to reconnect CI-V"):
             await radio.soft_reconnect()
 
@@ -1473,9 +1473,9 @@ async def test_watchdog_loop_logs_health_periodically(
             raise asyncio.CancelledError()
 
     with (
-        patch("icom_lan.radio.time.monotonic", side_effect=advancing_time),
+        patch("rigplane.radio.time.monotonic", side_effect=advancing_time),
         patch("asyncio.sleep", side_effect=mock_sleep),
-        caplog.at_level(logging.INFO, logger="icom_lan.runtime.radio"),
+        caplog.at_level(logging.INFO, logger="rigplane.runtime.radio"),
     ):
         await radio._watchdog_loop()
 
@@ -1509,7 +1509,7 @@ async def test_watchdog_loop_triggers_reconnect_on_timeout(radio: IcomRadio) -> 
         return task
 
     with (
-        patch("icom_lan.radio.time.monotonic", side_effect=mock_time),
+        patch("rigplane.radio.time.monotonic", side_effect=mock_time),
         patch("asyncio.sleep", side_effect=mock_sleep),
         patch("asyncio.create_task", side_effect=_create_task),
     ):
@@ -1526,7 +1526,7 @@ async def test_watchdog_loop_triggers_reconnect_on_timeout(radio: IcomRadio) -> 
 
 async def test_reconnect_loop_succeeds_on_first_attempt(radio: IcomRadio) -> None:
     """_reconnect_loop reconnects successfully on first attempt (lines 553-581)."""
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._conn_state = RadioConnectionState.RECONNECTING
 
@@ -1538,7 +1538,7 @@ async def test_reconnect_loop_succeeds_on_first_attempt(radio: IcomRadio) -> Non
         radio._conn_state = RadioConnectionState.CONNECTED
 
     with (
-        patch("icom_lan.radio.IcomTransport", return_value=fake_transport),
+        patch("rigplane.radio.IcomTransport", return_value=fake_transport),
         patch.object(radio, "connect", side_effect=fake_connect),
         patch.object(radio, "_stop_token_renewal"),
         patch.object(radio._audio_runtime, "capture_snapshot", return_value=None),
@@ -1550,7 +1550,7 @@ async def test_reconnect_loop_succeeds_on_first_attempt(radio: IcomRadio) -> Non
 
 async def test_reconnect_loop_handles_audio_stop_failure(radio: IcomRadio) -> None:
     """_reconnect_loop handles failure when stopping audio stream (lines 553-554)."""
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._conn_state = RadioConnectionState.RECONNECTING
 
@@ -1567,7 +1567,7 @@ async def test_reconnect_loop_handles_audio_stop_failure(radio: IcomRadio) -> No
         radio._conn_state = RadioConnectionState.CONNECTED
 
     with (
-        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch("rigplane.radio.IcomTransport", return_value=MagicMock()),
         patch.object(radio, "connect", side_effect=fake_connect),
         patch.object(radio, "_stop_token_renewal"),
         patch.object(radio._audio_runtime, "capture_snapshot", return_value=None),
@@ -1579,7 +1579,7 @@ async def test_reconnect_loop_handles_audio_stop_failure(radio: IcomRadio) -> No
 
 async def test_reconnect_loop_retries_on_failure(radio: IcomRadio) -> None:
     """_reconnect_loop retries with backoff when connect fails (lines 583-586)."""
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._conn_state = RadioConnectionState.RECONNECTING
     radio._reconnect_delay = 0.001  # very short delay
@@ -1593,7 +1593,7 @@ async def test_reconnect_loop_retries_on_failure(radio: IcomRadio) -> None:
         radio._conn_state = RadioConnectionState.CONNECTED
 
     with (
-        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch("rigplane.radio.IcomTransport", return_value=MagicMock()),
         patch.object(radio, "connect", side_effect=intermittent_connect),
         patch.object(radio, "_stop_token_renewal"),
         patch.object(radio._audio_runtime, "capture_snapshot", return_value=None),
@@ -1608,7 +1608,7 @@ async def test_reconnect_loop_stops_audio_transport_on_reconnect(
     radio: IcomRadio,
 ) -> None:
     """_reconnect_loop disconnects audio transport during retry (lines 559-561)."""
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._conn_state = RadioConnectionState.RECONNECTING
 
@@ -1620,7 +1620,7 @@ async def test_reconnect_loop_stops_audio_transport_on_reconnect(
         radio._conn_state = RadioConnectionState.CONNECTED
 
     with (
-        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch("rigplane.radio.IcomTransport", return_value=MagicMock()),
         patch.object(radio, "connect", side_effect=fake_connect),
         patch.object(radio, "_stop_token_renewal"),
         patch.object(radio._audio_runtime, "capture_snapshot", return_value=None),
@@ -1634,7 +1634,7 @@ async def test_reconnect_loop_stops_civ_transport_on_reconnect(
     radio: IcomRadio,
 ) -> None:
     """_reconnect_loop disconnects civ transport during retry (lines 564-567)."""
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._conn_state = RadioConnectionState.RECONNECTING
 
@@ -1642,7 +1642,7 @@ async def test_reconnect_loop_stops_civ_transport_on_reconnect(
         radio._conn_state = RadioConnectionState.CONNECTED
 
     with (
-        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch("rigplane.radio.IcomTransport", return_value=MagicMock()),
         patch.object(radio, "connect", side_effect=fake_connect),
         patch.object(radio, "_stop_token_renewal"),
         patch.object(radio._audio_runtime, "capture_snapshot", return_value=None),
@@ -1657,7 +1657,7 @@ async def test_reconnect_loop_stops_ctrl_transport_on_reconnect(
     radio: IcomRadio,
 ) -> None:
     """_reconnect_loop disconnects ctrl transport during retry (lines 568-571)."""
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._conn_state = RadioConnectionState.RECONNECTING
 
@@ -1665,7 +1665,7 @@ async def test_reconnect_loop_stops_ctrl_transport_on_reconnect(
         radio._conn_state = RadioConnectionState.CONNECTED
 
     with (
-        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch("rigplane.radio.IcomTransport", return_value=MagicMock()),
         patch.object(radio, "connect", side_effect=fake_connect),
         patch.object(radio, "_stop_token_renewal"),
         patch.object(radio._audio_runtime, "capture_snapshot", return_value=None),
@@ -1678,7 +1678,7 @@ async def test_reconnect_loop_attempts_token_remove(
     radio: IcomRadio,
 ) -> None:
     """_reconnect_loop sends token-remove before ctrl transport disconnect."""
-    from icom_lan.runtime._connection_state import RadioConnectionState
+    from rigplane.runtime._connection_state import RadioConnectionState
 
     radio._conn_state = RadioConnectionState.RECONNECTING
     radio._audio_transport = None
@@ -1690,7 +1690,7 @@ async def test_reconnect_loop_attempts_token_remove(
         radio._conn_state = RadioConnectionState.CONNECTED
 
     with (
-        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch("rigplane.radio.IcomTransport", return_value=MagicMock()),
         patch.object(radio, "connect", side_effect=fake_connect),
         patch.object(radio, "_stop_token_renewal"),
         patch.object(radio._audio_runtime, "capture_snapshot", return_value=None),
@@ -1726,10 +1726,10 @@ async def test_ensure_audio_transport_creates_transport(radio: IcomRadio) -> Non
 
     with (
         patch(
-            "icom_lan._audio_runtime_mixin.IcomTransport", return_value=fake_transport
+            "rigplane._audio_runtime_mixin.IcomTransport", return_value=fake_transport
         ),
         patch.object(radio, "_send_audio_open_close", new=AsyncMock()),
-        patch("icom_lan._audio_runtime_mixin.AudioStream"),
+        patch("rigplane._audio_runtime_mixin.AudioStream"),
     ):
         await radio._ensure_audio_transport()
 
@@ -1747,7 +1747,7 @@ async def test_ensure_audio_transport_noop_when_stream_exists(radio: IcomRadio) 
     """_ensure_audio_transport is noop when _audio_stream already set (line 987-988)."""
     radio._audio_stream = MagicMock()  # already connected
 
-    with patch("icom_lan._audio_runtime_mixin.IcomTransport") as mock_cls:
+    with patch("rigplane._audio_runtime_mixin.IcomTransport") as mock_cls:
         await radio._ensure_audio_transport()
         mock_cls.assert_not_called()
 
@@ -1760,7 +1760,7 @@ async def test_ensure_audio_transport_handles_connect_failure(radio: IcomRadio) 
     fake_transport.connect = AsyncMock(side_effect=OSError("port busy"))
 
     with patch(
-        "icom_lan._audio_runtime_mixin.IcomTransport", return_value=fake_transport
+        "rigplane._audio_runtime_mixin.IcomTransport", return_value=fake_transport
     ):
         with pytest.raises(ConnectionError, match="Failed to connect audio port"):
             await radio._ensure_audio_transport()
@@ -1777,7 +1777,7 @@ async def test_get_filter_returns_filter_width(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """get_filter() returns filter width from mode response (lines 1117-1118)."""
-    from icom_lan.commands import _CMD_MODE_GET
+    from rigplane.commands import _CMD_MODE_GET
 
     mode_civ = build_civ_frame(
         CONTROLLER_ADDR,
@@ -1794,7 +1794,7 @@ async def test_set_filter_reads_mode_then_sets(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """set_filter() reads current mode then calls set_mode (lines 1122-1123)."""
-    from icom_lan.commands import _CMD_MODE_GET
+    from rigplane.commands import _CMD_MODE_GET
 
     mode_civ = build_civ_frame(
         CONTROLLER_ADDR,
@@ -1868,7 +1868,7 @@ async def test_set_preamp_propagates_own_digi_sel_error(
     radio: IcomRadio,
 ) -> None:
     """set_preamp() propagates its own DIGI-SEL CommandError (lines 1421, 1426-1427)."""
-    from icom_lan.exceptions import CommandError
+    from rigplane.exceptions import CommandError
 
     # Mock get_digisel to return True (DIGI-SEL on)
     with patch.object(radio, "get_digisel", new=AsyncMock(return_value=True)):
@@ -1880,7 +1880,7 @@ async def test_set_preamp_ignores_unrelated_command_error(
     radio: IcomRadio,
 ) -> None:
     """set_preamp() ignores CommandError that isn't its own DIGI-SEL error."""
-    from icom_lan.exceptions import CommandError
+    from rigplane.exceptions import CommandError
 
     # Mock get_digisel to raise a different CommandError
     with patch.object(
@@ -2040,7 +2040,7 @@ async def test_run_state_transaction_uses_commander_when_available(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """run_state_transaction() uses commander.transaction() when commander is set (line 1608)."""
-    from icom_lan.commander import IcomCommander
+    from rigplane.commander import IcomCommander
 
     mock_commander = MagicMock(spec=IcomCommander)
     mock_commander.transaction = AsyncMock()

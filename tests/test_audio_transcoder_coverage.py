@@ -18,13 +18,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from icom_lan.audio._transcoder import (
+from rigplane.audio._transcoder import (
     PcmAudioFormat,
     PcmOpusTranscoder,
     _OpuslibBackend,
     _load_default_backend,
 )
-from icom_lan.exceptions import (
+from rigplane.exceptions import (
     AudioCodecBackendError,
     AudioFormatError,
     AudioTranscodeError,

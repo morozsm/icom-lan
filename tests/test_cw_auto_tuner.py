@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from icom_lan.cw_auto_tuner import CwAutoTuner
+from rigplane.cw_auto_tuner import CwAutoTuner
 
 _SAMPLE_RATE = 48000
 

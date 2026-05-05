@@ -120,8 +120,8 @@ def _find_config_path() -> Path | None:
     ]
     xdg = os.environ.get("XDG_CONFIG_HOME")
     if xdg:
-        candidates.append(Path(xdg) / "icom-lan" / "audio.toml")
-    candidates.append(Path.home() / ".config" / "icom-lan" / "audio.toml")
+        candidates.append(Path(xdg) / "rigplane" / "audio.toml")
+    candidates.append(Path.home() / ".config" / "rigplane" / "audio.toml")
 
     for p in candidates:
         if p.is_file():

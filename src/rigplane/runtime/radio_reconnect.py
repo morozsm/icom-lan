@@ -18,14 +18,14 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from icom_lan.runtime._connection_state import RadioConnectionState
-from icom_lan.core.exceptions import AuthenticationError
-from icom_lan.core.transport import IcomTransport
+from rigplane.runtime._connection_state import RadioConnectionState
+from rigplane.core.exceptions import AuthenticationError
+from rigplane.core.transport import IcomTransport
 
 if TYPE_CHECKING:
     # Internal implementation module for IcomRadio — the TID251 ban targets
     # external consumers (web/, rigctld/), not radio.py's own helpers.
-    from icom_lan.radio import IcomRadio  # type: ignore[attr-defined]  # noqa: TID251
+    from rigplane.radio import IcomRadio  # type: ignore[attr-defined]  # noqa: TID251
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +175,7 @@ _AUDIO_ERROR_THRESHOLD: int = 50
 _AUDIO_WATCHDOG_INTERVAL: float = 5.0
 
 
-async def audio_error_watchdog_loop(radio: "IcomRadio") -> None:  # type: ignore[name-defined]
+async def audio_error_watchdog_loop(radio: "IcomRadio") -> None:
     """Monitor audio transport for sustained EPIPE storms; recover audio-only.
 
     When the audio transport accumulates ``_AUDIO_ERROR_THRESHOLD`` UDP errors,

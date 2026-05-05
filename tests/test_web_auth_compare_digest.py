@@ -13,8 +13,8 @@ from typing import Any
 
 import pytest
 
-from icom_lan.web import server as web_server
-from icom_lan.web.server import WebConfig, WebServer
+from rigplane.web import server as web_server
+from rigplane.web.server import WebConfig, WebServer
 
 
 def test_server_module_imports_hmac() -> None:

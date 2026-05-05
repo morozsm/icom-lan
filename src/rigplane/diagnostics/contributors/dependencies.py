@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from icom_lan.diagnostics.contributor import BundleContext
+    from rigplane.diagnostics.contributor import BundleContext
 
 
 class DependenciesContributor:

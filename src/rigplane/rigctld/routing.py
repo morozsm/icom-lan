@@ -331,7 +331,7 @@ class YaesuRouting:
     def get_info(self) -> str:
         raw_model = getattr(self._radio, "model", "Yaesu")
         model = raw_model if isinstance(raw_model, str) and raw_model else "Yaesu"
-        return f"Yaesu {model} (icom-lan)"
+        return f"Yaesu {model} (rigplane)"
 
 
 # ---------------------------------------------------------------------------
@@ -347,14 +347,14 @@ def create_routing(
     """Create a vendor-specific :class:`RigctldRouting` for ``radio``.
 
     Dispatches via the public
-    :class:`~icom_lan.core.radio_protocol.RigctldRoutable` Protocol:
+    :class:`~rigplane.core.radio_protocol.RigctldRoutable` Protocol:
     radios that implement ``rigctld_routing(cache, max_power_w)`` get
     their custom strategy (Yaesu CAT today; Kenwood TS-590 or others
     in the future). Radios that do not — Icom CI-V — return ``None``
     and the handler's built-in Icom routing is used as the default
     path.
     """
-    from icom_lan.core.radio_protocol import RigctldRoutable
+    from rigplane.core.radio_protocol import RigctldRoutable
 
     if isinstance(radio, RigctldRoutable):
         return radio.rigctld_routing(cache, max_power_w)

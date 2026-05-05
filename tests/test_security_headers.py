@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.rigctld.state_cache import StateCache
-from icom_lan.web.server import WebConfig, WebServer
+from rigplane.rigctld.state_cache import StateCache
+from rigplane.web.server import WebConfig, WebServer
 
 
 # ---------------------------------------------------------------------------

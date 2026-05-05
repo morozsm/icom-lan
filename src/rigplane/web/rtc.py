@@ -1,4 +1,4 @@
-"""WebRTC signaling support for icom-lan.
+"""WebRTC signaling support for rigplane.
 
 Provides SDP offer/answer handling for low-latency audio delivery via
 WebRTC.  The ``aiortc`` library is an optional dependency — when absent,
@@ -29,7 +29,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-_INSTALL_HINT = "WebRTC backend unavailable; install icom-lan[webrtc]."
+_INSTALL_HINT = "WebRTC backend unavailable; install rigplane[webrtc]."
 
 # ---------------------------------------------------------------------------
 # Lazy aiortc availability check

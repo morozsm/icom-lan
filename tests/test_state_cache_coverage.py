@@ -12,7 +12,7 @@ import time
 
 import pytest
 
-from icom_lan.rigctld.state_cache import StateCache
+from rigplane.rigctld.state_cache import StateCache
 
 
 @pytest.fixture

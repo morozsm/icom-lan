@@ -148,7 +148,7 @@ class MockIcomRadio:
     * **Control port** – discovery (AYT/IAH), login, token exchange, pings
     * **CI-V port**    – discovery, open/close, CI-V commands, pings
 
-    After calling :meth:`start`, connect an :class:`~icom_lan.radio.IcomRadio`
+    After calling :meth:`start`, connect an :class:`~rigplane.radio.IcomRadio`
     to ``host:control_port`` and it will go through the full handshake.
 
     Args:

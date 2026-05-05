@@ -9,15 +9,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.audio._bridge_metrics import BridgeMetrics
-from icom_lan.audio._bridge_state import BridgeState, BridgeStateChange
-from icom_lan.audio.backend import (
+from rigplane.audio._bridge_metrics import BridgeMetrics
+from rigplane.audio._bridge_state import BridgeState, BridgeStateChange
+from rigplane.audio.backend import (
     AudioDeviceId,
     AudioDeviceInfo,
     FakeAudioBackend,
 )
-from icom_lan.audio.lan_stream import AudioPacket
-from icom_lan.audio_bridge import (
+from rigplane.audio.lan_stream import AudioPacket
+from rigplane.audio_bridge import (
     AudioBridge,
     CHANNELS,
     FRAME_BYTES,
@@ -96,7 +96,7 @@ def _bridge_backend(
 
 
 def _make_radio() -> types.SimpleNamespace:
-    from icom_lan.audio_bus import AudioBus
+    from rigplane.audio_bus import AudioBus
 
     radio: types.SimpleNamespace = types.SimpleNamespace(
         start_audio_rx_opus=AsyncMock(),
@@ -624,17 +624,17 @@ def test_derive_label_explicit():
 
 def test_derive_label_from_model():
     radio = _bare_radio(model="IC-7610")
-    assert derive_bridge_label(radio, None) == "icom-lan (IC-7610)"
+    assert derive_bridge_label(radio, None) == "rigplane (IC-7610)"
 
 
 def test_derive_label_no_model():
     radio = _bare_radio()  # no model attr — same semantics as MagicMock(spec=[])
-    assert derive_bridge_label(radio, None) == "icom-lan"
+    assert derive_bridge_label(radio, None) == "rigplane"
 
 
 def test_derive_label_empty_model():
     radio = _bare_radio(model="")
-    assert derive_bridge_label(radio, None) == "icom-lan"
+    assert derive_bridge_label(radio, None) == "rigplane"
 
 
 # ---------------------------------------------------------------------------
@@ -645,32 +645,32 @@ def test_derive_label_empty_model():
 def test_bridge_label_default():
     radio = _bare_radio()
     bridge = AudioBridge(radio)
-    assert bridge.label == "icom-lan"
+    assert bridge.label == "rigplane"
 
 
 def test_bridge_label_custom():
     radio = _bare_radio()
-    bridge = AudioBridge(radio, label="icom-lan (IC-7610)")
-    assert bridge.label == "icom-lan (IC-7610)"
+    bridge = AudioBridge(radio, label="rigplane (IC-7610)")
+    assert bridge.label == "rigplane (IC-7610)"
 
 
 def test_bridge_label_in_stats():
     radio = _bare_radio()
-    bridge = AudioBridge(radio, label="icom-lan (IC-905)")
-    assert bridge.stats["label"] == "icom-lan (IC-905)"
+    bridge = AudioBridge(radio, label="rigplane (IC-905)")
+    assert bridge.stats["label"] == "rigplane (IC-905)"
 
 
 async def test_bridge_label_in_log_messages(caplog):
     import logging
 
     radio = _bare_radio()
-    bridge = AudioBridge(radio, label="icom-lan (IC-905)")
+    bridge = AudioBridge(radio, label="rigplane (IC-905)")
 
     with caplog.at_level(logging.WARNING):
         bridge._running = True
         await bridge.start()
 
-    assert "icom-lan (IC-905): already running" in caplog.text
+    assert "rigplane (IC-905): already running" in caplog.text
 
 
 # ---------------------------------------------------------------------------

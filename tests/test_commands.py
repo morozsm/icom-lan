@@ -3,10 +3,10 @@
 import inspect
 
 import pytest
-import icom_lan.commands as raw_commands
+import rigplane.commands as raw_commands
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     CONTROLLER_ADDR,
     build_civ_frame,
     filter_hz_to_index,
@@ -29,7 +29,7 @@ from icom_lan.commands import (
     set_mode,
     set_rf_power,
 )
-from icom_lan.types import (
+from rigplane.types import (
     AgcMode,
     AudioPeakFilter,
     BreakInMode,
@@ -389,14 +389,14 @@ class TestCommand29:
     """Test Command29 framing for dual-receiver radios (IC-7610)."""
 
     def test_build_cmd29_frame_basic(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, build_cmd29_frame
+        from rigplane.commands import RECEIVER_MAIN, build_cmd29_frame
 
         frame = build_cmd29_frame(0x98, 0xE0, 0x16, sub=0x02, receiver=RECEIVER_MAIN)
         # FE FE 98 E0 29 00 16 02 FD
         assert frame == bytes.fromhex("fefe98e0 29 00 16 02 fd".replace(" ", ""))
 
     def test_cmd29_with_data(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, build_cmd29_frame
+        from rigplane.commands import RECEIVER_MAIN, build_cmd29_frame
 
         frame = build_cmd29_frame(
             0x98, 0xE0, 0x16, sub=0x02, data=b"\x01", receiver=RECEIVER_MAIN
@@ -404,7 +404,7 @@ class TestCommand29:
         assert frame == bytes.fromhex("fefe98e0 29 00 16 02 01 fd".replace(" ", ""))
 
     def test_cmd29_sub_receiver(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, build_cmd29_frame
+        from rigplane.commands import RECEIVER_SUB, build_cmd29_frame
 
         frame = build_cmd29_frame(
             0x98, 0xE0, 0x16, sub=0x02, data=b"\x02", receiver=RECEIVER_SUB
@@ -412,14 +412,14 @@ class TestCommand29:
         assert frame == bytes.fromhex("fefe98e0 29 01 16 02 02 fd".replace(" ", ""))
 
     def test_cmd29_no_sub(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, build_cmd29_frame
+        from rigplane.commands import RECEIVER_MAIN, build_cmd29_frame
 
         # ATT command has no sub-byte
         frame = build_cmd29_frame(0x98, 0xE0, 0x11, receiver=RECEIVER_MAIN)
         assert frame == bytes.fromhex("fefe98e0 29 00 11 fd".replace(" ", ""))
 
     def test_cmd29_att_with_data(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, build_cmd29_frame
+        from rigplane.commands import RECEIVER_MAIN, build_cmd29_frame
 
         frame = build_cmd29_frame(
             0x98, 0xE0, 0x11, data=b"\x18", receiver=RECEIVER_MAIN
@@ -443,7 +443,7 @@ class TestCommand29:
         assert parsed.data == b"\x18"
 
     def test_get_preamp_uses_cmd29(self) -> None:
-        from icom_lan.commands import get_preamp
+        from rigplane.commands import get_preamp
 
         frame = get_preamp()
         assert frame[4] == 0x29  # Command byte is 0x29
@@ -452,7 +452,7 @@ class TestCommand29:
         assert frame[7] == 0x02  # Preamp status sub
 
     def test_set_preamp_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_preamp
+        from rigplane.commands import set_preamp
 
         frame = set_preamp(1)
         assert frame[4] == 0x29
@@ -462,7 +462,7 @@ class TestCommand29:
         assert frame[8] == 0x01  # Level 1 in BCD
 
     def test_get_attenuator_uses_cmd29(self) -> None:
-        from icom_lan.commands import get_attenuator
+        from rigplane.commands import get_attenuator
 
         frame = get_attenuator()
         assert frame[4] == 0x29
@@ -470,7 +470,7 @@ class TestCommand29:
         assert frame[6] == 0x11
 
     def test_set_attenuator_level_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_attenuator_level
+        from rigplane.commands import set_attenuator_level
 
         frame = set_attenuator_level(18)
         assert frame[4] == 0x29
@@ -483,13 +483,13 @@ class TestCmd29ReceiverRouting:
     """Test that per-receiver SET commands use cmd29 when receiver=SUB."""
 
     def test_set_frequency_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_freq
+        from rigplane.commands import RECEIVER_MAIN, set_freq
 
         frame = set_freq(14_074_000, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x05  # Direct freq set, no cmd29 prefix
 
     def test_set_frequency_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_freq
+        from rigplane.commands import RECEIVER_SUB, set_freq
 
         frame = set_freq(14_074_000, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -497,15 +497,15 @@ class TestCmd29ReceiverRouting:
         assert frame[6] == 0x05  # Freq set command
 
     def test_set_mode_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_mode
-        from icom_lan.types import Mode
+        from rigplane.commands import RECEIVER_MAIN, set_mode
+        from rigplane.types import Mode
 
         frame = set_mode(Mode.USB, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x06  # Direct mode set, no cmd29 prefix
 
     def test_set_mode_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_mode
-        from icom_lan.types import Mode
+        from rigplane.commands import RECEIVER_SUB, set_mode
+        from rigplane.types import Mode
 
         frame = set_mode(Mode.USB, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -513,14 +513,14 @@ class TestCmd29ReceiverRouting:
         assert frame[6] == 0x06  # Mode set command
 
     def test_set_rf_gain_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_rf_gain
+        from rigplane.commands import RECEIVER_MAIN, set_rf_gain
 
         frame = set_rf_gain(128, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x14  # Direct level cmd, no cmd29 prefix
         assert frame[5] == 0x02  # RF gain sub
 
     def test_set_rf_gain_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_rf_gain
+        from rigplane.commands import RECEIVER_SUB, set_rf_gain
 
         frame = set_rf_gain(128, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -529,14 +529,14 @@ class TestCmd29ReceiverRouting:
         assert frame[7] == 0x02  # RF gain sub
 
     def test_set_af_level_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_af_level
+        from rigplane.commands import RECEIVER_MAIN, set_af_level
 
         frame = set_af_level(200, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x14
         assert frame[5] == 0x01  # AF level sub
 
     def test_set_af_level_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_af_level
+        from rigplane.commands import RECEIVER_SUB, set_af_level
 
         frame = set_af_level(200, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -545,14 +545,14 @@ class TestCmd29ReceiverRouting:
         assert frame[7] == 0x01  # AF level sub
 
     def test_get_rf_gain_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, get_rf_gain
+        from rigplane.commands import RECEIVER_MAIN, get_rf_gain
 
         frame = get_rf_gain(receiver=RECEIVER_MAIN)
         assert frame[4] == 0x14  # Direct level cmd, no cmd29 prefix
         assert frame[5] == 0x02  # RF gain sub
 
     def test_get_rf_gain_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, get_rf_gain
+        from rigplane.commands import RECEIVER_SUB, get_rf_gain
 
         frame = get_rf_gain(receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -561,19 +561,19 @@ class TestCmd29ReceiverRouting:
         assert frame[7] == 0x02  # RF gain sub
 
     def test_get_rf_gain_default_is_main(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, get_rf_gain
+        from rigplane.commands import RECEIVER_MAIN, get_rf_gain
 
         assert get_rf_gain() == get_rf_gain(receiver=RECEIVER_MAIN)
 
     def test_get_af_level_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, get_af_level
+        from rigplane.commands import RECEIVER_MAIN, get_af_level
 
         frame = get_af_level(receiver=RECEIVER_MAIN)
         assert frame[4] == 0x14
         assert frame[5] == 0x01  # AF level sub
 
     def test_get_af_level_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, get_af_level
+        from rigplane.commands import RECEIVER_SUB, get_af_level
 
         frame = get_af_level(receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -582,19 +582,19 @@ class TestCmd29ReceiverRouting:
         assert frame[7] == 0x01  # AF level sub
 
     def test_get_af_level_default_is_main(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, get_af_level
+        from rigplane.commands import RECEIVER_MAIN, get_af_level
 
         assert get_af_level() == get_af_level(receiver=RECEIVER_MAIN)
 
     def test_set_squelch_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_squelch
+        from rigplane.commands import RECEIVER_MAIN, set_squelch
 
         frame = set_squelch(100, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x14
         assert frame[5] == 0x03  # SQL sub
 
     def test_set_squelch_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_squelch
+        from rigplane.commands import RECEIVER_SUB, set_squelch
 
         frame = set_squelch(100, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -603,14 +603,14 @@ class TestCmd29ReceiverRouting:
         assert frame[7] == 0x03  # SQL sub
 
     def test_set_nb_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_nb
+        from rigplane.commands import RECEIVER_MAIN, set_nb
 
         frame = set_nb(True, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x16  # Direct cmd, no cmd29
         assert frame[5] == 0x22  # NB sub
 
     def test_set_nb_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_nb
+        from rigplane.commands import RECEIVER_SUB, set_nb
 
         frame = set_nb(True, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -620,14 +620,14 @@ class TestCmd29ReceiverRouting:
         assert frame[8] == 0x01  # on=True
 
     def test_set_nr_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_nr
+        from rigplane.commands import RECEIVER_MAIN, set_nr
 
         frame = set_nr(False, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x16
         assert frame[5] == 0x40  # NR sub
 
     def test_set_nr_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_nr
+        from rigplane.commands import RECEIVER_SUB, set_nr
 
         frame = set_nr(False, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -637,14 +637,14 @@ class TestCmd29ReceiverRouting:
         assert frame[8] == 0x00  # on=False
 
     def test_set_ip_plus_main_no_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_ip_plus
+        from rigplane.commands import RECEIVER_MAIN, set_ip_plus
 
         frame = set_ip_plus(True, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x16
         assert frame[5] == 0x65  # IP+ sub
 
     def test_set_ip_plus_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_ip_plus
+        from rigplane.commands import RECEIVER_SUB, set_ip_plus
 
         frame = set_ip_plus(True, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -654,7 +654,7 @@ class TestCmd29ReceiverRouting:
         assert frame[8] == 0x01  # on=True
 
     def test_set_digisel_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_digisel
+        from rigplane.commands import RECEIVER_SUB, set_digisel
 
         frame = set_digisel(True, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -664,7 +664,7 @@ class TestCmd29ReceiverRouting:
 
     def test_backward_compat_no_receiver_arg(self) -> None:
         """All functions remain backward-compatible (no receiver arg = MAIN)."""
-        from icom_lan.commands import (
+        from rigplane.commands import (
             set_af_level,
             set_frequency,
             set_ip_plus,
@@ -674,7 +674,7 @@ class TestCmd29ReceiverRouting:
             set_rf_gain,
             set_squelch,
         )
-        from icom_lan.types import Mode
+        from rigplane.types import Mode
 
         # None of these should use cmd29 when called without receiver
         assert set_frequency(14_000_000)[4] == 0x05
@@ -708,7 +708,7 @@ class TestDspLevelParityCommands:
         sub: int,
         receiver: int,
     ) -> None:
-        import icom_lan.commands as commands
+        import rigplane.commands as commands
 
         getter = getattr(commands, getter_name)
         setter = getattr(commands, setter_name)
@@ -739,7 +739,7 @@ class TestDspLevelParityCommands:
         sub: int,
         value: int,
     ) -> None:
-        import icom_lan.commands as commands
+        import rigplane.commands as commands
 
         getter = getattr(commands, getter_name)
         setter = getattr(commands, setter_name)
@@ -765,7 +765,7 @@ class TestDspLevelParityCommands:
         value: int,
         expected_payload: bytes,
     ) -> None:
-        import icom_lan.commands as commands
+        import rigplane.commands as commands
 
         getter = getattr(commands, getter_name)
         setter = getattr(commands, setter_name)
@@ -777,7 +777,7 @@ class TestDspLevelParityCommands:
         )
 
     def test_af_mute_builders(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, get_af_mute, set_af_mute
+        from rigplane.commands import RECEIVER_SUB, get_af_mute, set_af_mute
 
         assert get_af_mute() == b"\xfe\xfe\x98\xe0\x29\x00\x1a\x09\xfd"
         assert (
@@ -791,7 +791,7 @@ class TestDspLevelParityCommands:
         )
 
     def test_parse_level_response_direct_level(self) -> None:
-        from icom_lan.commands import parse_level_response
+        from rigplane.commands import parse_level_response
 
         frame = CivFrame(
             to_addr=0xE0,
@@ -803,7 +803,7 @@ class TestDspLevelParityCommands:
         assert parse_level_response(frame, sub=0x13) == 199
 
     def test_parse_level_response_with_ctl_mem_prefix(self) -> None:
-        from icom_lan.commands import parse_level_response
+        from rigplane.commands import parse_level_response
 
         frame = CivFrame(
             to_addr=0xE0,
@@ -818,7 +818,7 @@ class TestDspLevelParityCommands:
         )
 
     def test_parse_bool_response(self) -> None:
-        from icom_lan.commands import parse_bool_response
+        from rigplane.commands import parse_bool_response
 
         frame = CivFrame(
             to_addr=0xE0,
@@ -830,7 +830,7 @@ class TestDspLevelParityCommands:
         assert parse_bool_response(frame, command=0x1A, sub=0x09) is True
 
     def test_parse_level_response_rejects_wrong_prefix(self) -> None:
-        from icom_lan.commands import parse_level_response
+        from rigplane.commands import parse_level_response
 
         frame = CivFrame(
             to_addr=0xE0,
@@ -843,7 +843,7 @@ class TestDspLevelParityCommands:
             parse_level_response(frame, command=0x1A, sub=0x05, prefix=b"\x00\x70")
 
     def test_set_nb_width_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import set_nb_width
+        from rigplane.commands import set_nb_width
 
         with pytest.raises(ValueError, match="0-255"):
             set_nb_width(256)
@@ -870,7 +870,7 @@ class TestOperatorToggleParityCommands:
         sub: int,
         receiver: int,
     ) -> None:
-        import icom_lan.commands as commands
+        import rigplane.commands as commands
 
         getter = getattr(commands, getter_name)
         command = 0x15 if sub == 0x01 else 0x1A if sub == 0x04 else 0x16
@@ -896,7 +896,7 @@ class TestOperatorToggleParityCommands:
         value: object,
         expected_tail: bytes,
     ) -> None:
-        import icom_lan.commands as commands
+        import rigplane.commands as commands
 
         setter = getattr(commands, setter_name)
         assert setter(value, receiver=1).endswith(expected_tail)
@@ -915,7 +915,7 @@ class TestOperatorToggleParityCommands:
         ],
     )
     def test_direct_operator_getters(self, getter_name: str, sub: int) -> None:
-        import icom_lan.commands as commands
+        import rigplane.commands as commands
 
         getter = getattr(commands, getter_name)
         command = 0x15 if sub == 0x07 else 0x16
@@ -939,7 +939,7 @@ class TestOperatorToggleParityCommands:
         value: object,
         expected_tail: bytes,
     ) -> None:
-        import icom_lan.commands as commands
+        import rigplane.commands as commands
 
         setter = getattr(commands, setter_name)
         assert setter(value).endswith(expected_tail)
@@ -965,7 +965,7 @@ class TestOperatorToggleParityCommands:
         kwargs: dict[str, int],
         expected: int,
     ) -> None:
-        from icom_lan.commands import parse_level_response
+        from rigplane.commands import parse_level_response
 
         assert parse_level_response(frame, **kwargs) == expected
 
@@ -983,7 +983,7 @@ class TestOperatorToggleParityCommands:
         frame: CivFrame,
         kwargs: dict[str, int],
     ) -> None:
-        from icom_lan.commands import parse_bool_response
+        from rigplane.commands import parse_bool_response
 
         assert parse_bool_response(frame, **kwargs) is True
 
@@ -995,13 +995,13 @@ class TestTransceiverStatusBuilders:
     """Test CI-V builders for transceiver_status commands."""
 
     def test_get_band_edge_freq(self) -> None:
-        from icom_lan.commands import get_band_edge_freq
+        from rigplane.commands import get_band_edge_freq
 
         frame = get_band_edge_freq()
         assert b"\xfe\xfe\x98\xe0\x02\xfd" == frame
 
     def test_get_various_squelch_main(self) -> None:
-        from icom_lan.commands import get_various_squelch
+        from rigplane.commands import get_various_squelch
 
         frame = get_various_squelch(receiver=0x00)
         # Command29 frame: FE FE to from 29 00 15 05 FD
@@ -1009,112 +1009,112 @@ class TestTransceiverStatusBuilders:
         assert b"\x15\x05" in frame
 
     def test_get_various_squelch_sub(self) -> None:
-        from icom_lan.commands import get_various_squelch
+        from rigplane.commands import get_various_squelch
 
         frame = get_various_squelch(receiver=0x01)
         assert frame[4] == 0x29
         assert frame[5] == 0x01  # SUB receiver
 
     def test_get_power_meter(self) -> None:
-        from icom_lan.commands import get_power_meter
+        from rigplane.commands import get_power_meter
 
         frame = get_power_meter()
         assert b"\xfe\xfe\x98\xe0\x15\x11\xfd" == frame
 
     def test_get_comp_meter(self) -> None:
-        from icom_lan.commands import get_comp_meter
+        from rigplane.commands import get_comp_meter
 
         frame = get_comp_meter()
         assert b"\xfe\xfe\x98\xe0\x15\x14\xfd" == frame
 
     def test_get_vd_meter(self) -> None:
-        from icom_lan.commands import get_vd_meter
+        from rigplane.commands import get_vd_meter
 
         frame = get_vd_meter()
         assert b"\xfe\xfe\x98\xe0\x15\x15\xfd" == frame
 
     def test_get_id_meter(self) -> None:
-        from icom_lan.commands import get_id_meter
+        from rigplane.commands import get_id_meter
 
         frame = get_id_meter()
         assert b"\xfe\xfe\x98\xe0\x15\x16\xfd" == frame
 
     def test_get_tuner_status(self) -> None:
-        from icom_lan.commands import get_tuner_status
+        from rigplane.commands import get_tuner_status
 
         frame = get_tuner_status()
         assert b"\xfe\xfe\x98\xe0\x1c\x01\xfd" == frame
 
     def test_set_tuner_status_on(self) -> None:
-        from icom_lan.commands import set_tuner_status
+        from rigplane.commands import set_tuner_status
 
         frame = set_tuner_status(1)
         assert b"\x1c\x01\x01" in frame
 
     def test_set_tuner_status_tune(self) -> None:
-        from icom_lan.commands import set_tuner_status
+        from rigplane.commands import set_tuner_status
 
         frame = set_tuner_status(2)
         assert b"\x1c\x01\x02" in frame
 
     def test_set_tuner_status_off(self) -> None:
-        from icom_lan.commands import set_tuner_status
+        from rigplane.commands import set_tuner_status
 
         frame = set_tuner_status(0)
         assert b"\x1c\x01\x00" in frame
 
     def test_set_tuner_status_invalid(self) -> None:
-        from icom_lan.commands import set_tuner_status
+        from rigplane.commands import set_tuner_status
 
         with pytest.raises(ValueError, match="0, 1, or 2"):
             set_tuner_status(3)
 
     def test_get_tx_freq_monitor(self) -> None:
-        from icom_lan.commands import get_tx_freq_monitor
+        from rigplane.commands import get_tx_freq_monitor
 
         frame = get_tx_freq_monitor()
         assert b"\xfe\xfe\x98\xe0\x1c\x03\xfd" == frame
 
     def test_set_tx_freq_monitor_on(self) -> None:
-        from icom_lan.commands import set_tx_freq_monitor
+        from rigplane.commands import set_tx_freq_monitor
 
         frame = set_tx_freq_monitor(True)
         assert b"\x1c\x03\x01" in frame
 
     def test_set_tx_freq_monitor_off(self) -> None:
-        from icom_lan.commands import set_tx_freq_monitor
+        from rigplane.commands import set_tx_freq_monitor
 
         frame = set_tx_freq_monitor(False)
         assert b"\x1c\x03\x00" in frame
 
     def test_get_rit_frequency(self) -> None:
-        from icom_lan.commands import get_rit_frequency
+        from rigplane.commands import get_rit_frequency
 
         frame = get_rit_frequency()
         assert b"\xfe\xfe\x98\xe0\x21\x00\xfd" == frame
 
     def test_set_rit_frequency_positive(self) -> None:
-        from icom_lan.commands import set_rit_frequency
+        from rigplane.commands import set_rit_frequency
 
         frame = set_rit_frequency(150)
         # 150 Hz → BCD: d0=0x50 (50), d1=0x01 (01), sign=0x00 (positive)
         assert b"\x21\x00\x50\x01\x00" in frame
 
     def test_set_rit_frequency_negative(self) -> None:
-        from icom_lan.commands import set_rit_frequency
+        from rigplane.commands import set_rit_frequency
 
         frame = set_rit_frequency(-200)
         # 200 Hz → BCD: d0=0x00, d1=0x02, sign=0x01 (negative)
         assert b"\x21\x00\x00\x02\x01" in frame
 
     def test_set_rit_frequency_zero(self) -> None:
-        from icom_lan.commands import set_rit_frequency
+        from rigplane.commands import set_rit_frequency
 
         frame = set_rit_frequency(0)
         assert b"\x21\x00\x00\x00\x00" in frame
 
     def test_set_rit_frequency_out_of_range(self) -> None:
-        from icom_lan.commands import set_rit_frequency
+        from rigplane.commands import set_rit_frequency
 
         with pytest.raises(ValueError, match="±9999"):
             set_rit_frequency(10000)
@@ -1122,31 +1122,31 @@ class TestTransceiverStatusBuilders:
             set_rit_frequency(-10000)
 
     def test_get_rit_status(self) -> None:
-        from icom_lan.commands import get_rit_status
+        from rigplane.commands import get_rit_status
 
         frame = get_rit_status()
         assert b"\xfe\xfe\x98\xe0\x21\x01\xfd" == frame
 
     def test_set_rit_status_on(self) -> None:
-        from icom_lan.commands import set_rit_status
+        from rigplane.commands import set_rit_status
 
         frame = set_rit_status(True)
         assert b"\x21\x01\x01" in frame
 
     def test_set_rit_status_off(self) -> None:
-        from icom_lan.commands import set_rit_status
+        from rigplane.commands import set_rit_status
 
         frame = set_rit_status(False)
         assert b"\x21\x01\x00" in frame
 
     def test_get_rit_tx_status(self) -> None:
-        from icom_lan.commands import get_rit_tx_status
+        from rigplane.commands import get_rit_tx_status
 
         frame = get_rit_tx_status()
         assert b"\xfe\xfe\x98\xe0\x21\x02\xfd" == frame
 
     def test_set_rit_tx_status_on(self) -> None:
-        from icom_lan.commands import set_rit_tx_status
+        from rigplane.commands import set_rit_tx_status
 
         frame = set_rit_tx_status(True)
         assert b"\x21\x02\x01" in frame
@@ -1156,34 +1156,34 @@ class TestRitFrequencyParser:
     """Test parse_rit_frequency_response."""
 
     def test_positive_150hz(self) -> None:
-        from icom_lan.commands import parse_rit_frequency_response
+        from rigplane.commands import parse_rit_frequency_response
 
         # 150 Hz positive: d0=0x50, d1=0x01, sign=0x00
         assert parse_rit_frequency_response(b"\x50\x01\x00") == 150
 
     def test_negative_200hz(self) -> None:
-        from icom_lan.commands import parse_rit_frequency_response
+        from rigplane.commands import parse_rit_frequency_response
 
         assert parse_rit_frequency_response(b"\x00\x02\x01") == -200
 
     def test_zero(self) -> None:
-        from icom_lan.commands import parse_rit_frequency_response
+        from rigplane.commands import parse_rit_frequency_response
 
         assert parse_rit_frequency_response(b"\x00\x00\x00") == 0
 
     def test_max_positive(self) -> None:
-        from icom_lan.commands import parse_rit_frequency_response
+        from rigplane.commands import parse_rit_frequency_response
 
         # 9999 Hz: d0=0x99, d1=0x99, sign=0x00
         assert parse_rit_frequency_response(b"\x99\x99\x00") == 9999
 
     def test_max_negative(self) -> None:
-        from icom_lan.commands import parse_rit_frequency_response
+        from rigplane.commands import parse_rit_frequency_response
 
         assert parse_rit_frequency_response(b"\x99\x99\x01") == -9999
 
     def test_short_data_returns_zero(self) -> None:
-        from icom_lan.commands import parse_rit_frequency_response
+        from rigplane.commands import parse_rit_frequency_response
 
         assert parse_rit_frequency_response(b"\x50\x01") == 0
         assert parse_rit_frequency_response(b"") == 0
@@ -1193,7 +1193,7 @@ class TestAdvancedScopeParsers:
     """Test response parsing for advanced_scope commands."""
 
     def test_parse_scope_mode_response_with_receiver_prefix(self) -> None:
-        from icom_lan.commands import parse_scope_mode_response
+        from rigplane.commands import parse_scope_mode_response
 
         frame = CivFrame(0xE0, 0x98, 0x27, 0x14, b"\x01\x03")
         receiver, mode = parse_scope_mode_response(frame)
@@ -1201,8 +1201,8 @@ class TestAdvancedScopeParsers:
         assert mode == 3
 
     def test_parse_scope_span_response_from_bcd_frequency(self) -> None:
-        from icom_lan.commands import parse_scope_span_response
-        from icom_lan.types import bcd_encode
+        from rigplane.commands import parse_scope_span_response
+        from rigplane.types import bcd_encode
 
         frame = CivFrame(0xE0, 0x98, 0x27, 0x15, b"\x00" + bcd_encode(250_000))
         receiver, span = parse_scope_span_response(frame)
@@ -1210,7 +1210,7 @@ class TestAdvancedScopeParsers:
         assert span == 6
 
     def test_parse_scope_ref_response(self) -> None:
-        from icom_lan.commands import parse_scope_ref_response
+        from rigplane.commands import parse_scope_ref_response
 
         # -10.5 dB: 10dB=1, 1dB=0, 0.1dB=5 → byte0=0x10, byte1=0x50, sign=0x01
         frame = CivFrame(0xE0, 0x98, 0x27, 0x19, b"\x00\x10\x50\x01")
@@ -1219,13 +1219,13 @@ class TestAdvancedScopeParsers:
         assert ref_db == -10.5
 
     def test_parse_scope_during_tx_response(self) -> None:
-        from icom_lan.commands import parse_scope_during_tx_response
+        from rigplane.commands import parse_scope_during_tx_response
 
         frame = CivFrame(0xE0, 0x98, 0x27, 0x1B, b"\x01")
         assert parse_scope_during_tx_response(frame) is True
 
     def test_parse_scope_center_type_response(self) -> None:
-        from icom_lan.commands import parse_scope_center_type_response
+        from rigplane.commands import parse_scope_center_type_response
 
         frame = CivFrame(0xE0, 0x98, 0x27, 0x1C, b"\x00\x02")
         receiver, center_type = parse_scope_center_type_response(frame)
@@ -1233,8 +1233,8 @@ class TestAdvancedScopeParsers:
         assert center_type == 2
 
     def test_parse_scope_fixed_edge_response(self) -> None:
-        from icom_lan.commands import parse_scope_fixed_edge_response
-        from icom_lan.types import bcd_encode
+        from rigplane.commands import parse_scope_fixed_edge_response
+        from rigplane.types import bcd_encode
 
         frame = CivFrame(
             0xE0,
@@ -1250,7 +1250,7 @@ class TestAdvancedScopeParsers:
         assert bounds.end_hz == 14_350_000
 
     def test_parse_scope_span_response_from_single_byte_index(self) -> None:
-        from icom_lan.commands import parse_scope_span_response
+        from rigplane.commands import parse_scope_span_response
 
         frame = CivFrame(0xE0, 0x98, 0x27, 0x15, b"\x05")
         receiver, span = parse_scope_span_response(frame)
@@ -1258,7 +1258,7 @@ class TestAdvancedScopeParsers:
         assert span == 5
 
     def test_parse_scope_rbw_response(self) -> None:
-        from icom_lan.commands import parse_scope_rbw_response
+        from rigplane.commands import parse_scope_rbw_response
 
         frame = CivFrame(0xE0, 0x98, 0x27, 0x1F, b"\x01\x02")
         receiver, rbw = parse_scope_rbw_response(frame)
@@ -1266,7 +1266,7 @@ class TestAdvancedScopeParsers:
         assert rbw == 2
 
     def test_parse_scope_speed_response_with_receiver(self) -> None:
-        from icom_lan.commands import parse_scope_speed_response
+        from rigplane.commands import parse_scope_speed_response
 
         # sub=0x1A, receiver=0, speed=1
         frame = CivFrame(0xE0, 0x98, 0x27, 0x1A, b"\x00\x01")
@@ -1275,7 +1275,7 @@ class TestAdvancedScopeParsers:
         assert speed == 1
 
     def test_parse_scope_speed_response_sub_receiver(self) -> None:
-        from icom_lan.commands import parse_scope_speed_response
+        from rigplane.commands import parse_scope_speed_response
 
         # sub=0x1A, receiver=1 (sub), speed=2
         frame = CivFrame(0xE0, 0x98, 0x27, 0x1A, b"\x01\x02")
@@ -1284,7 +1284,7 @@ class TestAdvancedScopeParsers:
         assert speed == 2
 
     def test_parse_scope_speed_response_no_receiver(self) -> None:
-        from icom_lan.commands import parse_scope_speed_response
+        from rigplane.commands import parse_scope_speed_response
 
         # sub=0x1A, no receiver prefix, speed=0
         frame = CivFrame(0xE0, 0x98, 0x27, 0x1A, b"\x00")
@@ -1293,7 +1293,7 @@ class TestAdvancedScopeParsers:
         assert speed == 0
 
     def test_parse_scope_hold_response_true(self) -> None:
-        from icom_lan.commands import parse_scope_hold_response
+        from rigplane.commands import parse_scope_hold_response
 
         # sub=0x17, receiver=0, hold=True (0x01)
         frame = CivFrame(0xE0, 0x98, 0x27, 0x17, b"\x00\x01")
@@ -1302,7 +1302,7 @@ class TestAdvancedScopeParsers:
         assert hold is True
 
     def test_parse_scope_hold_response_false(self) -> None:
-        from icom_lan.commands import parse_scope_hold_response
+        from rigplane.commands import parse_scope_hold_response
 
         # sub=0x17, receiver=1, hold=False (0x00)
         frame = CivFrame(0xE0, 0x98, 0x27, 0x17, b"\x01\x00")
@@ -1311,7 +1311,7 @@ class TestAdvancedScopeParsers:
         assert hold is False
 
     def test_parse_scope_hold_response_no_receiver(self) -> None:
-        from icom_lan.commands import parse_scope_hold_response
+        from rigplane.commands import parse_scope_hold_response
 
         # sub=0x17, no receiver prefix, hold=True
         frame = CivFrame(0xE0, 0x98, 0x27, 0x17, b"\x01")
@@ -1320,7 +1320,7 @@ class TestAdvancedScopeParsers:
         assert hold is True
 
     def test_parse_scope_vbw_response_true(self) -> None:
-        from icom_lan.commands import parse_scope_vbw_response
+        from rigplane.commands import parse_scope_vbw_response
 
         # sub=0x1D, receiver=0, vbw=True (0x01)
         frame = CivFrame(0xE0, 0x98, 0x27, 0x1D, b"\x00\x01")
@@ -1329,7 +1329,7 @@ class TestAdvancedScopeParsers:
         assert vbw is True
 
     def test_parse_scope_vbw_response_false(self) -> None:
-        from icom_lan.commands import parse_scope_vbw_response
+        from rigplane.commands import parse_scope_vbw_response
 
         # sub=0x1D, receiver=1, vbw=False (0x00)
         frame = CivFrame(0xE0, 0x98, 0x27, 0x1D, b"\x01\x00")
@@ -1338,7 +1338,7 @@ class TestAdvancedScopeParsers:
         assert vbw is False
 
     def test_parse_scope_vbw_response_no_receiver(self) -> None:
-        from icom_lan.commands import parse_scope_vbw_response
+        from rigplane.commands import parse_scope_vbw_response
 
         # sub=0x1D, no receiver prefix, vbw=False
         frame = CivFrame(0xE0, 0x98, 0x27, 0x1D, b"\x00")
@@ -1351,67 +1351,67 @@ class TestAdvancedScopeValidation:
     """Negative tests for scope builder input validation."""
 
     def test_scope_set_mode_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import scope_set_mode
+        from rigplane.commands import scope_set_mode
 
         with pytest.raises(ValueError, match="scope mode must be 0-3"):
             scope_set_mode(5)
 
     def test_scope_set_span_rejects_negative(self) -> None:
-        from icom_lan.commands import scope_set_span
+        from rigplane.commands import scope_set_span
 
         with pytest.raises(ValueError, match="scope span must be 0-7"):
             scope_set_span(-1)
 
     def test_scope_set_edge_rejects_zero(self) -> None:
-        from icom_lan.commands import scope_set_edge
+        from rigplane.commands import scope_set_edge
 
         with pytest.raises(ValueError, match="scope edge must be 1-4"):
             scope_set_edge(0)
 
     def test_scope_set_speed_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import scope_set_speed
+        from rigplane.commands import scope_set_speed
 
         with pytest.raises(ValueError, match="scope speed must be 0-2"):
             scope_set_speed(3)
 
     def test_scope_set_center_type_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import scope_set_center_type
+        from rigplane.commands import scope_set_center_type
 
         with pytest.raises(ValueError, match="scope center type must be 0-2"):
             scope_set_center_type(5)
 
     def test_scope_set_rbw_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import scope_set_rbw
+        from rigplane.commands import scope_set_rbw
 
         with pytest.raises(ValueError, match="scope rbw must be 0-2"):
             scope_set_rbw(3)
 
     def test_scope_set_ref_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import scope_set_ref
+        from rigplane.commands import scope_set_ref
 
         with pytest.raises(ValueError, match="scope ref must be"):
             scope_set_ref(15.0)
 
     def test_scope_set_fixed_edge_rejects_end_before_start(self) -> None:
-        from icom_lan.commands import scope_set_fixed_edge
+        from rigplane.commands import scope_set_fixed_edge
 
         with pytest.raises(ValueError, match="end_hz must be greater"):
             scope_set_fixed_edge(edge=1, start_hz=14_350_000, end_hz=14_000_000)
 
     def test_scope_set_fixed_edge_rejects_edge_out_of_range(self) -> None:
-        from icom_lan.commands import scope_set_fixed_edge
+        from rigplane.commands import scope_set_fixed_edge
 
         with pytest.raises(ValueError, match="scope fixed edge must be 1-4"):
             scope_set_fixed_edge(edge=5, start_hz=14_000_000, end_hz=14_350_000)
 
     def test_scope_receiver_rejects_invalid(self) -> None:
-        from icom_lan.commands import scope_main_sub
+        from rigplane.commands import scope_main_sub
 
         with pytest.raises(ValueError, match="scope receiver must be 0 or 1"):
             scope_main_sub(5)
 
     def test_scope_payload_rejects_invalid_receiver(self) -> None:
-        from icom_lan.commands import scope_set_mode
+        from rigplane.commands import scope_set_mode
 
         with pytest.raises(ValueError, match="scope receiver must be 0 or 1"):
             scope_set_mode(0, receiver=5)
@@ -1423,7 +1423,7 @@ class TestToneTsqlCommands:
     # --- Repeater Tone (0x16 0x42) ---
 
     def test_get_repeater_tone_main_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, get_repeater_tone
+        from rigplane.commands import RECEIVER_MAIN, get_repeater_tone
 
         frame = get_repeater_tone(receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1432,7 +1432,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x42
 
     def test_get_repeater_tone_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, get_repeater_tone
+        from rigplane.commands import RECEIVER_SUB, get_repeater_tone
 
         frame = get_repeater_tone(receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -1441,7 +1441,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x42
 
     def test_set_repeater_tone_on(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_repeater_tone
+        from rigplane.commands import RECEIVER_MAIN, set_repeater_tone
 
         frame = set_repeater_tone(True, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1450,7 +1450,7 @@ class TestToneTsqlCommands:
         assert frame[8] == 0x01
 
     def test_set_repeater_tone_off(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_repeater_tone
+        from rigplane.commands import RECEIVER_MAIN, set_repeater_tone
 
         frame = set_repeater_tone(False, receiver=RECEIVER_MAIN)
         assert frame[8] == 0x00
@@ -1458,7 +1458,7 @@ class TestToneTsqlCommands:
     # --- Repeater TSQL (0x16 0x43) ---
 
     def test_get_repeater_tsql_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, get_repeater_tsql
+        from rigplane.commands import RECEIVER_MAIN, get_repeater_tsql
 
         frame = get_repeater_tsql(receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1466,7 +1466,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x43
 
     def test_set_repeater_tsql_on_sub(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, set_repeater_tsql
+        from rigplane.commands import RECEIVER_SUB, set_repeater_tsql
 
         frame = set_repeater_tsql(True, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -1478,32 +1478,32 @@ class TestToneTsqlCommands:
     # --- Tone frequency encoding/decoding ---
 
     def test_encode_tone_freq_88_5(self) -> None:
-        from icom_lan.commands import _encode_tone_freq
+        from rigplane.commands import _encode_tone_freq
 
         assert _encode_tone_freq(88.5) == bytes([0x00, 0x88, 0x05])
 
     def test_encode_tone_freq_110_9(self) -> None:
-        from icom_lan.commands import _encode_tone_freq
+        from rigplane.commands import _encode_tone_freq
 
         assert _encode_tone_freq(110.9) == bytes([0x01, 0x10, 0x09])
 
     def test_encode_tone_freq_100_0(self) -> None:
-        from icom_lan.commands import _encode_tone_freq
+        from rigplane.commands import _encode_tone_freq
 
         assert _encode_tone_freq(100.0) == bytes([0x01, 0x00, 0x00])
 
     def test_encode_tone_freq_67_0(self) -> None:
-        from icom_lan.commands import _encode_tone_freq
+        from rigplane.commands import _encode_tone_freq
 
         assert _encode_tone_freq(67.0) == bytes([0x00, 0x67, 0x00])
 
     def test_encode_tone_freq_254_1(self) -> None:
-        from icom_lan.commands import _encode_tone_freq
+        from rigplane.commands import _encode_tone_freq
 
         assert _encode_tone_freq(254.1) == bytes([0x02, 0x54, 0x01])
 
     def test_encode_tone_freq_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import _encode_tone_freq
+        from rigplane.commands import _encode_tone_freq
 
         with pytest.raises(ValueError, match="67.0-254.1"):
             _encode_tone_freq(60.0)
@@ -1511,17 +1511,17 @@ class TestToneTsqlCommands:
             _encode_tone_freq(300.0)
 
     def test_decode_tone_freq_88_5(self) -> None:
-        from icom_lan.commands import _decode_tone_freq
+        from rigplane.commands import _decode_tone_freq
 
         assert _decode_tone_freq(bytes([0x00, 0x88, 0x05])) == pytest.approx(88.5)
 
     def test_decode_tone_freq_110_9(self) -> None:
-        from icom_lan.commands import _decode_tone_freq
+        from rigplane.commands import _decode_tone_freq
 
         assert _decode_tone_freq(bytes([0x01, 0x10, 0x09])) == pytest.approx(110.9)
 
     def test_decode_tone_freq_roundtrip(self) -> None:
-        from icom_lan.commands import _decode_tone_freq, _encode_tone_freq
+        from rigplane.commands import _decode_tone_freq, _encode_tone_freq
 
         for freq in [67.0, 88.5, 100.0, 110.9, 127.3, 203.5, 254.1]:
             encoded = _encode_tone_freq(freq)
@@ -1530,7 +1530,7 @@ class TestToneTsqlCommands:
     # --- Tone Frequency command (0x1B 0x00) ---
 
     def test_get_tone_freq_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, get_tone_freq
+        from rigplane.commands import RECEIVER_MAIN, get_tone_freq
 
         frame = get_tone_freq(receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1539,7 +1539,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x00
 
     def test_set_tone_freq_encodes_bcd(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_tone_freq
+        from rigplane.commands import RECEIVER_MAIN, set_tone_freq
 
         frame = set_tone_freq(88.5, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1548,7 +1548,7 @@ class TestToneTsqlCommands:
         assert frame[8:11] == bytes([0x00, 0x88, 0x05])
 
     def test_set_tone_freq_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import set_tone_freq
+        from rigplane.commands import set_tone_freq
 
         with pytest.raises(ValueError, match="67.0-254.1"):
             set_tone_freq(50.0)
@@ -1556,7 +1556,7 @@ class TestToneTsqlCommands:
     # --- TSQL Frequency command (0x1B 0x01) ---
 
     def test_get_tsql_freq_uses_cmd29(self) -> None:
-        from icom_lan.commands import RECEIVER_SUB, get_tsql_freq
+        from rigplane.commands import RECEIVER_SUB, get_tsql_freq
 
         frame = get_tsql_freq(receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -1565,7 +1565,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x01
 
     def test_set_tsql_freq_encodes_bcd(self) -> None:
-        from icom_lan.commands import RECEIVER_MAIN, set_tsql_freq
+        from rigplane.commands import RECEIVER_MAIN, set_tsql_freq
 
         frame = set_tsql_freq(110.9, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1576,8 +1576,8 @@ class TestToneTsqlCommands:
     # --- Response parsers ---
 
     def test_parse_tone_freq_response(self) -> None:
-        from icom_lan import IC_7610_ADDR
-        from icom_lan.commands import (
+        from rigplane import IC_7610_ADDR
+        from rigplane.commands import (
             CONTROLLER_ADDR,
             RECEIVER_MAIN,
             build_cmd29_frame,
@@ -1599,8 +1599,8 @@ class TestToneTsqlCommands:
         assert freq == pytest.approx(88.5)
 
     def test_parse_tsql_freq_response(self) -> None:
-        from icom_lan import IC_7610_ADDR
-        from icom_lan.commands import (
+        from rigplane import IC_7610_ADDR
+        from rigplane.commands import (
             CONTROLLER_ADDR,
             RECEIVER_SUB,
             build_cmd29_frame,
@@ -1622,21 +1622,21 @@ class TestToneTsqlCommands:
         assert freq == pytest.approx(110.9)
 
     def test_build_memory_mode_get(self) -> None:
-        from icom_lan.commands import build_memory_mode_get
+        from rigplane.commands import build_memory_mode_get
 
         civ = build_memory_mode_get()
         # FE FE 98 E0 08 FD
         assert civ == b"\xfe\xfe\x98\xe0\x08\xfd"
 
     def test_build_memory_mode_set(self) -> None:
-        from icom_lan.commands import build_memory_mode_set
+        from rigplane.commands import build_memory_mode_set
 
         civ = build_memory_mode_set(42)
         # FE FE 98 E0 08 00 42 FD (channel 42 in BCD)
         assert civ == b"\xfe\xfe\x98\xe0\x08\x00\x42\xfd"
 
     def test_build_memory_mode_set_validates_range(self) -> None:
-        from icom_lan.commands import build_memory_mode_set
+        from rigplane.commands import build_memory_mode_set
 
         with pytest.raises(ValueError, match="Channel must be 1-101"):
             build_memory_mode_set(0)
@@ -1644,7 +1644,7 @@ class TestToneTsqlCommands:
             build_memory_mode_set(102)
 
     def test_parse_memory_mode_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_memory_mode_response
+        from rigplane.commands import parse_civ_frame, parse_memory_mode_response
 
         # Response: FE FE E0 98 08 00 42 FD (channel 42)
         civ = b"\xfe\xfe\xe0\x98\x08\x00\x42\xfd"
@@ -1653,36 +1653,36 @@ class TestToneTsqlCommands:
         assert channel == 42
 
     def test_build_memory_write(self) -> None:
-        from icom_lan.commands import build_memory_write
+        from rigplane.commands import build_memory_write
 
         civ = build_memory_write()
         # FE FE 98 E0 09 FD
         assert civ == b"\xfe\xfe\x98\xe0\x09\xfd"
 
     def test_build_memory_to_vfo(self) -> None:
-        from icom_lan.commands import build_memory_to_vfo
+        from rigplane.commands import build_memory_to_vfo
 
         civ = build_memory_to_vfo(99)
         # FE FE 98 E0 0A 00 99 FD (channel 99 in BCD)
         assert civ == b"\xfe\xfe\x98\xe0\x0a\x00\x99\xfd"
 
     def test_build_memory_clear(self) -> None:
-        from icom_lan.commands import build_memory_clear
+        from rigplane.commands import build_memory_clear
 
         civ = build_memory_clear(1)
         # FE FE 98 E0 0B 00 01 FD (channel 1 in BCD)
         assert civ == b"\xfe\xfe\x98\xe0\x0b\x00\x01\xfd"
 
     def test_build_memory_contents_get(self) -> None:
-        from icom_lan.commands import build_memory_contents_get
+        from rigplane.commands import build_memory_contents_get
 
         civ = build_memory_contents_get(50)
         # FE FE 98 E0 1A 00 00 50 FD (0x1A sub=0x00, channel 50 BCD)
         assert civ == b"\xfe\xfe\x98\xe0\x1a\x00\x00\x50\xfd"
 
     def test_build_memory_contents_set(self) -> None:
-        from icom_lan.commands import build_memory_contents_set
-        from icom_lan.types import MemoryChannel
+        from rigplane.commands import build_memory_contents_set
+        from rigplane.types import MemoryChannel
 
         mem = MemoryChannel(
             channel=42,
@@ -1708,7 +1708,7 @@ class TestToneTsqlCommands:
         assert civ[23:26] == b"FT8"
 
     def test_parse_memory_contents_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_memory_contents_response
+        from rigplane.commands import parse_civ_frame, parse_memory_contents_response
 
         # Build minimal response: channel 42, freq 14.074 MHz, mode USB, filter 1, name "TEST"
         # data = channel(2) + payload(26)
@@ -1734,14 +1734,14 @@ class TestToneTsqlCommands:
         assert mem.name == "TEST"
 
     def test_build_band_stack_get(self) -> None:
-        from icom_lan.commands import build_band_stack_get
+        from rigplane.commands import build_band_stack_get
 
         civ = build_band_stack_get(15, 1)  # band 15 (20m), register 1
         # FE FE 98 E0 1A 01 0F 01 FD (0x1A sub=0x01, band=15, reg=1)
         assert civ == b"\xfe\xfe\x98\xe0\x1a\x01\x0f\x01\xfd"
 
     def test_build_band_stack_get_validates_range(self) -> None:
-        from icom_lan.commands import build_band_stack_get
+        from rigplane.commands import build_band_stack_get
 
         with pytest.raises(ValueError, match="Band must be 0-24"):
             build_band_stack_get(25, 1)
@@ -1751,8 +1751,8 @@ class TestToneTsqlCommands:
             build_band_stack_get(15, 4)
 
     def test_build_band_stack_set(self) -> None:
-        from icom_lan.commands import set_bsr
-        from icom_lan.types import BandStackRegister
+        from rigplane.commands import set_bsr
+        from rigplane.types import BandStackRegister
 
         bsr = BandStackRegister(
             band=15,  # 20m
@@ -1770,7 +1770,7 @@ class TestToneTsqlCommands:
         assert civ[14] == 0x01  # filter
 
     def test_parse_band_stack_response(self) -> None:
-        from icom_lan.commands import parse_band_stack_response, parse_civ_frame
+        from rigplane.commands import parse_band_stack_response, parse_civ_frame
 
         # Response: band=15, reg=1, freq=14.200 MHz, mode=1, filter=1
         payload = bytes([15, 1]) + b"\x00\x00\x20\x14\x00" + bytes([0x01, 0x01])
@@ -1791,34 +1791,34 @@ class TestSystemConfigCommands:
     # --- REF Adjust (0x1A 0x05 0x00 0x70) ---
 
     def test_get_ref_adjust_frame(self) -> None:
-        from icom_lan.commands import get_ref_adjust
+        from rigplane.commands import get_ref_adjust
 
         frame = get_ref_adjust()
         # FE FE 98 E0 1A 05 00 70 FD
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x70\xfd"
 
     def test_set_ref_adjust_255(self) -> None:
-        from icom_lan.commands import set_ref_adjust
+        from rigplane.commands import set_ref_adjust
 
         frame = set_ref_adjust(255)
         # 255 as 2-byte BCD: 0x02 0x55
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x70\x02\x55\xfd"
 
     def test_set_ref_adjust_0(self) -> None:
-        from icom_lan.commands import set_ref_adjust
+        from rigplane.commands import set_ref_adjust
 
         frame = set_ref_adjust(0)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x70\x00\x00\xfd"
 
     def test_set_ref_adjust_511(self) -> None:
-        from icom_lan.commands import set_ref_adjust
+        from rigplane.commands import set_ref_adjust
 
         frame = set_ref_adjust(511)
         # 511 as 2-byte BCD: 0x05 0x11
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x70\x05\x11\xfd"
 
     def test_set_ref_adjust_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import set_ref_adjust
+        from rigplane.commands import set_ref_adjust
 
         with pytest.raises(ValueError, match="REF Adjust must be 0-511"):
             set_ref_adjust(-1)
@@ -1826,7 +1826,7 @@ class TestSystemConfigCommands:
             set_ref_adjust(512)
 
     def test_parse_ref_adjust_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_level_response
+        from rigplane.commands import parse_civ_frame, parse_level_response
 
         # Radio responds with REF Adjust = 256
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x00\x70\x02\x56\xfd"
@@ -1835,7 +1835,7 @@ class TestSystemConfigCommands:
         assert value == 256
 
     def test_ref_adjust_roundtrip(self) -> None:
-        from icom_lan.commands import (
+        from rigplane.commands import (
             parse_civ_frame,
             parse_level_response,
             set_ref_adjust,
@@ -1853,34 +1853,34 @@ class TestSystemConfigCommands:
     # --- Dash Ratio (0x1A 0x05 0x02 0x28) ---
 
     def test_get_dash_ratio_frame(self) -> None:
-        from icom_lan.commands import get_dash_ratio
+        from rigplane.commands import get_dash_ratio
 
         frame = get_dash_ratio()
         # FE FE 98 E0 1A 05 02 28 FD
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x02\x28\xfd"
 
     def test_set_dash_ratio_28(self) -> None:
-        from icom_lan.commands import set_dash_ratio
+        from rigplane.commands import set_dash_ratio
 
         frame = set_dash_ratio(28)
         # 28 as 1-byte BCD: 0x28
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x02\x28\x28\xfd"
 
     def test_set_dash_ratio_30(self) -> None:
-        from icom_lan.commands import set_dash_ratio
+        from rigplane.commands import set_dash_ratio
 
         frame = set_dash_ratio(30)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x02\x28\x30\xfd"
 
     def test_set_dash_ratio_45(self) -> None:
-        from icom_lan.commands import set_dash_ratio
+        from rigplane.commands import set_dash_ratio
 
         frame = set_dash_ratio(45)
         # 45 as 1-byte BCD: 0x45
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x02\x28\x45\xfd"
 
     def test_set_dash_ratio_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import set_dash_ratio
+        from rigplane.commands import set_dash_ratio
 
         with pytest.raises(ValueError, match="Dash Ratio must be 28-45"):
             set_dash_ratio(27)
@@ -1888,7 +1888,7 @@ class TestSystemConfigCommands:
             set_dash_ratio(46)
 
     def test_parse_dash_ratio_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_level_response
+        from rigplane.commands import parse_civ_frame, parse_level_response
 
         # Radio responds with Dash Ratio = 35 (0x35)
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x02\x28\x35\xfd"
@@ -1899,7 +1899,7 @@ class TestSystemConfigCommands:
         assert value == 35
 
     def test_dash_ratio_roundtrip(self) -> None:
-        from icom_lan.commands import (
+        from rigplane.commands import (
             parse_civ_frame,
             parse_level_response,
             set_dash_ratio,
@@ -1919,65 +1919,65 @@ class TestSystemConfigCommands:
     # --- Antenna Selection (0x12) ---
 
     def test_get_antenna_1_frame(self) -> None:
-        from icom_lan.commands import get_antenna_1
+        from rigplane.commands import get_antenna_1
 
         frame = get_antenna_1()
         # FE FE 98 E0 12 00 FD
         assert frame == b"\xfe\xfe\x98\xe0\x12\x00\xfd"
 
     def test_set_antenna_1_on(self) -> None:
-        from icom_lan.commands import set_antenna_1
+        from rigplane.commands import set_antenna_1
 
         frame = set_antenna_1(True)
         # FE FE 98 E0 12 00 01 FD
         assert frame == b"\xfe\xfe\x98\xe0\x12\x00\x01\xfd"
 
     def test_set_antenna_1_off(self) -> None:
-        from icom_lan.commands import set_antenna_1
+        from rigplane.commands import set_antenna_1
 
         frame = set_antenna_1(False)
         assert frame == b"\xfe\xfe\x98\xe0\x12\x00\x00\xfd"
 
     def test_get_antenna_2_frame(self) -> None:
-        from icom_lan.commands import get_antenna_2
+        from rigplane.commands import get_antenna_2
 
         frame = get_antenna_2()
         assert frame == b"\xfe\xfe\x98\xe0\x12\x01\xfd"
 
     def test_set_antenna_2_on(self) -> None:
-        from icom_lan.commands import set_antenna_2
+        from rigplane.commands import set_antenna_2
 
         frame = set_antenna_2(True)
         assert frame == b"\xfe\xfe\x98\xe0\x12\x01\x01\xfd"
 
     def test_get_rx_antenna_ant1_frame(self) -> None:
-        from icom_lan.commands import get_rx_antenna_ant1
+        from rigplane.commands import get_rx_antenna_ant1
 
         frame = get_rx_antenna_ant1()
         # IC-7610 CI-V: RX-ANT is encoded as data byte on 0x12 0x00 (ANT1)
         assert frame == b"\xfe\xfe\x98\xe0\x12\x00\xfd"
 
     def test_set_rx_antenna_ant1_on(self) -> None:
-        from icom_lan.commands import set_rx_antenna_ant1
+        from rigplane.commands import set_rx_antenna_ant1
 
         frame = set_rx_antenna_ant1(True)
         assert frame == b"\xfe\xfe\x98\xe0\x12\x00\x01\xfd"
 
     def test_get_rx_antenna_ant2_frame(self) -> None:
-        from icom_lan.commands import get_rx_antenna_ant2
+        from rigplane.commands import get_rx_antenna_ant2
 
         frame = get_rx_antenna_ant2()
         # IC-7610 CI-V: RX-ANT is encoded as data byte on 0x12 0x01 (ANT2)
         assert frame == b"\xfe\xfe\x98\xe0\x12\x01\xfd"
 
     def test_set_rx_antenna_ant2_off(self) -> None:
-        from icom_lan.commands import set_rx_antenna_ant2
+        from rigplane.commands import set_rx_antenna_ant2
 
         frame = set_rx_antenna_ant2(False)
         assert frame == b"\xfe\xfe\x98\xe0\x12\x01\x00\xfd"
 
     def test_parse_antenna_bool_response(self) -> None:
-        from icom_lan.commands import parse_bool_response, parse_civ_frame
+        from rigplane.commands import parse_bool_response, parse_civ_frame
 
         # Radio responds: FE FE E0 98 12 00 01 FD (ANT1 = ON)
         civ = b"\xfe\xfe\xe0\x98\x12\x00\x01\xfd"
@@ -1986,7 +1986,7 @@ class TestSystemConfigCommands:
         assert result is True
 
     def test_parse_antenna_bool_response_off(self) -> None:
-        from icom_lan.commands import parse_bool_response, parse_civ_frame
+        from rigplane.commands import parse_bool_response, parse_civ_frame
 
         civ = b"\xfe\xfe\xe0\x98\x12\x01\x00\xfd"
         frame = parse_civ_frame(civ)
@@ -1996,64 +1996,64 @@ class TestSystemConfigCommands:
     # --- Modulation Levels (0x14 0x0B / 0x10 / 0x11) ---
 
     def test_get_acc1_mod_level_frame(self) -> None:
-        from icom_lan.commands import get_acc1_mod_level
+        from rigplane.commands import get_acc1_mod_level
 
         frame = get_acc1_mod_level()
         assert frame == b"\xfe\xfe\x98\xe0\x14\x0b\xfd"
 
     def test_set_acc1_mod_level_128(self) -> None:
-        from icom_lan.commands import set_acc1_mod_level
+        from rigplane.commands import set_acc1_mod_level
 
         frame = set_acc1_mod_level(128)
         # 128 BCD-encoded: 0x01 0x28
         assert frame == b"\xfe\xfe\x98\xe0\x14\x0b\x01\x28\xfd"
 
     def test_set_acc1_mod_level_0(self) -> None:
-        from icom_lan.commands import set_acc1_mod_level
+        from rigplane.commands import set_acc1_mod_level
 
         frame = set_acc1_mod_level(0)
         assert frame == b"\xfe\xfe\x98\xe0\x14\x0b\x00\x00\xfd"
 
     def test_set_acc1_mod_level_255(self) -> None:
-        from icom_lan.commands import set_acc1_mod_level
+        from rigplane.commands import set_acc1_mod_level
 
         frame = set_acc1_mod_level(255)
         assert frame == b"\xfe\xfe\x98\xe0\x14\x0b\x02\x55\xfd"
 
     def test_set_acc1_mod_level_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import set_acc1_mod_level
+        from rigplane.commands import set_acc1_mod_level
 
         with pytest.raises(ValueError, match="Level must be 0-255"):
             set_acc1_mod_level(256)
 
     def test_get_usb_mod_level_frame(self) -> None:
-        from icom_lan.commands import get_usb_mod_level
+        from rigplane.commands import get_usb_mod_level
 
         frame = get_usb_mod_level()
         assert frame == b"\xfe\xfe\x98\xe0\x14\x10\xfd"
 
     def test_set_usb_mod_level_100(self) -> None:
-        from icom_lan.commands import set_usb_mod_level
+        from rigplane.commands import set_usb_mod_level
 
         frame = set_usb_mod_level(100)
         # 100 BCD-encoded: 0x01 0x00
         assert frame == b"\xfe\xfe\x98\xe0\x14\x10\x01\x00\xfd"
 
     def test_get_lan_mod_level_frame(self) -> None:
-        from icom_lan.commands import get_lan_mod_level
+        from rigplane.commands import get_lan_mod_level
 
         frame = get_lan_mod_level()
         assert frame == b"\xfe\xfe\x98\xe0\x14\x11\xfd"
 
     def test_set_lan_mod_level_50(self) -> None:
-        from icom_lan.commands import set_lan_mod_level
+        from rigplane.commands import set_lan_mod_level
 
         frame = set_lan_mod_level(50)
         # 50 BCD-encoded: 0x00 0x50
         assert frame == b"\xfe\xfe\x98\xe0\x14\x11\x00\x50\xfd"
 
     def test_parse_mod_level_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_level_response
+        from rigplane.commands import parse_civ_frame, parse_level_response
 
         # ACC1 mod level = 128 (0x01 0x28)
         civ = b"\xfe\xfe\xe0\x98\x14\x0b\x01\x28\xfd"
@@ -2064,68 +2064,68 @@ class TestSystemConfigCommands:
     # --- Modulation Input Routing (0x1A 0x05 0x00 0x91-0x94) ---
 
     def test_get_data_off_mod_input_frame(self) -> None:
-        from icom_lan.commands import get_data_off_mod_input
+        from rigplane.commands import get_data_off_mod_input
 
         frame = get_data_off_mod_input()
         # FE FE 98 E0 1A 05 00 91 FD
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x91\xfd"
 
     def test_set_data_off_mod_input_mic(self) -> None:
-        from icom_lan.commands import set_data_off_mod_input
+        from rigplane.commands import set_data_off_mod_input
 
         frame = set_data_off_mod_input(0)  # MIC
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x91\x00\xfd"
 
     def test_set_data_off_mod_input_lan(self) -> None:
-        from icom_lan.commands import set_data_off_mod_input
+        from rigplane.commands import set_data_off_mod_input
 
         frame = set_data_off_mod_input(5)  # LAN
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x91\x05\xfd"
 
     def test_set_data_off_mod_input_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import set_data_off_mod_input
+        from rigplane.commands import set_data_off_mod_input
 
         with pytest.raises(ValueError, match="0-5"):
             set_data_off_mod_input(6)
 
     def test_get_data1_mod_input_frame(self) -> None:
-        from icom_lan.commands import get_data1_mod_input
+        from rigplane.commands import get_data1_mod_input
 
         frame = get_data1_mod_input()
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x92\xfd"
 
     def test_set_data1_mod_input_usb(self) -> None:
-        from icom_lan.commands import set_data1_mod_input
+        from rigplane.commands import set_data1_mod_input
 
         frame = set_data1_mod_input(2)  # USB
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x92\x02\xfd"
 
     def test_set_data1_mod_input_rejects_out_of_range(self) -> None:
-        from icom_lan.commands import set_data1_mod_input
+        from rigplane.commands import set_data1_mod_input
 
         with pytest.raises(ValueError, match="0-4"):
             set_data1_mod_input(5)
 
     def test_get_data2_mod_input_frame(self) -> None:
-        from icom_lan.commands import get_data2_mod_input
+        from rigplane.commands import get_data2_mod_input
 
         frame = get_data2_mod_input()
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x93\xfd"
 
     def test_get_data3_mod_input_frame(self) -> None:
-        from icom_lan.commands import get_data3_mod_input
+        from rigplane.commands import get_data3_mod_input
 
         frame = get_data3_mod_input()
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x94\xfd"
 
     def test_set_data3_mod_input_lan_usb(self) -> None:
-        from icom_lan.commands import set_data3_mod_input
+        from rigplane.commands import set_data3_mod_input
 
         frame = set_data3_mod_input(4)  # LAN+USB
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x94\x04\xfd"
 
     def test_parse_mod_input_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_level_response
+        from rigplane.commands import parse_civ_frame, parse_level_response
 
         # Data Off mod input = 3 (USB)
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x00\x91\x03\xfd"
@@ -2138,37 +2138,37 @@ class TestSystemConfigCommands:
     # --- CI-V Options (0x1A 0x05 0x01 0x29 / 0x30) ---
 
     def test_get_civ_transceive_frame(self) -> None:
-        from icom_lan.commands import get_civ_transceive
+        from rigplane.commands import get_civ_transceive
 
         frame = get_civ_transceive()
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x29\xfd"
 
     def test_set_civ_transceive_on(self) -> None:
-        from icom_lan.commands import set_civ_transceive
+        from rigplane.commands import set_civ_transceive
 
         frame = set_civ_transceive(True)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x29\x01\xfd"
 
     def test_set_civ_transceive_off(self) -> None:
-        from icom_lan.commands import set_civ_transceive
+        from rigplane.commands import set_civ_transceive
 
         frame = set_civ_transceive(False)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x29\x00\xfd"
 
     def test_get_civ_output_ant_frame(self) -> None:
-        from icom_lan.commands import get_civ_output_ant
+        from rigplane.commands import get_civ_output_ant
 
         frame = get_civ_output_ant()
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x30\xfd"
 
     def test_set_civ_output_ant_on(self) -> None:
-        from icom_lan.commands import set_civ_output_ant
+        from rigplane.commands import set_civ_output_ant
 
         frame = set_civ_output_ant(True)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x30\x01\xfd"
 
     def test_parse_civ_bool_response(self) -> None:
-        from icom_lan.commands import parse_bool_response, parse_civ_frame
+        from rigplane.commands import parse_bool_response, parse_civ_frame
 
         # CI-V transceive = ON
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x29\x01\xfd"
@@ -2177,7 +2177,7 @@ class TestSystemConfigCommands:
         assert result is True
 
     def test_parse_civ_output_ant_off_response(self) -> None:
-        from icom_lan.commands import parse_bool_response, parse_civ_frame
+        from rigplane.commands import parse_bool_response, parse_civ_frame
 
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x30\x00\xfd"
         frame = parse_civ_frame(civ)
@@ -2187,26 +2187,26 @@ class TestSystemConfigCommands:
     # --- System Date (0x1A 0x05 0x01 0x58) ---
 
     def test_get_system_date_frame(self) -> None:
-        from icom_lan.commands import get_system_date
+        from rigplane.commands import get_system_date
 
         frame = get_system_date()
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x58\xfd"
 
     def test_set_system_date_2026_03_07(self) -> None:
-        from icom_lan.commands import set_system_date
+        from rigplane.commands import set_system_date
 
         frame = set_system_date(2026, 3, 7)
         # FE FE 98 E0 1A 05 01 58 20 26 03 07 FD
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x58\x20\x26\x03\x07\xfd"
 
     def test_set_system_date_2000_01_01(self) -> None:
-        from icom_lan.commands import set_system_date
+        from rigplane.commands import set_system_date
 
         frame = set_system_date(2000, 1, 1)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x58\x20\x00\x01\x01\xfd"
 
     def test_set_system_date_rejects_invalid_month(self) -> None:
-        from icom_lan.commands import set_system_date
+        from rigplane.commands import set_system_date
 
         with pytest.raises(ValueError, match="Month must be 1-12"):
             set_system_date(2026, 0, 1)
@@ -2214,7 +2214,7 @@ class TestSystemConfigCommands:
             set_system_date(2026, 13, 1)
 
     def test_set_system_date_rejects_invalid_day(self) -> None:
-        from icom_lan.commands import set_system_date
+        from rigplane.commands import set_system_date
 
         with pytest.raises(ValueError, match="Day must be 1-31"):
             set_system_date(2026, 3, 0)
@@ -2222,19 +2222,19 @@ class TestSystemConfigCommands:
             set_system_date(2026, 3, 32)
 
     def test_set_system_date_rejects_year_too_low(self) -> None:
-        from icom_lan.commands import set_system_date
+        from rigplane.commands import set_system_date
 
         with pytest.raises(ValueError, match="Year must be 2000-2099"):
             set_system_date(1999, 1, 1)
 
     def test_set_system_date_rejects_year_too_high(self) -> None:
-        from icom_lan.commands import set_system_date
+        from rigplane.commands import set_system_date
 
         with pytest.raises(ValueError, match="Year must be 2000-2099"):
             set_system_date(2100, 1, 1)
 
     def test_set_system_date_accepts_year_boundaries(self) -> None:
-        from icom_lan.commands import set_system_date
+        from rigplane.commands import set_system_date
 
         # Should accept 2000 and 2099
         frame_2000 = set_system_date(2000, 1, 1)
@@ -2244,7 +2244,7 @@ class TestSystemConfigCommands:
         assert frame_2099 == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x58\x20\x99\x12\x31\xfd"
 
     def test_parse_system_date_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_system_date_response
+        from rigplane.commands import parse_civ_frame, parse_system_date_response
 
         # Response: 2026-03-07
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x58\x20\x26\x03\x07\xfd"
@@ -2255,7 +2255,7 @@ class TestSystemConfigCommands:
         assert day == 7
 
     def test_parse_system_date_response_2000(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_system_date_response
+        from rigplane.commands import parse_civ_frame, parse_system_date_response
 
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x58\x20\x00\x12\x31\xfd"
         frame = parse_civ_frame(civ)
@@ -2265,7 +2265,7 @@ class TestSystemConfigCommands:
         assert day == 31
 
     def test_system_date_roundtrip(self) -> None:
-        from icom_lan.commands import (
+        from rigplane.commands import (
             parse_civ_frame,
             parse_system_date_response,
             set_system_date,
@@ -2281,44 +2281,44 @@ class TestSystemConfigCommands:
     # --- System Time (0x1A 0x05 0x01 0x59) ---
 
     def test_get_system_time_frame(self) -> None:
-        from icom_lan.commands import get_system_time
+        from rigplane.commands import get_system_time
 
         frame = get_system_time()
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x59\xfd"
 
     def test_set_system_time_16_45(self) -> None:
-        from icom_lan.commands import set_system_time
+        from rigplane.commands import set_system_time
 
         frame = set_system_time(16, 45)
         # FE FE 98 E0 1A 05 01 59 16 45 FD
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x59\x16\x45\xfd"
 
     def test_set_system_time_00_00(self) -> None:
-        from icom_lan.commands import set_system_time
+        from rigplane.commands import set_system_time
 
         frame = set_system_time(0, 0)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x59\x00\x00\xfd"
 
     def test_set_system_time_23_59(self) -> None:
-        from icom_lan.commands import set_system_time
+        from rigplane.commands import set_system_time
 
         frame = set_system_time(23, 59)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x59\x23\x59\xfd"
 
     def test_set_system_time_rejects_invalid_hour(self) -> None:
-        from icom_lan.commands import set_system_time
+        from rigplane.commands import set_system_time
 
         with pytest.raises(ValueError, match="Hour must be 0-23"):
             set_system_time(24, 0)
 
     def test_set_system_time_rejects_invalid_minute(self) -> None:
-        from icom_lan.commands import set_system_time
+        from rigplane.commands import set_system_time
 
         with pytest.raises(ValueError, match="Minute must be 0-59"):
             set_system_time(12, 60)
 
     def test_parse_system_time_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_system_time_response
+        from rigplane.commands import parse_civ_frame, parse_system_time_response
 
         # Response: 16:45
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x59\x16\x45\xfd"
@@ -2328,7 +2328,7 @@ class TestSystemConfigCommands:
         assert minute == 45
 
     def test_system_time_roundtrip(self) -> None:
-        from icom_lan.commands import (
+        from rigplane.commands import (
             parse_civ_frame,
             parse_system_time_response,
             set_system_time,
@@ -2343,45 +2343,45 @@ class TestSystemConfigCommands:
     # --- UTC Offset (0x1A 0x05 0x01 0x62) ---
 
     def test_get_utc_offset_frame(self) -> None:
-        from icom_lan.commands import get_utc_offset
+        from rigplane.commands import get_utc_offset
 
         frame = get_utc_offset()
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\xfd"
 
     def test_set_utc_offset_plus_05_30(self) -> None:
-        from icom_lan.commands import set_utc_offset
+        from rigplane.commands import set_utc_offset
 
         frame = set_utc_offset(5, 30, False)
         # FE FE 98 E0 1A 05 01 62 05 30 00 FD
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\x05\x30\x00\xfd"
 
     def test_set_utc_offset_minus_08_00(self) -> None:
-        from icom_lan.commands import set_utc_offset
+        from rigplane.commands import set_utc_offset
 
         frame = set_utc_offset(8, 0, True)
         # FE FE 98 E0 1A 05 01 62 08 00 01 FD
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\x08\x00\x01\xfd"
 
     def test_set_utc_offset_zero(self) -> None:
-        from icom_lan.commands import set_utc_offset
+        from rigplane.commands import set_utc_offset
 
         frame = set_utc_offset(0, 0, False)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\x00\x00\x00\xfd"
 
     def test_set_utc_offset_max_positive(self) -> None:
-        from icom_lan.commands import set_utc_offset
+        from rigplane.commands import set_utc_offset
 
         frame = set_utc_offset(14, 0, False)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\x14\x00\x00\xfd"
 
     def test_set_utc_offset_rejects_invalid_hours(self) -> None:
-        from icom_lan.commands import set_utc_offset
+        from rigplane.commands import set_utc_offset
 
         with pytest.raises(ValueError, match="hours must be 0-14"):
             set_utc_offset(15, 0, False)
 
     def test_set_utc_offset_rejects_invalid_minutes(self) -> None:
-        from icom_lan.commands import set_utc_offset
+        from rigplane.commands import set_utc_offset
 
         with pytest.raises(ValueError, match="minutes must be 0/15/30/45"):
             set_utc_offset(5, 10, False)
@@ -2389,7 +2389,7 @@ class TestSystemConfigCommands:
             set_utc_offset(5, 60, False)
 
     def test_parse_utc_offset_response_positive(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_utc_offset_response
+        from rigplane.commands import parse_civ_frame, parse_utc_offset_response
 
         # +05:30
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x62\x05\x30\x00\xfd"
@@ -2400,7 +2400,7 @@ class TestSystemConfigCommands:
         assert is_negative is False
 
     def test_parse_utc_offset_response_negative(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_utc_offset_response
+        from rigplane.commands import parse_civ_frame, parse_utc_offset_response
 
         # -08:00
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x62\x08\x00\x01\xfd"
@@ -2411,7 +2411,7 @@ class TestSystemConfigCommands:
         assert is_negative is True
 
     def test_utc_offset_roundtrip(self) -> None:
-        from icom_lan.commands import (
+        from rigplane.commands import (
             parse_civ_frame,
             parse_utc_offset_response,
             set_utc_offset,
@@ -2426,34 +2426,34 @@ class TestSystemConfigCommands:
     # --- Speech (0x13) ---
 
     def test_speech_all(self) -> None:
-        from icom_lan.commands import get_speech
+        from rigplane.commands import get_speech
 
         frame = get_speech(0)
         assert frame == b"\xfe\xfe\x98\xe0\x13\x00\xfd"
 
     def test_speech_freq(self) -> None:
-        from icom_lan.commands import get_speech
+        from rigplane.commands import get_speech
 
         frame = get_speech(1)
         assert b"\x13\x01" in frame
 
     def test_speech_mode(self) -> None:
-        from icom_lan.commands import get_speech
+        from rigplane.commands import get_speech
 
         frame = get_speech(2)
         assert b"\x13\x02" in frame
 
     def test_speech_invalid(self) -> None:
-        from icom_lan.commands import get_speech
+        from rigplane.commands import get_speech
 
         with pytest.raises(ValueError, match="0, 1, or 2"):
             get_speech(3)
 
     def test_speech_cmd_map_prefers_set_speech_key(self) -> None:
         """Rig profiles may expose set_speech (wfview Set-only) instead of get_speech."""
-        from icom_lan import IC_7610_ADDR
-        from icom_lan.command_map import CommandMap
-        from icom_lan.commands import get_speech
+        from rigplane import IC_7610_ADDR
+        from rigplane.command_map import CommandMap
+        from rigplane.commands import get_speech
 
         cm = CommandMap({"set_speech": (0x13,)})
         assert get_speech(0, to_addr=IC_7610_ADDR, cmd_map=cm) == get_speech(
@@ -2463,7 +2463,7 @@ class TestSystemConfigCommands:
     # --- Transceiver ID (0x19 0x00) ---
 
     def test_get_transceiver_id(self) -> None:
-        from icom_lan.commands import get_transceiver_id
+        from rigplane.commands import get_transceiver_id
 
         frame = get_transceiver_id()
         assert frame == b"\xfe\xfe\x98\xe0\x19\x00\xfd"
@@ -2471,19 +2471,19 @@ class TestSystemConfigCommands:
     # --- XFC Status (0x1C 0x02) ---
 
     def test_get_xfc_status(self) -> None:
-        from icom_lan.commands import get_xfc_status
+        from rigplane.commands import get_xfc_status
 
         frame = get_xfc_status()
         assert frame == b"\xfe\xfe\x98\xe0\x1c\x02\xfd"
 
     def test_set_xfc_status_on(self) -> None:
-        from icom_lan.commands import set_xfc_status
+        from rigplane.commands import set_xfc_status
 
         frame = set_xfc_status(True)
         assert b"\x1c\x02\x01" in frame
 
     def test_set_xfc_status_off(self) -> None:
-        from icom_lan.commands import set_xfc_status
+        from rigplane.commands import set_xfc_status
 
         frame = set_xfc_status(False)
         assert b"\x1c\x02\x00" in frame

@@ -20,19 +20,19 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from icom_lan.diagnostics import (
+from rigplane.diagnostics import (
     BundleContext,
     DiagnosticUploadError,
     RateLimited,
     ReportSubmitted,
 )
-from icom_lan.diagnostics import _discovery
-from icom_lan.web.handlers.diagnostics import (
+from rigplane.diagnostics import _discovery
+from rigplane.web.handlers.diagnostics import (
     PREVIEW_TTL_SECONDS,
     DiagnosticsHandler,
     check_origin_or_loopback,
 )
-from icom_lan.web.server import WebConfig, WebServer
+from rigplane.web.server import WebConfig, WebServer
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +281,7 @@ async def test_send_with_valid_csrf_uploads(
             auth_class="anonymous",
         )
         with patch(
-            "icom_lan.web.handlers.diagnostics.upload_bundle",
+            "rigplane.web.handlers.diagnostics.upload_bundle",
             new=AsyncMock(return_value=report),
         ) as mock_upload:
             body = json.dumps(
@@ -315,7 +315,7 @@ async def test_send_csrf_single_use(
         preview = await _do_preview(srv)
         report = ReportSubmitted("r1", "https://x", 0, "anonymous")
         with patch(
-            "icom_lan.web.handlers.diagnostics.upload_bundle",
+            "rigplane.web.handlers.diagnostics.upload_bundle",
             new=AsyncMock(return_value=report),
         ):
             body = json.dumps(
@@ -366,7 +366,7 @@ async def test_save_returns_zip_bytes(
         headers = writer.response_headers
         assert headers["content-type"] == "application/zip"
         assert "attachment" in headers["content-disposition"]
-        assert "icom-lan-report-" in headers["content-disposition"]
+        assert "rigplane-report-" in headers["content-disposition"]
         # Body parses as a real ZIP.
         zip_path = tmp_path / "downloaded.zip"
         zip_path.write_bytes(writer.response_body)
@@ -619,7 +619,7 @@ async def test_send_translates_rate_limited(
     try:
         preview = await _do_preview(srv)
         with patch(
-            "icom_lan.web.handlers.diagnostics.upload_bundle",
+            "rigplane.web.handlers.diagnostics.upload_bundle",
             new=AsyncMock(side_effect=RateLimited(retry_after_seconds=42)),
         ):
             body = json.dumps(
@@ -826,7 +826,7 @@ async def test_origin_missing_returns_distinct_code(
 @pytest.mark.asyncio
 async def test_handler_preview_endpoint_url_matches_resolved() -> None:
     """The preview's endpoint_url equals diagnostics.upload._resolve_endpoint(None)."""
-    from icom_lan.diagnostics.upload import _resolve_endpoint
+    from rigplane.diagnostics.upload import _resolve_endpoint
 
     handler = DiagnosticsHandler()
     _register_test_contributor()
@@ -876,7 +876,7 @@ async def test_concurrent_send_uploads_only_once(
             return report
 
         with patch(
-            "icom_lan.web.handlers.diagnostics.upload_bundle",
+            "rigplane.web.handlers.diagnostics.upload_bundle",
             new=AsyncMock(side_effect=_slow_upload),
         ) as mock_upload:
             body = json.dumps(

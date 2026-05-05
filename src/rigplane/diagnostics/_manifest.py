@@ -11,11 +11,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from icom_lan.diagnostics.contributor import BundleContext, DiagnosticContributor
+from rigplane.diagnostics.contributor import BundleContext, DiagnosticContributor
 
 SCHEMA_VERSION = "icom-lan-bundle-v1"
 APP_NAME = "icom-lan"
-_PYPI_NAME = "icom-lan"
+_PYPI_NAME = "rigplane"
 _VERSION_FALLBACK = "0.0.0+unknown"
 _GIT_TIMEOUT_S = 2.0
 

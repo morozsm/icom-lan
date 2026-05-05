@@ -6,8 +6,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from icom_lan.audio_fft_scope import AudioFftScope
-from icom_lan.scope import ScopeFrame
+from rigplane.audio_fft_scope import AudioFftScope
+from rigplane.scope import ScopeFrame
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -359,7 +359,7 @@ class TestAudioFftScopeProtocolCompat:
 
     def test_scope_frame_encodable(self):
         """ScopeFrame from AudioFftScope should be encodable by protocol.py."""
-        from icom_lan.web.protocol import encode_scope_frame
+        from rigplane.web.protocol import encode_scope_frame
 
         scope = AudioFftScope(fft_size=1024, fps=100, avg_count=1)
         scope.set_center_freq(14_074_000)

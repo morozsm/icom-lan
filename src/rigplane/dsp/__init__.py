@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from icom_lan.dsp.exceptions import DSPBackendUnavailable, DSPConfigError
-from icom_lan.dsp.pipeline import DSPNode, DSPPipeline
-from icom_lan.dsp.tap_registry import TapHandle, TapRegistry
+from rigplane.dsp.exceptions import DSPBackendUnavailable, DSPConfigError
+from rigplane.dsp.pipeline import DSPNode, DSPPipeline
+from rigplane.dsp.tap_registry import TapHandle, TapRegistry
 
 __all__ = [
     "DSPBackendUnavailable",

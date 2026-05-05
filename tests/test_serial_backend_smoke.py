@@ -7,19 +7,18 @@ import base64
 import hashlib
 import json
 import struct
-from unittest.mock import patch
 
 import pytest
 
-from icom_lan.audio.backend import AudioDeviceId, AudioDeviceInfo, FakeAudioBackend
-from icom_lan.audio_bridge import AudioBridge
-from icom_lan.backends.icom7610 import Icom7610SerialRadio
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
-from icom_lan.rigctld.contract import RigctldConfig
-from icom_lan.rigctld.server import RigctldServer
-from icom_lan.web.handlers import AudioBroadcaster
-from icom_lan.web.protocol import AUDIO_CODEC_PCM16, AUDIO_HEADER_SIZE
-from icom_lan.web.server import WebConfig, WebServer
+from rigplane.audio.backend import AudioDeviceId, AudioDeviceInfo, FakeAudioBackend
+from rigplane.audio_bridge import AudioBridge
+from rigplane.backends.icom7610 import Icom7610SerialRadio
+from rigplane.backends.icom7610.drivers.serial_stub import SerialMockRadio
+from rigplane.rigctld.contract import RigctldConfig
+from rigplane.rigctld.server import RigctldServer
+from rigplane.web.handlers import AudioBroadcaster
+from rigplane.web.protocol import AUDIO_CODEC_PCM16, AUDIO_HEADER_SIZE
+from rigplane.web.server import WebConfig, WebServer
 
 
 _WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"

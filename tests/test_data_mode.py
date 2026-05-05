@@ -14,17 +14,17 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from icom_lan.commands import (
+from rigplane.commands import (
     get_data_mode,
     parse_civ_frame,
     parse_data_mode_response,
     set_data_mode,
 )
-from icom_lan.rigctld.contract import RigctldCommand, RigctldConfig
-from icom_lan.rigctld.handler import RigctldHandler
-from icom_lan.rigctld.poller import RadioPoller
-from icom_lan.rigctld.state_cache import StateCache
-from icom_lan.types import CivFrame, Mode
+from rigplane.rigctld.contract import RigctldCommand, RigctldConfig
+from rigplane.rigctld.handler import RigctldHandler
+from rigplane.rigctld.poller import RadioPoller
+from rigplane.rigctld.state_cache import StateCache
+from rigplane.types import CivFrame, Mode
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -414,7 +414,7 @@ async def test_poller_data_mode_error_does_not_crash(
 ) -> None:
     import asyncio
 
-    from icom_lan.exceptions import TimeoutError as IcomTimeoutError
+    from rigplane.exceptions import TimeoutError as IcomTimeoutError
 
     poll_radio.get_data_mode.side_effect = IcomTimeoutError("timeout")
     await poller.start()

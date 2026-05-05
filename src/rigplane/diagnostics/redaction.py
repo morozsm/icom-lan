@@ -192,7 +192,7 @@ def redact_hostnames(text: str) -> str:
        This redactor will scrub anything matching ``label.tld`` shape, including
        filenames like ``radio.json`` and ``script.py``. Apply only to fields
        known to carry hostnames. See the ``_redact_host`` helper in
-       :mod:`icom_lan.diagnostics.contributors.radio` for the safe call site.
+       :mod:`rigplane.diagnostics.contributors.radio` for the safe call site.
     """
     if not text:
         return ""

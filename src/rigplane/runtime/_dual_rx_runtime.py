@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 else:
     _MixinBase = object
 
-from icom_lan.commands import (
+from rigplane.commands import (
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
     build_civ_frame,
@@ -27,18 +27,18 @@ from icom_lan.commands import (
     set_freq,
     set_mode,
 )
-from icom_lan.commands import get_selected_freq as _get_selected_freq_cmd
-from icom_lan.commands import get_selected_mode as _get_selected_mode_cmd
-from icom_lan.commands import get_unselected_freq as _get_unselected_freq_cmd
-from icom_lan.commands import get_unselected_mode as _get_unselected_mode_cmd
-from icom_lan.commands import (
+from rigplane.commands import get_selected_freq as _get_selected_freq_cmd
+from rigplane.commands import get_selected_mode as _get_selected_mode_cmd
+from rigplane.commands import get_unselected_freq as _get_unselected_freq_cmd
+from rigplane.commands import get_unselected_mode as _get_unselected_mode_cmd
+from rigplane.commands import (
     parse_selected_freq_response as _parse_selected_freq_response,
 )
-from icom_lan.commands import (
+from rigplane.commands import (
     parse_selected_mode_response as _parse_selected_mode_response,
 )
-from icom_lan.core.exceptions import CommandError, TimeoutError
-from icom_lan.core.types import Mode
+from rigplane.core.exceptions import CommandError, TimeoutError
+from rigplane.core.types import Mode
 
 # CI-V command byte for VFO select / equal / swap (0x07).
 _CMD_VFO = 0x07
@@ -411,7 +411,7 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
         ``main_select`` / ``sub_select`` opcode (``0x07 0xD0`` /
         ``0x07 0xD1``) and updates :attr:`RadioState.active`.  On single-RX
         profiles only ``which == 0`` is accepted and the call is a no-op
-        (matching the :class:`~icom_lan.radio_protocol.ReceiverBankCapable`
+        (matching the :class:`~rigplane.radio_protocol.ReceiverBankCapable`
         contract).  Out-of-range indices and unknown names raise
         :class:`ValueError`.
         """

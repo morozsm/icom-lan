@@ -6,15 +6,15 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.audio._transcoder import PcmAudioFormat, PcmOpusTranscoder
-from icom_lan.audio import AudioPacket
-from icom_lan.exceptions import (
+from rigplane.audio._transcoder import PcmAudioFormat, PcmOpusTranscoder
+from rigplane.audio import AudioPacket
+from rigplane.exceptions import (
     AudioCodecBackendError,
     ConnectionError,
     AudioFormatError,
     AudioTranscodeError,
 )
-from icom_lan.radio import IcomRadio
+from rigplane.radio import IcomRadio
 from _audio_stream_fake import FakeAudioStream
 
 
@@ -72,9 +72,9 @@ class TestPcmOpusTranscoder:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(
-            "icom_lan._audio_transcoder._load_default_backend", lambda: None
+            "rigplane._audio_transcoder._load_default_backend", lambda: None
         )
-        with pytest.raises(AudioCodecBackendError, match="install icom-lan\\[audio\\]"):
+        with pytest.raises(AudioCodecBackendError, match="install rigplane\\[audio\\]"):
             PcmOpusTranscoder()
 
     def test_format_validation_error(self) -> None:
@@ -304,11 +304,11 @@ class TestRadioPcmTxApi:
         radio._audio_stream = fake_stream  # type: ignore[assignment]
         radio._get_pcm_transcoder = MagicMock(  # type: ignore[method-assign]
             side_effect=AudioCodecBackendError(
-                "Audio codec backend unavailable; install icom-lan[audio]."
+                "Audio codec backend unavailable; install rigplane[audio]."
             )
         )
 
-        with pytest.raises(AudioCodecBackendError, match="install icom-lan\\[audio\\]"):
+        with pytest.raises(AudioCodecBackendError, match="install rigplane\\[audio\\]"):
             await radio.start_audio_tx_pcm()
         assert fake_stream.start_tx_count == 0
 

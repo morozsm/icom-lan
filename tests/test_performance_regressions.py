@@ -14,13 +14,13 @@ from __future__ import annotations
 import time
 
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     _CMD_FREQ_GET,
     CONTROLLER_ADDR,
     build_civ_frame,
 )
-from icom_lan.types import Mode, bcd_encode
+from rigplane.types import Mode, bcd_encode
 
 from _helpers import freq_response as _freq_response
 from _helpers import mode_response as _mode_response

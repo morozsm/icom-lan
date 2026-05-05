@@ -8,19 +8,19 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from icom_lan.diagnostics.redaction import redact_credentials, redact_paths
+from rigplane.diagnostics.redaction import redact_credentials, redact_paths
 
 if TYPE_CHECKING:
-    from icom_lan.diagnostics.contributor import BundleContext
+    from rigplane.diagnostics.contributor import BundleContext
 
 
 # Allowlisted environment variables — only these are recorded in the bundle.
 # Anything not on this list is silently dropped (avoid leaking arbitrary
 # user environment, secrets, ssh agent paths, etc.).
 _ENV_ALLOWLIST: tuple[str, ...] = (
-    "ICOM_LAN_DISABLE_DIAGNOSTIC_LOGGING",
-    "ICOM_LAN_REPORT_ENDPOINT",
-    "ICOM_LAN_LOG_DIR",
+    "RIGPLANE_DISABLE_DIAGNOSTIC_LOGGING",
+    "RIGPLANE_REPORT_ENDPOINT",
+    "RIGPLANE_LOG_DIR",
     "PATH",
     "PYTHONPATH",
     "LANG",

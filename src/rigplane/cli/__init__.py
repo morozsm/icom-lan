@@ -1,23 +1,23 @@
-"""icom-lan CLI — command-line interface for Icom LAN control.
+"""rigplane CLI — command-line interface for Icom LAN control.
 
 Usage:
-    icom-lan status [--host HOST] [--user USER] [--pass PASS]
-    icom-lan freq [VALUE] [--host HOST] [--user USER] [--pass PASS]
-    icom-lan mode [VALUE] [--host HOST] [--user USER] [--pass PASS]
-    icom-lan power [VALUE] [--host HOST] [--user USER] [--pass PASS]
-    icom-lan meter [--host HOST] [--user USER] [--pass PASS]
-    icom-lan audio caps [--json] [--stats]
-    icom-lan audio rx --out rx.wav [--seconds 10]
-    icom-lan audio tx --in tx.wav
-    icom-lan audio loopback [--seconds 10]
-    icom-lan att [VALUE] [--host HOST] [--user USER] [--pass PASS]
-    icom-lan preamp [VALUE] [--host HOST] [--user USER] [--pass PASS]
-    icom-lan ptt {on,off} [--host HOST] [--user USER] [--pass PASS]
-    icom-lan antenna [--ant1 on|off] [--ant2 on|off] [--rx-ant1 on|off] [--rx-ant2 on|off]
-    icom-lan date [YYYY-MM-DD]
-    icom-lan time [HH:MM]
-    icom-lan levels [--nr 0-255] [--nb 0-255] [--mic-gain 0-255] [--drive-gain 0-255] [--comp-level 0-255]
-    icom-lan discover
+    rigplane status [--host HOST] [--user USER] [--pass PASS]
+    rigplane freq [VALUE] [--host HOST] [--user USER] [--pass PASS]
+    rigplane mode [VALUE] [--host HOST] [--user USER] [--pass PASS]
+    rigplane power [VALUE] [--host HOST] [--user USER] [--pass PASS]
+    rigplane meter [--host HOST] [--user USER] [--pass PASS]
+    rigplane audio caps [--json] [--stats]
+    rigplane audio rx --out rx.wav [--seconds 10]
+    rigplane audio tx --in tx.wav
+    rigplane audio loopback [--seconds 10]
+    rigplane att [VALUE] [--host HOST] [--user USER] [--pass PASS]
+    rigplane preamp [VALUE] [--host HOST] [--user USER] [--pass PASS]
+    rigplane ptt {on,off} [--host HOST] [--user USER] [--pass PASS]
+    rigplane antenna [--ant1 on|off] [--ant2 on|off] [--rx-ant1 on|off] [--rx-ant2 on|off]
+    rigplane date [YYYY-MM-DD]
+    rigplane time [HH:MM]
+    rigplane levels [--nr 0-255] [--nb 0-255] [--mic-gain 0-255] [--drive-gain 0-255] [--comp-level 0-255]
+    rigplane discover
 """
 
 __all__ = ["main", "check_ports_available"]
@@ -38,15 +38,15 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from icom_lan import __version__  # noqa: E402
-from icom_lan.audio import AudioStats  # noqa: E402
-from icom_lan.backends.config import (  # noqa: E402
+from rigplane import __version__  # noqa: E402
+from rigplane.audio import AudioStats  # noqa: E402
+from rigplane.backends.config import (  # noqa: E402
     LanBackendConfig,
     SerialBackendConfig,
     YaesuCatBackendConfig,
 )
-from icom_lan.backends.factory import create_radio  # noqa: E402
-from icom_lan.core.capabilities import (  # noqa: E402
+from rigplane.backends.factory import create_radio  # noqa: E402
+from rigplane.core.capabilities import (  # noqa: E402
     CAP_AF_LEVEL,
     CAP_ANTENNA,
     CAP_ATTENUATOR,
@@ -60,12 +60,12 @@ from icom_lan.core.capabilities import (  # noqa: E402
     CAP_SYSTEM_SETTINGS,
     CAP_TUNER,
 )
-from icom_lan.cli._diagnose import (  # noqa: E402
+from rigplane.cli._diagnose import (  # noqa: E402
     add_subparser as _add_diagnose_subparser,
     run as _run_diagnose,
 )
-from icom_lan.core.radio_protocol import Radio  # noqa: E402
-from icom_lan.core.types import Mode, get_audio_capabilities  # noqa: E402
+from rigplane.core.radio_protocol import Radio  # noqa: E402
+from rigplane.core.types import Mode, get_audio_capabilities  # noqa: E402
 
 _AUDIO_FRAME_MS = 20
 _PCM_SAMPLE_WIDTH_BYTES = 2
@@ -103,7 +103,7 @@ async def _auto_discover_lan(timeout: float = _DISCOVER_TIMEOUT) -> str:
     Exits with an error message if zero or multiple radios are found
     (multiple radios print a list so the user can pick).
     """
-    from icom_lan.discovery import discover_lan_radios
+    from rigplane.discovery import discover_lan_radios
 
     print(f"No --host specified, scanning LAN for radios ({timeout:.0f}s)...")
     try:
@@ -139,7 +139,7 @@ async def _auto_discover_serial() -> tuple[str, int | None]:
 
     Exits with an error message if zero or multiple radios are found.
     """
-    from icom_lan.discovery import discover_serial_radios
+    from rigplane.discovery import discover_serial_radios
 
     print("No --serial-port specified, scanning serial ports...")
     radios = await discover_serial_radios()
@@ -280,16 +280,16 @@ def _resolve_password(args: argparse.Namespace) -> str:
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="icom-lan",
+        prog="rigplane",
         description="Control Icom transceivers over LAN",
         epilog=(
             "examples:\n"
-            "  icom-lan web                          # auto-discover radio, start web UI\n"
-            "  icom-lan web --host 192.168.55.40     # explicit radio IP\n"
-            "  icom-lan web --preset digimode        # bridge + rigctld + WSJT-X compat\n"
-            "  icom-lan web --bridge                 # web UI + audio bridge\n"
-            "  icom-lan serve                        # rigctld server only\n"
-            "  icom-lan discover                     # find radios on the network\n"
+            "  rigplane web                          # auto-discover radio, start web UI\n"
+            "  rigplane web --host 192.168.55.40     # explicit radio IP\n"
+            "  rigplane web --preset digimode        # bridge + rigctld + WSJT-X compat\n"
+            "  rigplane web --bridge                 # web UI + audio bridge\n"
+            "  rigplane serve                        # rigctld server only\n"
+            "  rigplane discover                     # find radios on the network\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -399,7 +399,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--list-audio-devices",
         dest="list_audio_devices",
         action="store_true",
-        help="List available USB audio devices and exit (requires icom-lan[bridge])",
+        help="List available USB audio devices and exit (requires rigplane[bridge])",
     )
     p.add_argument(
         "--model",
@@ -471,7 +471,7 @@ def _build_parser() -> argparse.ArgumentParser:
     audio_sub.required = True
     audio_caps_p = audio_sub.add_parser(
         "caps",
-        help="Show icom-lan audio capabilities and defaults",
+        help="Show rigplane audio capabilities and defaults",
     )
     _add_json(audio_caps_p)
     _add_stats(audio_caps_p)
@@ -505,7 +505,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Capture RX audio to a WAV file",
         description=(
             "Capture PCM audio from the radio and write a 16-bit PCM WAV file.\n"
-            "Example: icom-lan audio rx --out rx.wav --seconds 10"
+            "Example: rigplane audio rx --out rx.wav --seconds 10"
         ),
     )
     _add_audio_common_flags(audio_rx_p)
@@ -527,7 +527,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Transmit audio from a WAV file",
         description=(
             "Read a 16-bit PCM WAV file and transmit it over LAN audio.\n"
-            "Example: icom-lan audio tx --in tx.wav"
+            "Example: rigplane audio tx --in tx.wav"
         ),
     )
     _add_audio_common_flags(audio_tx_p)
@@ -543,7 +543,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="RX->TX PCM loopback for quick audio path checks",
         description=(
             "Receive PCM audio and immediately feed it back to TX.\n"
-            "Example: icom-lan audio loopback --seconds 10"
+            "Example: rigplane audio loopback --seconds 10"
         ),
     )
     _add_audio_common_flags(audio_loopback_p)
@@ -562,9 +562,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "Bidirectional PCM audio bridge between the radio and a system\n"
             "audio device. Allows WSJT-X, fldigi, JS8Call etc. to use the\n"
             "radio by selecting the virtual device as their sound card.\n\n"
-            "Requires: pip install icom-lan[bridge]\n"
+            "Requires: pip install rigplane[bridge]\n"
             "Virtual device: brew install blackhole-2ch\n\n"
-            "Example: icom-lan audio bridge --device 'BlackHole 2ch'"
+            "Example: rigplane audio bridge --device 'BlackHole 2ch'"
         ),
     )
     audio_bridge_p.add_argument(
@@ -1051,13 +1051,13 @@ def _parse_frequency(value: str) -> int:
 
 def _rigs_dir() -> Path:
     """Return the path to the rigs/ directory shipped with the package."""
-    # Installed layout: icom_lan/rigs/ next to the package directory
-    # (this file is icom_lan/cli/__init__.py, so go up TWO levels to icom_lan/)
+    # Installed layout: rigplane/rigs/ next to the package directory
+    # (this file is rigplane/cli/__init__.py, so go up TWO levels to rigplane/)
     pkg_rigs = Path(__file__).resolve().parent.parent / "rigs"
     if pkg_rigs.is_dir():
         return pkg_rigs
     # Development layout: repo_root/rigs/
-    # (parents[3] from src/icom_lan/cli/__init__.py = repo root)
+    # (parents[3] from src/rigplane/cli/__init__.py = repo root)
     return Path(__file__).resolve().parents[3] / "rigs"
 
 
@@ -1069,7 +1069,7 @@ def _resolve_model(
     Returns:
         (radio_addr, model_name) — either may be None.
     """
-    from icom_lan.rig_loader import discover_rigs
+    from rigplane.rig_loader import discover_rigs
 
     model_name: str | None = getattr(args, "model", None)
     radio_addr: int | None = getattr(args, "radio_addr", None)
@@ -1224,11 +1224,11 @@ async def _cmd_list_audio_devices(args: argparse.Namespace) -> int:
     except ImportError:
         print(
             "Error: --list-audio-devices requires the sounddevice package.\n"
-            "  Install with: pip install icom-lan[bridge]",
+            "  Install with: pip install rigplane[bridge]",
             file=sys.stderr,
         )
         return 1
-    from icom_lan.audio.usb_driver import list_usb_audio_devices
+    from rigplane.audio.usb_driver import list_usb_audio_devices
 
     devices = list_usb_audio_devices(_sd)
     if getattr(args, "json", False):
@@ -1994,7 +1994,7 @@ async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
 
 
 async def _cmd_meter(radio: Radio, args: argparse.Namespace) -> int:
-    from icom_lan.exceptions import TimeoutError as IcomTimeout
+    from rigplane.exceptions import TimeoutError as IcomTimeout
 
     if CAP_METERS not in radio.capabilities:
         print(
@@ -2302,7 +2302,7 @@ async def _cmd_scope(radio: Radio, args: argparse.Namespace) -> int:
 
     if not args.json:
         try:
-            from icom_lan.scope_render import render_scope_image, render_spectrum
+            from rigplane.scope_render import render_scope_image, render_spectrum
         except ImportError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
@@ -2394,15 +2394,15 @@ async def _cmd_scope(radio: Radio, args: argparse.Namespace) -> int:
 async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
     """Bridge radio audio to a virtual audio device."""
     try:
-        from icom_lan.audio_bridge import (
+        from rigplane.audio_bridge import (
             AudioBridge,
             derive_bridge_label,
             list_audio_devices,
         )
     except ImportError:
         print(
-            "Error: audio bridge requires icom-lan[bridge].\n"
-            "  Install: pip install 'icom-lan[bridge]'",
+            "Error: audio bridge requires rigplane[bridge].\n"
+            "  Install: pip install 'rigplane[bridge]'",
             file=sys.stderr,
         )
         return 1
@@ -2488,7 +2488,7 @@ async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
 def _detect_loopback_hint() -> str | None:
     """Try to detect a loopback audio device; return a hint string or None."""
     try:
-        from icom_lan.audio_bridge import find_loopback_device
+        from rigplane.audio_bridge import find_loopback_device
 
         dev = find_loopback_device()
         if dev:
@@ -2517,7 +2517,7 @@ def _print_startup_banner(
         host = getattr(transport, "_device", None) or "?"
 
     lines = [
-        f"--- icom-lan v{__version__} ---",
+        f"--- rigplane v{__version__} ---",
         f"  Radio:    {model} at {host}",
     ]
     if web_url:
@@ -2538,13 +2538,13 @@ def _print_startup_banner(
 async def _cmd_serve(radio: Radio, args: argparse.Namespace) -> int:
     import logging as _logging
 
-    from icom_lan.rigctld.audit import AUDIT_LOGGER_NAME, RigctldAuditFormatter
-    from icom_lan.rigctld.contract import RigctldConfig
-    from icom_lan.rigctld.server import RigctldServer
+    from rigplane.rigctld.audit import AUDIT_LOGGER_NAME, RigctldAuditFormatter
+    from rigplane.rigctld.contract import RigctldConfig
+    from rigplane.rigctld.server import RigctldServer
 
-    # Apply requested log level to the icom_lan logger hierarchy.
+    # Apply requested log level to the rigplane logger hierarchy.
     log_level = getattr(args, "log_level", "INFO")
-    _logging.getLogger("icom_lan").setLevel(getattr(_logging, log_level))
+    _logging.getLogger("rigplane").setLevel(getattr(_logging, log_level))
 
     # Configure JSON audit log if a path was provided.
     audit_log_path: str | None = getattr(args, "audit_log", None)
@@ -2586,7 +2586,7 @@ async def _cmd_serve(radio: Radio, args: argparse.Namespace) -> int:
 async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     import pathlib
 
-    from icom_lan.web.server import WebConfig, WebServer
+    from rigplane.web.server import WebConfig, WebServer
 
     static_dir = pathlib.Path(args.web_static_dir) if args.web_static_dir else None
     if static_dir is not None and not static_dir.is_dir():
@@ -2668,7 +2668,7 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
         tx_device_name = getattr(args, "web_bridge_tx_device", None)
         rx_only = getattr(args, "web_bridge_rx_only", False)
         bridge_label = getattr(args, "web_bridge_label", None)
-        from icom_lan.audio_bridge import LoopbackNotFoundError
+        from rigplane.audio_bridge import LoopbackNotFoundError
 
         try:
             await server.start_audio_bridge(
@@ -2723,8 +2723,8 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     rigctld_server = None
     rigctld_addr: str | None = None
     if getattr(args, "web_rigctld", False):
-        from icom_lan.rigctld.contract import RigctldConfig
-        from icom_lan.rigctld.server import RigctldServer
+        from rigplane.rigctld.contract import RigctldConfig
+        from rigplane.rigctld.server import RigctldServer
 
         rigctld_port = getattr(args, "web_rigctld_port", 4532)
         rigctld_config = RigctldConfig(
@@ -2785,7 +2785,7 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
 
 async def _cmd_discover(_radio: Radio | None, args: argparse.Namespace) -> int:
     """Discover Icom radios on LAN and/or serial ports."""
-    from icom_lan.discovery import (
+    from rigplane.discovery import (
         dedupe_radios,
         discover_lan_radios,
         discover_serial_radios,
@@ -2877,7 +2877,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Enable debug logging with ICOM_DEBUG=1 or any truthy value
-    # ICOM_LOG_FILE=/path/to/file.log — log to file (default: logs/icom-lan.log)
+    # ICOM_LOG_FILE=/path/to/file.log — log to file (default: logs/rigplane.log)
     # ICOM_LOG_MAX_BYTES=50000000 — rotate when file reaches this size (default: 50 MB)
     # ICOM_LOG_BACKUP_COUNT=5 — keep N rotated backups (default: 5; 0 disables rotation)
     # Set ICOM_LOG_FILE=off to disable the default file log on daemon commands.
@@ -2917,7 +2917,7 @@ def main() -> None:
 
     # File handler (if log_file specified, debug mode, or daemon command)
     if (debug_mode or is_daemon) and not log_file and not log_file_disabled:
-        log_file = "logs/icom-lan.log"
+        log_file = "logs/rigplane.log"
 
     if log_file:
         log_path = Path(log_file).expanduser().resolve()
@@ -2954,7 +2954,7 @@ def main() -> None:
     elif args.command == "discover":
         sys.exit(asyncio.run(_cmd_discover(None, args)))
     elif args.command == "proxy":
-        from icom_lan.proxy import run_proxy
+        from rigplane.proxy import run_proxy
 
         try:
             asyncio.run(run_proxy(args.radio, args.listen, args.port))

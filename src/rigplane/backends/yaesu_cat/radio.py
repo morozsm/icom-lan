@@ -1,6 +1,6 @@
 """Yaesu CAT radio backend — FTX-1 and compatible transceivers.
 
-Implements the core :class:`~icom_lan.radio_protocol.Radio` protocol
+Implements the core :class:`~rigplane.radio_protocol.Radio` protocol
 using :class:`YaesuCatTransport` for serial I/O and
 :class:`CatCommandParser` / :func:`format_command` for encoding.
 """
@@ -33,7 +33,7 @@ __all__ = ["YaesuCatRadio"]
 
 logger = logging.getLogger(__name__)
 
-# Path to rigs/ directory: src/icom_lan/backends/yaesu_cat/radio.py → 4 levels up
+# Path to rigs/ directory: src/rigplane/backends/yaesu_cat/radio.py → 4 levels up
 _RIGS_DIR = Path(__file__).parents[4] / "rigs"
 
 
@@ -50,7 +50,7 @@ def _load_config(profile: Any) -> Any:
 
 
 # Backwards-compat alias — historical name kept for the FTX-1 backend.
-# The shared implementation now lives in ``icom_lan.meter_cal`` so that
+# The shared implementation now lives in ``rigplane.meter_cal`` so that
 # both the Yaesu and Icom backends apply the same piecewise-linear curve
 # to ``[[meters.swr.calibration]]`` tables (issue #1173).
 from ...meter_cal import MeterType, interpolate_swr as _interpolate_swr  # noqa: E402
@@ -77,7 +77,7 @@ class YaesuCatRadio:
     # padded), not a raw 0-255 scale. Inspected by upper layers to
     # avoid translating user-facing watt values into the Icom raw
     # scale before queueing SetPower. See
-    # :class:`icom_lan.core.radio_protocol.PowerControlCapable`.
+    # :class:`rigplane.core.radio_protocol.PowerControlCapable`.
     native_power_unit: Literal["raw_255", "watts"] = "watts"
 
     # Yaesu CAT radios connect over USB and expose audio as a separate
@@ -86,7 +86,7 @@ class YaesuCatRadio:
     # uses this marker (via :class:`UsbAudioCapable`) to keep the
     # ``"audio"`` UI capability advertised even for backends that don't
     # implement the Radio Protocol's :class:`AudioCapable` surface.
-    # See :class:`icom_lan.core.radio_protocol.UsbAudioCapable`.
+    # See :class:`rigplane.core.radio_protocol.UsbAudioCapable`.
     has_usb_audio: bool = True
 
     def __init__(
@@ -120,7 +120,7 @@ class YaesuCatRadio:
         self._pcm_rx_user_callback: Callable[[bytes | None], None] | None = None
         self._audio_sample_rate = audio_sample_rate
         if audio_driver is None:
-            # Lazy import: avoids pulling icom_lan.audio.backend (PortAudio,
+            # Lazy import: avoids pulling rigplane.audio.backend (PortAudio,
             # numpy DSP) into top-level package import. PR #1200 / #1194.
             from ...audio.usb_driver import UsbAudioDriver as _UsbAudioDriver
 
@@ -804,7 +804,7 @@ class YaesuCatRadio:
         """Dispatch to the matching per-type getter by meter type name.
 
         Args:
-            meter_type: A :class:`~icom_lan.meter_cal.MeterType` enum value or
+            meter_type: A :class:`~rigplane.meter_cal.MeterType` enum value or
                 its string equivalent (``"smeter"``, ``"comp"``, ``"alc"``,
                 ``"power"``, ``"swr"``, ``"id"``, ``"vd"``).
             receiver: 0 = main, 1 = sub (only meaningful for ``"smeter"``).
@@ -1254,7 +1254,7 @@ class YaesuCatRadio:
         On dual-RX Yaesu CAT rigs (FTX-1) issues ``VS{0|1};`` via the
         existing ``set_vfo_select`` template.  On single-RX profiles only
         ``which == 0`` is accepted and the call is a no-op (matching the
-        :class:`~icom_lan.radio_protocol.ReceiverBankCapable` contract).
+        :class:`~rigplane.radio_protocol.ReceiverBankCapable` contract).
         """
         index = self._normalize_receiver(which)
         count = self.receiver_count
@@ -2056,7 +2056,7 @@ class YaesuCatRadio:
     ) -> Any:
         """Construct a Yaesu-specific rigctld routing strategy.
 
-        Returns a :class:`~icom_lan.rigctld.routing.YaesuRouting` that
+        Returns a :class:`~rigplane.rigctld.routing.YaesuRouting` that
         translates rigctl ``get_level``/``set_level``/``get_func``/
         ``set_func``/``dump_state``/``get_info`` calls into the Yaesu CAT
         protocol semantics expected by the FTX-1 (and compatible)
@@ -2068,11 +2068,11 @@ class YaesuCatRadio:
         top-level import here would invert the layering). The argument
         and return types are annotated as :class:`~typing.Any` for the
         same reason; precise typing for the public surface lives on
-        :class:`~icom_lan.core.radio_protocol.RigctldRoutable`.
+        :class:`~rigplane.core.radio_protocol.RigctldRoutable`.
 
         Args:
             cache: Shared
-                :class:`~icom_lan.rigctld.handler._FallbackRigState`
+                :class:`~rigplane.rigctld.handler._FallbackRigState`
                 cache used by the rigctld handler to remember
                 last-known meter/level values when the radio cannot
                 answer.
@@ -2080,7 +2080,7 @@ class YaesuCatRadio:
                 normalised RFPOWER readings (defaults to 100 W).
 
         Returns:
-            A :class:`~icom_lan.rigctld.routing.YaesuRouting` instance
+            A :class:`~rigplane.rigctld.routing.YaesuRouting` instance
             bound to this radio.
         """
         from ...rigctld.routing import YaesuRouting  # noqa: TID251

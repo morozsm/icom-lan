@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-from icom_lan.web.server import _MAX_POST_BODY, _read_capped_body
+from rigplane.web.server import _MAX_POST_BODY, _read_capped_body
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +121,7 @@ async def test_band_plan_config_rejects_oversized_body() -> None:
     """_handle_band_plan_config returns 413 for oversized Content-Length."""
     from unittest.mock import MagicMock
 
-    from icom_lan.web.server import WebConfig, WebServer
+    from rigplane.web.server import WebConfig, WebServer
 
     srv = WebServer(MagicMock(), WebConfig(host="127.0.0.1", port=0))
     writer = _FakeWriter()
@@ -143,7 +143,7 @@ async def test_eibi_fetch_rejects_oversized_body() -> None:
     """_handle_eibi_fetch returns 413 for oversized Content-Length."""
     from unittest.mock import AsyncMock, MagicMock
 
-    from icom_lan.web.server import WebConfig, WebServer
+    from rigplane.web.server import WebConfig, WebServer
 
     srv = WebServer(MagicMock(), WebConfig(host="127.0.0.1", port=0))
     srv._eibi = MagicMock()
@@ -167,7 +167,7 @@ async def test_band_plan_config_accepts_valid_body() -> None:
     """_handle_band_plan_config succeeds with a small valid body."""
     from unittest.mock import MagicMock
 
-    from icom_lan.web.server import WebConfig, WebServer
+    from rigplane.web.server import WebConfig, WebServer
 
     srv = WebServer(MagicMock(), WebConfig(host="127.0.0.1", port=0))
     srv._band_plan_manager = MagicMock()

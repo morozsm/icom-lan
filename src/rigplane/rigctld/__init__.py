@@ -1,4 +1,4 @@
-"""Hamlib NET rigctld-compatible TCP server for icom-lan.
+"""Hamlib NET rigctld-compatible TCP server for rigplane.
 
 Provides a drop-in replacement for ``rigctld`` that bridges
 rigctld's line-based TCP protocol to an ``IcomRadio`` instance.

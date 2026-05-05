@@ -2,8 +2,8 @@
 
 import pytest
 
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     CONTROLLER_ADDR,
     _CMD_SELECTED_FREQ,
     _CMD_SELECTED_MODE,
@@ -15,8 +15,8 @@ from icom_lan.commands import (
     parse_selected_freq_response,
     parse_selected_mode_response,
 )
-from icom_lan.radio import IcomRadio
-from icom_lan.types import CivFrame, Mode, bcd_encode
+from rigplane.radio import IcomRadio
+from rigplane.types import CivFrame, Mode, bcd_encode
 
 from test_radio import MockTransport, _wrap_civ_in_udp
 
@@ -268,8 +268,8 @@ class TestVfoSlotOverrideCivRx:
     receiver."""
 
     def test_cmd03_routes_to_vfo_b_when_override_set(self, radio: IcomRadio) -> None:
-        from icom_lan.radio_state import RadioState
-        from icom_lan.types import bcd_encode
+        from rigplane.radio_state import RadioState
+        from rigplane.types import bcd_encode
 
         radio._radio_state = RadioState()
         rs = radio._radio_state
@@ -288,7 +288,7 @@ class TestVfoSlotOverrideCivRx:
         assert rs.main.vfo_b.freq_hz == 21_000_000  # unselected slot populated
 
     def test_cmd04_routes_to_vfo_b_when_override_set(self, radio: IcomRadio) -> None:
-        from icom_lan.radio_state import RadioState
+        from rigplane.radio_state import RadioState
 
         radio._radio_state = RadioState()
         rs = radio._radio_state
@@ -308,8 +308,8 @@ class TestVfoSlotOverrideCivRx:
 
     def test_override_absent_falls_back_to_active_slot(self, radio: IcomRadio) -> None:
         """Without the override flag, 0x03 writes to the active slot as before."""
-        from icom_lan.radio_state import RadioState
-        from icom_lan.types import bcd_encode
+        from rigplane.radio_state import RadioState
+        from rigplane.types import bcd_encode
 
         radio._radio_state = RadioState()
         rs = radio._radio_state
@@ -327,8 +327,8 @@ class TestVfoSlotOverrideCivRx:
 
     def test_override_targets_sub_receiver(self, radio: IcomRadio) -> None:
         """Override for SUB routes cmd29-wrapped responses to sub.vfo_b."""
-        from icom_lan.radio_state import RadioState
-        from icom_lan.types import bcd_encode
+        from rigplane.radio_state import RadioState
+        from rigplane.types import bcd_encode
 
         radio._radio_state = RadioState()
         rs = radio._radio_state
@@ -354,10 +354,10 @@ class TestPollerUnselectedSlotGate:
     def _make_poller(self, model: str, active: str = "MAIN"):
         from types import SimpleNamespace
         from unittest.mock import AsyncMock, MagicMock
-        from icom_lan.profiles import resolve_radio_profile
-        from icom_lan.radio_state import RadioState
-        from icom_lan.rigctld.state_cache import StateCache
-        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+        from rigplane.profiles import resolve_radio_profile
+        from rigplane.radio_state import RadioState
+        from rigplane.rigctld.state_cache import StateCache
+        from rigplane.web.radio_poller import CommandQueue, RadioPoller
 
         profile = resolve_radio_profile(model=model)
         radio = MagicMock()
@@ -402,7 +402,7 @@ class TestPollerUnselectedSlotGate:
 
     @pytest.mark.asyncio
     async def test_gate_skips_when_queue_has_commands(self) -> None:
-        from icom_lan.web.radio_poller import PttOn
+        from rigplane.web.radio_poller import PttOn
 
         poller, radio, state = self._make_poller("IC-7610")
         poller._queue.put(PttOn())
@@ -429,7 +429,7 @@ class TestPollerUnselectedSlotGate:
 
     @pytest.mark.asyncio
     async def test_set_freq_updates_last_user_write_ts(self) -> None:
-        from icom_lan.web.radio_poller import SetFreq
+        from rigplane.web.radio_poller import SetFreq
 
         poller, radio, state = self._make_poller("IC-7610")
         assert poller._last_user_write_ts == 0.0

@@ -1,4 +1,4 @@
-"""Additional coverage tests for icom_lan.cli."""
+"""Additional coverage tests for rigplane.cli."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from _caps import FULL_ICOM_CAPS
-from icom_lan.backends.config import SerialBackendConfig
-from icom_lan.cli import (
+from rigplane.backends.config import SerialBackendConfig
+from rigplane.cli import (
     _cmd_att,
     _cmd_audio_loopback,
     _cmd_audio_rx,
@@ -30,13 +30,13 @@ from icom_lan.cli import (
     _validate_audio_format_args,
     main,
 )
-from icom_lan.radio_protocol import (
+from rigplane.radio_protocol import (
     AdvancedControlCapable,
     AudioCapable,
     PowerControlCapable,
     ScopeCapable,
 )
-from icom_lan.scope import ScopeFrame
+from rigplane.scope import ScopeFrame
 
 
 class _CapableRadio(SimpleNamespace):
@@ -192,9 +192,9 @@ async def test_run_dispatches_non_audio_commands(
 
     _, radio = _mock_radio_ctx()
     with (
-        patch("icom_lan.cli.create_radio", return_value=radio),
-        patch("icom_lan.cli.check_ports_available"),
-        patch(f"icom_lan.cli.{handler_name}", new_callable=AsyncMock) as handler,
+        patch("rigplane.cli.create_radio", return_value=radio),
+        patch("rigplane.cli.check_ports_available"),
+        patch(f"rigplane.cli.{handler_name}", new_callable=AsyncMock) as handler,
     ):
         handler.return_value = 7
         rc = await _run(args)
@@ -225,9 +225,9 @@ async def test_run_web_uses_serial_backend_factory_config() -> None:
     )
     _, radio = _mock_radio_ctx()
     with (
-        patch("icom_lan.cli.create_radio", return_value=radio) as create_radio,
-        patch("icom_lan.cli.check_ports_available"),
-        patch("icom_lan.cli._cmd_web", new_callable=AsyncMock) as cmd_web,
+        patch("rigplane.cli.create_radio", return_value=radio) as create_radio,
+        patch("rigplane.cli.check_ports_available"),
+        patch("rigplane.cli._cmd_web", new_callable=AsyncMock) as cmd_web,
     ):
         cmd_web.return_value = 0
         rc = await _run(args)
@@ -268,9 +268,9 @@ async def test_run_serve_uses_serial_backend_factory_config() -> None:
     )
     _, radio = _mock_radio_ctx()
     with (
-        patch("icom_lan.cli.create_radio", return_value=radio) as create_radio,
-        patch("icom_lan.cli.check_ports_available"),
-        patch("icom_lan.cli._cmd_serve", new_callable=AsyncMock) as cmd_serve,
+        patch("rigplane.cli.create_radio", return_value=radio) as create_radio,
+        patch("rigplane.cli.check_ports_available"),
+        patch("rigplane.cli._cmd_serve", new_callable=AsyncMock) as cmd_serve,
     ):
         cmd_serve.return_value = 0
         rc = await _run(args)
@@ -297,7 +297,7 @@ async def test_run_dispatches_power_on_off_and_unknown_paths(
     radio.get_powerstat = AsyncMock(return_value=True)
     radio.set_powerstat = AsyncMock()
     radio.set_rf_power = AsyncMock()
-    with patch("icom_lan.cli.create_radio", return_value=radio):
+    with patch("rigplane.cli.create_radio", return_value=radio):
         rc_on = await _run(_run_args(command="power-on"))
         rc_off = await _run(_run_args(command="power-off"))
     assert rc_on == 0
@@ -306,14 +306,14 @@ async def test_run_dispatches_power_on_off_and_unknown_paths(
     radio.set_powerstat.assert_any_await(False)
 
     bad_audio = _run_args(command="audio", audio_command="invalid")
-    with patch("icom_lan.cli.create_radio", return_value=radio):
+    with patch("rigplane.cli.create_radio", return_value=radio):
         rc_bad = await _run(bad_audio)
     assert rc_bad == 1
     assert "unknown audio command" in capsys.readouterr().err.lower()
 
     with (
-        patch("icom_lan.cli.create_radio", return_value=radio),
-        patch("icom_lan.cli._cmd_status", new_callable=AsyncMock) as status_cmd,
+        patch("rigplane.cli.create_radio", return_value=radio),
+        patch("rigplane.cli._cmd_status", new_callable=AsyncMock) as status_cmd,
     ):
         status_cmd.return_value = 9
         rc_fallback = await _run(_run_args(command="something-else"))
@@ -377,7 +377,7 @@ async def test_cmd_audio_rx_stop_failure_and_write_failure(
         json=False,
         stats=False,
     )
-    with patch("icom_lan.cli.logger.debug") as log_debug:
+    with patch("rigplane.cli.logger.debug") as log_debug:
         rc = await _cmd_audio_rx(radio, args_ok)
     assert rc == 0
     assert "Saved RX audio" in capsys.readouterr().out
@@ -391,7 +391,7 @@ async def test_cmd_audio_rx_stop_failure_and_write_failure(
         json=False,
         stats=False,
     )
-    with patch("icom_lan.cli.wave.open", side_effect=OSError("nope")):
+    with patch("rigplane.cli.wave.open", side_effect=OSError("nope")):
         rc_bad = await _cmd_audio_rx(radio, args_bad)
     assert rc_bad == 1
     assert "failed to write wav file" in capsys.readouterr().err.lower()
@@ -422,19 +422,19 @@ async def test_cmd_audio_tx_error_branches_and_padding(
         json=False,
         stats=False,
     )
-    with patch("icom_lan.cli._load_wav_pcm", side_effect=wave.Error("bad wav")):
+    with patch("rigplane.cli._load_wav_pcm", side_effect=wave.Error("bad wav")):
         assert await _cmd_audio_tx(radio, args) == 1
-    with patch("icom_lan.cli._load_wav_pcm", side_effect=RuntimeError("boom")):
+    with patch("rigplane.cli._load_wav_pcm", side_effect=RuntimeError("boom")):
         assert await _cmd_audio_tx(radio, args) == 1
-    with patch("icom_lan.cli._load_wav_pcm", return_value=(48000, 1, 1, b"\x00")):
+    with patch("rigplane.cli._load_wav_pcm", return_value=(48000, 1, 1, b"\x00")):
         assert await _cmd_audio_tx(radio, args) == 1
-    with patch("icom_lan.cli._load_wav_pcm", return_value=(48000, 1, 2, b"")):
+    with patch("rigplane.cli._load_wav_pcm", return_value=(48000, 1, 2, b"")):
         assert await _cmd_audio_tx(radio, args) == 1
 
     short_pcm = b"\x01\x02" * 100
     with (
-        patch("icom_lan.cli._load_wav_pcm", return_value=(48000, 1, 2, short_pcm)),
-        patch("icom_lan.cli.asyncio.sleep", new=AsyncMock()),
+        patch("rigplane.cli._load_wav_pcm", return_value=(48000, 1, 2, short_pcm)),
+        patch("rigplane.cli.asyncio.sleep", new=AsyncMock()),
     ):
         rc_ok = await _cmd_audio_tx(radio, args)
     assert rc_ok == 0
@@ -443,9 +443,9 @@ async def test_cmd_audio_tx_error_branches_and_padding(
 
     radio.stop_audio_tx_pcm = AsyncMock(side_effect=RuntimeError("stop"))
     with (
-        patch("icom_lan.cli._load_wav_pcm", return_value=(48000, 1, 2, short_pcm)),
-        patch("icom_lan.cli.asyncio.sleep", new=AsyncMock()),
-        patch("icom_lan.cli.logger.debug") as log_debug,
+        patch("rigplane.cli._load_wav_pcm", return_value=(48000, 1, 2, short_pcm)),
+        patch("rigplane.cli.asyncio.sleep", new=AsyncMock()),
+        patch("rigplane.cli.logger.debug") as log_debug,
     ):
         rc_stop_err = await _cmd_audio_tx(radio, args)
     assert rc_stop_err == 0
@@ -506,7 +506,7 @@ async def test_cmd_audio_loopback_queue_full_and_worker_error(
     radio.push_audio_tx_pcm = AsyncMock(side_effect=RuntimeError("tx failed"))
     radio.stop_audio_rx_pcm = AsyncMock(side_effect=RuntimeError("rx stop failed"))
     radio.stop_audio_tx_pcm = AsyncMock(side_effect=RuntimeError("tx stop failed"))
-    with patch("icom_lan.cli.logger.debug") as log_debug:
+    with patch("rigplane.cli.logger.debug") as log_debug:
         with pytest.raises(RuntimeError, match="tx failed"):
             await _cmd_audio_loopback(radio, args)
     assert log_debug.call_count >= 2
@@ -575,11 +575,11 @@ async def test_cmd_scope_json_image_and_error_paths(
     assert await _cmd_scope(radio, json_spectrum) == 0
     assert "start_freq_hz" in capsys.readouterr().out
 
-    mod = types.ModuleType("icom_lan.scope_render")
+    mod = types.ModuleType("rigplane.scope_render")
     img = MagicMock()
     mod.render_spectrum = MagicMock(return_value=img)
     mod.render_scope_image = MagicMock()
-    monkeypatch.setitem(__import__("sys").modules, "icom_lan.scope_render", mod)
+    monkeypatch.setitem(__import__("sys").modules, "rigplane.scope_render", mod)
     image_spectrum = argparse.Namespace(
         frames=1,
         width=800,
@@ -628,7 +628,7 @@ async def test_cmd_scope_json_image_and_error_paths(
     )
     radio.capture_scope_frame = AsyncMock(side_effect=RuntimeError("capture failed"))
     radio.disable_scope = AsyncMock(side_effect=RuntimeError("disable failed"))
-    with patch("icom_lan.cli.logger.debug") as log_debug:
+    with patch("rigplane.cli.logger.debug") as log_debug:
         assert await _cmd_scope(radio, bad) == 1
     assert log_debug.called
 
@@ -727,7 +727,7 @@ async def test_cmd_serve_and_cmd_web_paths(
     audit_logger = MagicMock()
     icom_logger = MagicMock()
     with (
-        patch("icom_lan.rigctld.server.RigctldServer", FakeRigctldServer),
+        patch("rigplane.rigctld.server.RigctldServer", FakeRigctldServer),
         patch("logging.FileHandler", return_value=MagicMock()),
         patch("logging.getLogger", side_effect=[icom_logger, audit_logger]),
     ):
@@ -754,7 +754,7 @@ async def test_cmd_serve_and_cmd_web_paths(
         async def serve_forever(self):
             raise asyncio.CancelledError
 
-    with patch("icom_lan.web.server.WebServer", FakeWebServer):
+    with patch("rigplane.web.server.WebServer", FakeWebServer):
         args = argparse.Namespace(
             web_host="127.0.0.1", web_port=9090, web_static_dir=None
         )
@@ -790,7 +790,7 @@ async def test_cli_web_no_loopback_graceful(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Auto bridge with no loopback device: warn and continue (no exit 1)."""
-    from icom_lan.audio_bridge import LoopbackNotFoundError
+    from rigplane.audio_bridge import LoopbackNotFoundError
 
     radio = AsyncMock()
 
@@ -806,7 +806,7 @@ async def test_cli_web_no_loopback_graceful(
             raise asyncio.CancelledError
 
     args = _web_cmd_args(web_bridge="auto")
-    with patch("icom_lan.web.server.WebServer", FakeWebServer):
+    with patch("rigplane.web.server.WebServer", FakeWebServer):
         rc = await _cmd_web(radio, args)
 
     assert rc == 0
@@ -845,8 +845,8 @@ async def test_cli_web_unrelated_bridge_failure_surfaces(
 
     args = _web_cmd_args(web_bridge="auto")
     with (
-        caplog.at_level("ERROR", logger="icom_lan.cli"),
-        patch("icom_lan.web.server.WebServer", FakeWebServer),
+        caplog.at_level("ERROR", logger="rigplane.cli"),
+        patch("rigplane.web.server.WebServer", FakeWebServer),
     ):
         rc = await _cmd_web(radio, args)
 
@@ -868,7 +868,7 @@ async def test_cli_web_explicit_bridge_still_fails(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Explicit --bridge=NonExistent must fail fast with clear error."""
-    from icom_lan.audio_bridge import LoopbackNotFoundError
+    from rigplane.audio_bridge import LoopbackNotFoundError
 
     radio = AsyncMock()
 
@@ -884,7 +884,7 @@ async def test_cli_web_explicit_bridge_still_fails(
             raise asyncio.CancelledError
 
     args = _web_cmd_args(web_bridge="NonExistent")
-    with patch("icom_lan.web.server.WebServer", FakeWebServer):
+    with patch("rigplane.web.server.WebServer", FakeWebServer):
         rc = await _cmd_web(radio, args)
 
     assert rc == 1
@@ -900,10 +900,10 @@ async def test_cmd_discover_found_and_not_found(
     # Mock discover functions to return immediately instead of waiting for real network timeouts
     with (
         patch(
-            "icom_lan.discovery.discover_lan_radios",
+            "rigplane.discovery.discover_lan_radios",
             AsyncMock(return_value=[{"host": "192.168.1.9", "remote_id": 0x1234ABCD}]),
         ),
-        patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])),
+        patch("rigplane.discovery.discover_serial_radios", AsyncMock(return_value=[])),
     ):
         rc_found = await _cmd_discover(None, None)
     assert rc_found == 0
@@ -913,8 +913,8 @@ async def test_cmd_discover_found_and_not_found(
     assert "Found 1 radio with 1 connection method:" in out
 
     with (
-        patch("icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])),
-        patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])),
+        patch("rigplane.discovery.discover_lan_radios", AsyncMock(return_value=[])),
+        patch("rigplane.discovery.discover_serial_radios", AsyncMock(return_value=[])),
     ):
         rc_none = await _cmd_discover(None, None)
     assert rc_none == 0
@@ -939,9 +939,9 @@ def test_main_branches(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
 
     parser_help = DummyParser(SimpleNamespace(command=None))
     with (
-        patch("icom_lan.cli._build_parser", return_value=parser_help),
-        patch("icom_lan.cli.logging.basicConfig") as basic_cfg,
-        patch("icom_lan.cli.sys.exit", side_effect=SystemExit) as sys_exit,
+        patch("rigplane.cli._build_parser", return_value=parser_help),
+        patch("rigplane.cli.logging.basicConfig") as basic_cfg,
+        patch("rigplane.cli.sys.exit", side_effect=SystemExit) as sys_exit,
     ):
         monkeypatch.setenv("ICOM_DEBUG", "1")
         with pytest.raises(SystemExit):
@@ -952,9 +952,9 @@ def test_main_branches(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
 
     parser_discover = DummyParser(SimpleNamespace(command="discover"))
     with (
-        patch("icom_lan.cli._build_parser", return_value=parser_discover),
-        patch("icom_lan.cli.asyncio.run", side_effect=fake_run),
-        patch("icom_lan.cli.sys.exit", side_effect=SystemExit) as sys_exit,
+        patch("rigplane.cli._build_parser", return_value=parser_discover),
+        patch("rigplane.cli.asyncio.run", side_effect=fake_run),
+        patch("rigplane.cli.sys.exit", side_effect=SystemExit) as sys_exit,
     ):
         with pytest.raises(SystemExit):
             main()
@@ -964,10 +964,10 @@ def test_main_branches(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
         SimpleNamespace(command="proxy", radio="1.2.3.4", listen="0.0.0.0", port=50001),
     )
     with (
-        patch("icom_lan.cli._build_parser", return_value=parser_proxy),
-        patch("icom_lan.proxy.run_proxy", new_callable=AsyncMock),
-        patch("icom_lan.cli.asyncio.run", side_effect=fake_run),
-        patch("icom_lan.cli.sys.exit", side_effect=SystemExit) as sys_exit,
+        patch("rigplane.cli._build_parser", return_value=parser_proxy),
+        patch("rigplane.proxy.run_proxy", new_callable=AsyncMock),
+        patch("rigplane.cli.asyncio.run", side_effect=fake_run),
+        patch("rigplane.cli.sys.exit", side_effect=SystemExit) as sys_exit,
     ):
         with pytest.raises(SystemExit):
             main()
@@ -982,10 +982,10 @@ def test_main_branches(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
     parser_run = DummyParser(SimpleNamespace(command="status", timeout=5))
     captured_exit = []
     with (
-        patch("icom_lan.cli._build_parser", return_value=parser_run),
-        patch("icom_lan.cli._run", side_effect=_raise_interrupt),
+        patch("rigplane.cli._build_parser", return_value=parser_run),
+        patch("rigplane.cli._run", side_effect=_raise_interrupt),
         patch(
-            "icom_lan.cli.os._exit",
+            "rigplane.cli.os._exit",
             side_effect=lambda c: (
                 captured_exit.append(c) or (_ for _ in ()).throw(SystemExit(c))
             ),
@@ -1044,8 +1044,8 @@ async def test_cmd_tuner_json_output(capsys: pytest.CaptureFixture[str]) -> None
 # _cmd_audio_bridge — Task 3
 # ---------------------------------------------------------------------------
 
-import icom_lan.audio_bridge as _ab_mod  # noqa: E402
-from icom_lan.cli import _cmd_audio_bridge  # noqa: E402
+import rigplane.audio_bridge as _ab_mod  # noqa: E402
+from rigplane.cli import _cmd_audio_bridge  # noqa: E402
 
 
 def _fake_bridge_cls(start_err: Exception | None = None) -> type:

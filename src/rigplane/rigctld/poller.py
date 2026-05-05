@@ -1,7 +1,7 @@
 """Autonomous radio state poller for the rigctld server.
 
 Polls the radio at a configurable interval and keeps the shared
-:class:`~icom_lan.rigctld.state_cache.StateCache` up to date so that
+:class:`~rigplane.rigctld.state_cache.StateCache` up to date so that
 read commands can be served from cache instead of waiting for a CI-V
 round-trip.
 
@@ -9,7 +9,7 @@ The poller runs as a background asyncio task and is intentionally
 resilient: timeout or connection errors from a single poll cycle are
 logged as warnings and the poller continues on the next cycle.
 
-If a :class:`~icom_lan.rigctld.circuit_breaker.CircuitBreaker` is
+If a :class:`~rigplane.rigctld.circuit_breaker.CircuitBreaker` is
 attached, the poller skips cycles when the circuit is OPEN and uses a
 single-command probe when HALF_OPEN.
 """

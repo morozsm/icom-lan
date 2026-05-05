@@ -56,7 +56,7 @@ class _AudioBus(Protocol):
 class AudioBroadcaster:
     """Single-instance RX audio broadcaster shared by all AudioHandler clients.
 
-    Uses :class:`~icom_lan.audio_bus.AudioBus` to subscribe to the radio's
+    Uses :class:`~rigplane.audio_bus.AudioBus` to subscribe to the radio's
     opus RX stream.  Multiple consumers (WebSocket clients, audio bridge,
     recorders) can all share the same stream through the bus.
     """

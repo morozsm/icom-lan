@@ -6,17 +6,17 @@ Capability Protocols — no upper-layer (web/rigctld) code change needed.
 
 If a new backend implements ``rigctld_routing(cache, max_power_w)``
 returning an object that satisfies
-:class:`~icom_lan.rigctld.routing.RigctldRouting`, the rigctld handler's
+:class:`~rigplane.rigctld.routing.RigctldRouting`, the rigctld handler's
 ``isinstance(radio, RigctldRoutable)`` check picks it up without any
 registry, plugin mechanism, or string discriminator.
 """
 
 from __future__ import annotations
 
-from icom_lan import RigctldRoutable
-from icom_lan.rigctld.contract import RigctldResponse
-from icom_lan.rigctld.handler import _FallbackRigState
-from icom_lan.rigctld.routing import RigctldRouting
+from rigplane import RigctldRoutable
+from rigplane.rigctld.contract import RigctldResponse
+from rigplane.rigctld.handler import _FallbackRigState
+from rigplane.rigctld.routing import RigctldRouting
 
 
 class _StubRouting:
@@ -82,6 +82,6 @@ def test_stub_routing_satisfies_protocol() -> None:
 def test_yaesu_cat_radio_satisfies_rigctld_routable() -> None:
     """The shipping Yaesu CAT backend already conforms to the public
     :class:`RigctldRoutable` Protocol (no inheritance required)."""
-    from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
+    from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
 
     assert issubclass(YaesuCatRadio, RigctldRoutable)

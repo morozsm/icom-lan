@@ -451,7 +451,7 @@ class ControlHandler:
         msg = {
             "type": "hello",
             "proto": 1,
-            "server": "icom-lan",
+            "server": "rigplane",
             "version": self._version,
             "radio": self._radio_model,
             "connected": raw_connected if isinstance(raw_connected, bool) else False,

@@ -2,15 +2,15 @@
 
 import pytest
 
-from icom_lan import commands
-from icom_lan import IC_7610_ADDR
-from icom_lan.commands import (
+from rigplane import commands
+from rigplane import IC_7610_ADDR
+from rigplane.commands import (
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
     RECEIVER_SUB,
     parse_level_response,
 )
-from icom_lan.types import CivFrame
+from rigplane.types import CivFrame
 from _command_test_helpers import bind_default_addr_globals
 
 bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)

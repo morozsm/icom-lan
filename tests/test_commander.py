@@ -4,9 +4,9 @@ import asyncio
 
 import pytest
 
-from icom_lan.commander import IcomCommander, Priority
-from icom_lan.exceptions import ConnectionError
-from icom_lan.types import CivFrame
+from rigplane.commander import IcomCommander, Priority
+from rigplane.exceptions import ConnectionError
+from rigplane.types import CivFrame
 
 
 @pytest.mark.asyncio

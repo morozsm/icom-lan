@@ -1,4 +1,4 @@
-"""Yaesu CAT backend for icom-lan."""
+"""Yaesu CAT backend for rigplane."""
 
 from .poller import YaesuCatPoller
 from .radio import YaesuCatRadio

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from icom_lan.audio.backend import (
+from rigplane.audio.backend import (
     AudioBackend,
     AudioDeviceId,
     AudioDeviceInfo,

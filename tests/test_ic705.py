@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from icom_lan.ic705 import (
+from rigplane.ic705 import (
     prepare_ic705_data_profile,
     restore_ic705_data_profile,
 )

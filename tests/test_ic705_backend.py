@@ -2,12 +2,12 @@
 
 import pytest
 
-from icom_lan.backends.config import SerialBackendConfig
-from icom_lan.backends.factory import create_radio
-from icom_lan.backends.ic705.serial import Ic705SerialRadio
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
-from icom_lan.backends.icom7610.serial import Icom7610SerialRadio
-from icom_lan.exceptions import CommandError
+from rigplane.backends.config import SerialBackendConfig
+from rigplane.backends.factory import create_radio
+from rigplane.backends.ic705.serial import Ic705SerialRadio
+from rigplane.backends.icom7610.drivers.serial_stub import SerialMockRadio
+from rigplane.backends.icom7610.serial import Icom7610SerialRadio
+from rigplane.exceptions import CommandError
 
 
 def test_ic705_factory_creates_correct_backend():

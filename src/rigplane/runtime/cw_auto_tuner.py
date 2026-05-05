@@ -31,7 +31,7 @@ _NOISE_FLOOR_DB = -50.0
 
 def _import_numpy() -> Any:
     """Lazy-import numpy to avoid hard dependency at module level."""
-    from icom_lan._optional_deps import _require_numpy
+    from rigplane._optional_deps import _require_numpy
 
     _require_numpy()
     import numpy as np

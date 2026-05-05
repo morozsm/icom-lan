@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from _caps import FULL_ICOM_CAPS
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.web.handlers import ControlHandler
-from icom_lan.web.radio_poller import (
+from rigplane.profiles import resolve_radio_profile
+from rigplane.web.handlers import ControlHandler
+from rigplane.web.radio_poller import (
     QuickDualWatch,
     QuickSplit,
     SetAfMute,
@@ -531,7 +531,7 @@ async def test_set_quick_dual_watch() -> None:
 
 
 def test_new_commands_registered() -> None:
-    from icom_lan.web.handlers import ControlHandler
+    from rigplane.web.handlers import ControlHandler
 
     expected = {
         "get_ref_adjust",

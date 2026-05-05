@@ -8,9 +8,9 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from icom_lan.diagnostics.contributor import DiagnosticContributor
+    from rigplane.diagnostics.contributor import DiagnosticContributor
 
-from icom_lan.diagnostics.contributors import (
+from rigplane.diagnostics.contributors import (
     AudioContributor,
     ConfigContributor,
     DependenciesContributor,
@@ -24,7 +24,7 @@ from icom_lan.diagnostics.contributors import (
 
 logger = logging.getLogger(__name__)
 
-_ENTRY_POINT_GROUP = "icom_lan.diagnostics"
+_ENTRY_POINT_GROUP = "rigplane.diagnostics"
 
 # Built-in contributors are populated incrementally by #1390-#1392.
 # #1390: system, invocation, dependencies, config.

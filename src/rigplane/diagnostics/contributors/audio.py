@@ -7,11 +7,11 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from icom_lan.core.radio_protocol import AudioCapable
-from icom_lan.diagnostics.redaction import redact_paths
+from rigplane.core.radio_protocol import AudioCapable
+from rigplane.diagnostics.redaction import redact_paths
 
 if TYPE_CHECKING:
-    from icom_lan.diagnostics.contributor import BundleContext
+    from rigplane.diagnostics.contributor import BundleContext
 
 
 def _safe_attr(obj: Any, name: str, default: Any = None) -> Any:

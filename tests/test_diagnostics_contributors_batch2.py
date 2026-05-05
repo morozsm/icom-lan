@@ -20,9 +20,9 @@ from typing import Any
 
 import pytest
 
-from icom_lan.diagnostics import _discovery
-from icom_lan.diagnostics.contributor import BundleContext
-from icom_lan.diagnostics.contributors import (
+from rigplane.diagnostics import _discovery
+from rigplane.diagnostics.contributor import BundleContext
+from rigplane.diagnostics.contributors import (
     AudioContributor,
     RadioContributor,
 )
@@ -150,23 +150,23 @@ def test_radio_redacts_public_host_ip(tmp_path: Path) -> None:
 def test_radio_includes_model_and_backend(tmp_path: Path) -> None:
     class FakeRadio:
         model = "IC-7610"
-        backend_id = "icom_lan"
+        backend_id = "rigplane"
 
     RadioContributor().contribute(_make_ctx(radio=FakeRadio()), tmp_path)
     payload = json.loads((tmp_path / "radio.json").read_text())
     assert payload["model"] == "IC-7610"
-    assert payload["backend"] == "icom_lan"
+    assert payload["backend"] == "rigplane"
 
 
 def test_radio_backend_id_wins_over_class_name(tmp_path: Path) -> None:
     """``backend_id`` takes precedence over the radio's class name."""
 
     class WeirdName:
-        backend_id = "icom_lan"
+        backend_id = "rigplane"
 
     RadioContributor().contribute(_make_ctx(radio=WeirdName()), tmp_path)
     payload = json.loads((tmp_path / "radio.json").read_text())
-    assert payload["backend"] == "icom_lan"
+    assert payload["backend"] == "rigplane"
 
 
 def test_radio_falls_back_to_class_name_when_no_backend_id(tmp_path: Path) -> None:
@@ -242,12 +242,12 @@ def test_radio_model_field_not_over_redacted_by_hostname(tmp_path: Path) -> None
 
     class FakeRadio:
         model = "IC-7610"
-        backend_id = "icom_lan"
+        backend_id = "rigplane"
 
     RadioContributor().contribute(_make_ctx(radio=FakeRadio()), tmp_path)
     payload = json.loads((tmp_path / "radio.json").read_text())
     assert payload["model"] == "IC-7610"
-    assert payload["backend"] == "icom_lan"
+    assert payload["backend"] == "rigplane"
 
 
 def test_radio_credentials_redacted_in_string_field(tmp_path: Path) -> None:

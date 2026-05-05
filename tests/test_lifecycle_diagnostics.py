@@ -11,12 +11,12 @@ import logging
 
 import pytest
 
-from icom_lan.runtime._connection_state import RadioConnectionState
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
-from icom_lan.radio import IcomRadio
-from icom_lan.rigctld.contract import RigctldConfig
-from icom_lan.rigctld.server import RigctldServer
-from icom_lan.web.server import WebConfig, WebServer
+from rigplane.runtime._connection_state import RadioConnectionState
+from rigplane.backends.icom7610.drivers.serial_stub import SerialMockRadio
+from rigplane.radio import IcomRadio
+from rigplane.rigctld.contract import RigctldConfig
+from rigplane.rigctld.server import RigctldServer
+from rigplane.web.server import WebConfig, WebServer
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +29,7 @@ def test_radio_gc_with_active_connection_logs_warning(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """When a Radio is collected while still 'connected', a WARN is emitted."""
-    with caplog.at_level(logging.WARNING, logger="icom_lan.runtime.radio"):
+    with caplog.at_level(logging.WARNING, logger="rigplane.runtime.radio"):
         radio = IcomRadio("192.168.1.1")
         # Simulate still connected (e.g. user forgot disconnect() or async with exit)
         radio._conn_state = RadioConnectionState.CONNECTED
@@ -49,7 +49,7 @@ def test_radio_gc_when_disconnected_does_not_log_warning(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """When a Radio is collected after disconnect, no WARN is emitted."""
-    with caplog.at_level(logging.WARNING, logger="icom_lan.runtime.radio"):
+    with caplog.at_level(logging.WARNING, logger="rigplane.runtime.radio"):
         radio = IcomRadio("192.168.1.1")
         assert radio._conn_state == RadioConnectionState.DISCONNECTED
         del radio
@@ -117,7 +117,7 @@ async def test_web_server_gc_while_running_logs_warning() -> None:
     handler = logging.Handler()
     handler.emit = lambda record: caught.append(record)  # type: ignore[assignment]
     handler.setLevel(logging.WARNING)
-    target_logger = logging.getLogger("icom_lan.web.server")
+    target_logger = logging.getLogger("rigplane.web.server")
     target_logger.addHandler(handler)
     try:
         del server
@@ -135,7 +135,7 @@ async def test_web_server_gc_after_stop_does_not_log_warning(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """When WebServer is stopped before GC, no WARN is emitted."""
-    with caplog.at_level(logging.WARNING, logger="icom_lan.web.server"):
+    with caplog.at_level(logging.WARNING, logger="rigplane.web.server"):
         server = WebServer(config=WebConfig(port=0, discovery=False))
         await server.start()
         await server.stop()
@@ -159,7 +159,7 @@ async def test_rigctld_server_gc_while_running_logs_warning(
     """When RigctldServer is collected while TCP server is still active, a WARN is emitted."""
     radio = SerialMockRadio()
     await radio.connect()  # required by assert_radio_startup_ready
-    with caplog.at_level(logging.WARNING, logger="icom_lan.rigctld.server"):
+    with caplog.at_level(logging.WARNING, logger="rigplane.rigctld.server"):
         server = RigctldServer(radio, RigctldConfig(port=0))
         await server.start()
         assert server._server is not None
@@ -181,7 +181,7 @@ async def test_rigctld_server_gc_after_stop_does_not_log_warning(
     """When RigctldServer is stopped before GC, no WARN is emitted."""
     radio = SerialMockRadio()
     await radio.connect()  # required by assert_radio_startup_ready
-    with caplog.at_level(logging.WARNING, logger="icom_lan.rigctld.server"):
+    with caplog.at_level(logging.WARNING, logger="rigplane.rigctld.server"):
         server = RigctldServer(radio, RigctldConfig(port=0))
         await server.start()
         await server.stop()

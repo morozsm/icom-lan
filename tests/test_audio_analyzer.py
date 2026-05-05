@@ -7,7 +7,7 @@ import math
 
 import pytest
 
-from icom_lan.audio_analyzer import AudioAnalyzer
+from rigplane.audio_analyzer import AudioAnalyzer
 
 
 def _make_pcm_silence(n_samples: int = 480) -> bytes:

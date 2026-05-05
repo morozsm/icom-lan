@@ -1,4 +1,4 @@
-"""System diagnostic contributor — OS, arch, Python, icom-lan version, install method."""
+"""System diagnostic contributor — OS, arch, Python, rigplane version, install method."""
 
 from __future__ import annotations
 
@@ -8,15 +8,15 @@ import platform
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from icom_lan.diagnostics.redaction import redact_paths
+from rigplane.diagnostics.redaction import redact_paths
 
 if TYPE_CHECKING:
-    from icom_lan.diagnostics.contributor import BundleContext
+    from rigplane.diagnostics.contributor import BundleContext
 
 
 def _get_version() -> str:
     try:
-        return importlib.metadata.version("icom-lan")
+        return importlib.metadata.version("rigplane")
     except Exception:
         return "unknown"
 
@@ -27,7 +27,7 @@ def _detect_install_method() -> str:
     Falls back to ``"unknown"`` on any metadata access failure.
     """
     try:
-        dist = importlib.metadata.distribution("icom-lan")
+        dist = importlib.metadata.distribution("rigplane")
         direct_url = dist.read_text("direct_url.json")
         if direct_url is None:
             return "wheel"
@@ -52,7 +52,7 @@ def _normalise_os() -> str:
 
 
 class SystemContributor:
-    """Emits ``system/system.json`` with OS, arch, Python, icom-lan version."""
+    """Emits ``system/system.json`` with OS, arch, Python, rigplane version."""
 
     name = "system"
 

@@ -371,7 +371,7 @@ class SerialCivLink:
         return _open
 
     def _ensure_serial_dependencies(self) -> None:
-        from icom_lan._optional_deps import _require_pyserial_asyncio
+        from rigplane._optional_deps import _require_pyserial_asyncio
 
         # pyserial-asyncio depends on pyserial, so a single check covers both.
         _require_pyserial_asyncio()

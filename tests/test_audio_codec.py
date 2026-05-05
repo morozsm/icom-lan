@@ -2,8 +2,8 @@
 
 import pytest
 
-from icom_lan.types import AudioCapabilities, AudioCodec, get_audio_capabilities
-from icom_lan.radio import IcomRadio
+from rigplane.types import AudioCapabilities, AudioCodec, get_audio_capabilities
+from rigplane.radio import IcomRadio
 
 
 class TestAudioCodecEnum:

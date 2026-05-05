@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from icom_lan.runtime import radio_reconnect
+from rigplane.runtime import radio_reconnect
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ async def _run_watchdog_n_ticks(
         if sleep_side_effect:
             await sleep_side_effect(tick)
 
-    with patch("icom_lan.runtime.radio_reconnect.asyncio.sleep", side_effect=fake_sleep):
+    with patch("rigplane.runtime.radio_reconnect.asyncio.sleep", side_effect=fake_sleep):
         try:
             await radio_reconnect.audio_error_watchdog_loop(radio)  # type: ignore[arg-type]
         except asyncio.CancelledError:

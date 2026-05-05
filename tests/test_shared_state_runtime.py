@@ -1,17 +1,17 @@
-"""Tests for icom_lan._shared_state_runtime helpers."""
+"""Tests for rigplane._shared_state_runtime helpers."""
 
 from __future__ import annotations
 
 import pytest
 
-from icom_lan.runtime._shared_state_runtime import (
+from rigplane.runtime._shared_state_runtime import (
     DEFAULT_STATE_CACHE_TTL,
     is_cache_fresh,
     poll_frequency,
     poll_mode,
     poll_standard_fields,
 )
-from icom_lan.rigctld.state_cache import StateCache
+from rigplane.rigctld.state_cache import StateCache
 
 
 # ---------------------------------------------------------------------------

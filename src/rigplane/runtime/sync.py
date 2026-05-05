@@ -1,11 +1,11 @@
-"""Synchronous (blocking) wrapper around :class:`~icom_lan.radio.IcomRadio`.
+"""Synchronous (blocking) wrapper around :class:`~rigplane.radio.IcomRadio`.
 
 Provides the same API as the async version but runs an internal event loop
 so callers don't need ``async/await``.
 
 Example::
 
-    from icom_lan.sync import IcomRadio
+    from rigplane.sync import IcomRadio
 
     with IcomRadio("192.168.1.100", username="u", password="p") as radio:
         print(radio.get_freq())
@@ -15,14 +15,14 @@ Example::
 import asyncio
 from typing import Any, Callable, Coroutine, TypeVar
 
-from icom_lan.audio import AudioPacket
+from rigplane.audio import AudioPacket
 from .ic705 import (
     prepare_ic705_data_profile as _prepare_ic705_data_profile,
     restore_ic705_data_profile as _restore_ic705_data_profile,
 )
 from .radio import IcomRadio as _AsyncIcomRadio, _DEFAULT_AUDIO_CODEC  # noqa: TID251
-from icom_lan.core.capabilities import CAP_METERS, CAP_POWER_CONTROL
-from icom_lan.core.types import AudioCodec, Mode, ScopeCompletionPolicy
+from rigplane.core.capabilities import CAP_METERS, CAP_POWER_CONTROL
+from rigplane.core.types import AudioCodec, Mode, ScopeCompletionPolicy
 
 T = TypeVar("T")
 
@@ -32,7 +32,7 @@ __all__ = ["IcomRadio"]
 class IcomRadio:
     """Synchronous (blocking) wrapper for Icom radio LAN control.
 
-    Wraps the async :class:`~icom_lan.radio.IcomRadio` with a dedicated
+    Wraps the async :class:`~rigplane.radio.IcomRadio` with a dedicated
     event loop. All methods block until the operation completes.
 
     Args:

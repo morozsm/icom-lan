@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from icom_lan.audio.dsp import (
+from rigplane.audio.dsp import (
     DspPipeline,
     Limiter,
     NoiseGate,

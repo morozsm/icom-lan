@@ -11,7 +11,7 @@ from typing import Any
 
 import aiohttp
 
-from icom_lan.diagnostics._errors import (
+from rigplane.diagnostics._errors import (
     BundleTooLarge,
     ForbiddenContent,
     MetadataInvalid,
@@ -21,7 +21,7 @@ from icom_lan.diagnostics._errors import (
 )
 
 DEFAULT_ENDPOINT = "https://reports.msmsoft.net/v1/diagnostics/upload"
-"""Default diagnostic-bundle upload endpoint. Override via ``ICOM_LAN_REPORT_ENDPOINT``."""
+"""Default diagnostic-bundle upload endpoint. Override via ``RIGPLANE_REPORT_ENDPOINT``."""
 
 HeaderProvider = Callable[[], Awaitable[dict[str, str]]]
 """Optional async hook returning extra HTTP headers (e.g. Authorization for Pro)."""
@@ -40,7 +40,7 @@ class ReportSubmitted:
 def _resolve_endpoint(endpoint: str | None) -> str:
     if endpoint is not None:
         return endpoint
-    return os.environ.get("ICOM_LAN_REPORT_ENDPOINT", DEFAULT_ENDPOINT)
+    return os.environ.get("RIGPLANE_REPORT_ENDPOINT", DEFAULT_ENDPOINT)
 
 
 def _raise_for_error(status: int, body: dict[str, Any]) -> None:
@@ -103,7 +103,7 @@ async def upload_bundle(
     See module docstring + :data:`DEFAULT_ENDPOINT`.
 
     Raises one of the typed exceptions in
-    :mod:`icom_lan.diagnostics._errors` on failure.
+    :mod:`rigplane.diagnostics._errors` on failure.
     """
     if not isinstance(metadata, dict):
         raise MetadataInvalid(field=None, message="metadata must be a dict")

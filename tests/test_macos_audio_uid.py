@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 
-from icom_lan.audio.usb_driver import (
+from rigplane.audio.usb_driver import (
     UsbAudioDevice,
     list_usb_audio_devices,
 )
@@ -79,7 +79,7 @@ class TestListDevicesWithUid:
         """When _get_uid_map returns data, platform_uid is set."""
         sd = _make_sd_module(_FAKE_DEVICES)
         with patch(
-            "icom_lan.audio.usb_driver._get_uid_map",
+            "rigplane.audio.usb_driver._get_uid_map",
             return_value=_FAKE_UID_MAP,
         ):
             devices = list_usb_audio_devices(sd)
@@ -93,7 +93,7 @@ class TestListDevicesWithUid:
         """When _get_uid_map returns {}, platform_uid stays empty."""
         sd = _make_sd_module(_FAKE_DEVICES)
         with patch(
-            "icom_lan.audio.usb_driver._get_uid_map",
+            "rigplane.audio.usb_driver._get_uid_map",
             return_value={},
         ):
             devices = list_usb_audio_devices(sd)
@@ -105,7 +105,7 @@ class TestListDevicesWithUid:
         sd = _make_sd_module(_FAKE_DEVICES)
         partial_map = {"USB Audio CODEC": "uid-for-usb-only"}
         with patch(
-            "icom_lan.audio.usb_driver._get_uid_map",
+            "rigplane.audio.usb_driver._get_uid_map",
             return_value=partial_map,
         ):
             devices = list_usb_audio_devices(sd)
@@ -117,7 +117,7 @@ class TestListDevicesWithUid:
         """Adding platform_uid must not break existing fields."""
         sd = _make_sd_module(_FAKE_DEVICES)
         with patch(
-            "icom_lan.audio.usb_driver._get_uid_map",
+            "rigplane.audio.usb_driver._get_uid_map",
             return_value=_FAKE_UID_MAP,
         ):
             devices = list_usb_audio_devices(sd)
@@ -141,21 +141,21 @@ class TestListDevicesWithUid:
 class TestGetUidMapFallback:
     def test_returns_empty_on_non_darwin(self) -> None:
         """On non-macOS, _get_uid_map must return {}."""
-        from icom_lan.audio.usb_driver import _get_uid_map
+        from rigplane.audio.usb_driver import _get_uid_map
 
-        with patch("icom_lan.audio.usb_driver.sys") as mock_sys:
+        with patch("rigplane.audio.usb_driver.sys") as mock_sys:
             mock_sys.platform = "linux"
             result = _get_uid_map()
         assert result == {}
 
     def test_returns_empty_on_import_error(self) -> None:
         """If the macOS helper fails to import, _get_uid_map returns {}."""
-        from icom_lan.audio.usb_driver import _get_uid_map
+        from rigplane.audio.usb_driver import _get_uid_map
 
-        with patch("icom_lan.audio.usb_driver.sys") as mock_sys:
+        with patch("rigplane.audio.usb_driver.sys") as mock_sys:
             mock_sys.platform = "darwin"
             with patch(
-                "icom_lan.audio._macos_uid.get_device_uid_map",
+                "rigplane.audio._macos_uid.get_device_uid_map",
                 side_effect=OSError("no CoreAudio"),
             ):
                 result = _get_uid_map()
