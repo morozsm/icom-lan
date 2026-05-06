@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-const liveTarget = process.env.RIGPLANE_V2_URL ?? process.env.ICOM_LAN_V2_URL;
+const liveTarget = process.env.RIGPLANE_V2_URL;
 
 export default defineConfig({
   testDir: '../tests/e2e',
