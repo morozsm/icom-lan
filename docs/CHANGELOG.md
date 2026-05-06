@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] — 2026-05-06
+
+### Added
+- Tailored in-repo release skill (`.claude/skills/release/SKILL.md`) replacing the stale global slash command (#1436).
+
+### Fixed
+- Frontend e2e: closed pre-existing Wave 2 rebrand leak in `playwright.config.ts` and `v2-ui-interactive.impl.ts`; removed obsolete `ICOM_LAN_V2_URL` fallback (#1437).
+
+### Docs
+- IC-7610 WSJT-X TX level workaround for FT8/JS8/fldigi multi-peak waterfall (#1382, #1384).
+- GitHub Project workflow for Codex-style agents: `AGENTS.md`, project doc, `CLAUDE.md` link (#1431).
+
 ## [2.0.1] — 2026-05-06
 
 ### Fixed
@@ -1211,7 +1223,10 @@ These deprecation closures were announced in v0.19 and dropped on schedule.
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.0.2...HEAD
+[2.0.2]: https://github.com/rigplane/rigplane-core/compare/v2.0.1...v2.0.2
+[2.0.1]: https://github.com/rigplane/rigplane-core/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/rigplane/rigplane-core/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/morozsm/icom-lan/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/morozsm/icom-lan/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/morozsm/icom-lan/compare/v0.19.0...v1.0.0
