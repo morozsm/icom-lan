@@ -20,7 +20,7 @@ Break a large issue or epic into atomic, guardrail-compliant tasks.
 2. Read issue body fully — identify all requirements
 3. Identify:
    - Components involved (backend / frontend / both)
-   - Modules affected (map to `src/icom_lan/` structure)
+   - Modules affected (map to `src/rigplane/` structure)
    - Dependencies between requirements
    - Hardware requirements (if any)
 4. Read relevant source files to assess scope

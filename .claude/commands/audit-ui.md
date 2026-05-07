@@ -19,11 +19,11 @@ Frontend:
 - `frontend/src/lib/utils/` — helpers used by LCD
 
 Backend integration:
-- `src/icom_lan/web/handlers/control.py` — REST endpoints serving LCD data
-- `src/icom_lan/web/websocket.py` — WebSocket push (state updates)
-- `src/icom_lan/web/radio_poller.py` — what gets polled
-- `src/icom_lan/web/_delta_encoder.py` — state diff encoding
-- `src/icom_lan/radio_state.py` — canonical state shape
+- `src/rigplane/web/handlers/control.py` — REST endpoints serving LCD data
+- `src/rigplane/web/websocket.py` — WebSocket push (state updates)
+- `src/rigplane/web/radio_poller.py` — what gets polled
+- `src/rigplane/web/_delta_encoder.py` — state diff encoding
+- `src/rigplane/radio_state.py` — canonical state shape
 
 If `$ARGUMENTS` specifies a focus area, narrow scope further:
 - `rendering` → components only
