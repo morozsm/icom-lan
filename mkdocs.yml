@@ -1,11 +1,12 @@
 site_name: rigplane
-site_description: Python library for controlling Icom transceivers over LAN
+site_description: Multi-vendor Python library and browser UI for controlling ham transceivers over LAN or USB serial
 site_url: https://rigplane.dev/
 repo_url: https://github.com/rigplane/rigplane-core
 repo_name: rigplane/rigplane-core
 
 theme:
   name: material
+  custom_dir: docs/overrides
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -121,6 +122,7 @@ nav:
       - Security: SECURITY.md
 
 extra:
+  social_image: https://rigplane.com/assets/og-image.png
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/rigplane/rigplane-core
