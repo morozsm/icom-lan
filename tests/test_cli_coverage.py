@@ -789,13 +789,14 @@ def _web_cmd_args(*, web_bridge: str | None) -> argparse.Namespace:
 def test_web_managed_parser_defaults_to_loopback_and_auth_required() -> None:
     parser = _build_parser()
 
-    args = parser.parse_args(["web", "--managed"])
+    args = parser.parse_args(["web", "--managed", "--auth-token-file", "token.txt"])
 
     assert args.command == "web"
     assert args.managed_runtime is True
     assert args.web_host == "127.0.0.1"
     assert args.web_rigctld is True
     assert args.auth_token == ""
+    assert args.auth_token_file == "token.txt"
 
 
 def test_station_parser_is_managed_web_runtime() -> None:
@@ -824,7 +825,88 @@ async def test_cmd_web_managed_requires_auth_token(
     rc = await _cmd_web(radio, args)
 
     assert rc == 1
-    assert "managed mode requires auth" in capsys.readouterr().err
+    assert (
+        "Set RIGPLANE_AUTH_TOKEN or pass --auth-token-file" in capsys.readouterr().err
+    )
+
+
+@pytest.mark.asyncio
+async def test_cmd_web_managed_uses_auth_token_file(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    radio = AsyncMock()
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("RIGPLANE_AUTH_TOKEN", "env-token")
+    token_file = tmp_path / "token.txt"
+    token_file.write_text(" file-token \n", encoding="utf-8")
+
+    class FakeWebServer:
+        def __init__(self, _radio, cfg):
+            captured["cfg"] = cfg
+            self._runtime_log_path = None
+
+        async def serve_forever(self):
+            raise asyncio.CancelledError
+
+    args = _web_cmd_args(web_bridge=None)
+    args.managed_runtime = True
+    args.auth_token = ""
+    args.auth_token_file = str(token_file)
+
+    with patch("rigplane.web.server.WebServer", FakeWebServer):
+        assert await _cmd_web(radio, args) == 0
+
+    assert captured["cfg"].auth_token == "file-token"
+
+
+@pytest.mark.asyncio
+async def test_cmd_web_auth_token_precedence_over_file_and_env(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    radio = AsyncMock()
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("RIGPLANE_AUTH_TOKEN", "env-token")
+    token_file = tmp_path / "token.txt"
+    token_file.write_text("file-token\n", encoding="utf-8")
+
+    class FakeWebServer:
+        def __init__(self, _radio, cfg):
+            captured["cfg"] = cfg
+            self._runtime_log_path = None
+
+        async def serve_forever(self):
+            raise asyncio.CancelledError
+
+    args = _web_cmd_args(web_bridge=None)
+    args.managed_runtime = True
+    args.auth_token = "argv-token"
+    args.auth_token_file = str(token_file)
+
+    with patch("rigplane.web.server.WebServer", FakeWebServer):
+        assert await _cmd_web(radio, args) == 0
+
+    assert captured["cfg"].auth_token == "argv-token"
+
+
+@pytest.mark.asyncio
+async def test_cmd_web_auth_token_file_failure_surfaces(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path,
+) -> None:
+    radio = AsyncMock()
+    missing = tmp_path / "missing-token.txt"
+
+    args = _web_cmd_args(web_bridge=None)
+    args.managed_runtime = True
+    args.auth_token = ""
+    args.auth_token_file = str(missing)
+
+    rc = await _cmd_web(radio, args)
+
+    assert rc == 1
+    assert "failed to read --auth-token-file" in capsys.readouterr().err
 
 
 @pytest.mark.asyncio

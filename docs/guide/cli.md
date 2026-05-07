@@ -600,9 +600,11 @@ rigplane web --port 9090 --rigctld-port 4533
 
 # Require token for /api and WebSocket channels
 rigplane web --auth-token "change-me"
+rigplane web --auth-token-file ./runtime-token
 
 # Managed local runtime for a supervising desktop app
 RIGPLANE_AUTH_TOKEN="$(openssl rand -hex 24)" rigplane station --port 0
+rigplane station --port 0 --auth-token-file ./runtime-token
 ```
 
 | Option | Default | Description |
@@ -619,6 +621,7 @@ RIGPLANE_AUTH_TOKEN="$(openssl rand -hex 24)" rigplane station --port 0
 | `--dx-cluster HOST:PORT` | — | Connect to DX cluster server for real-time spot overlays (opt-in) |
 | `--callsign CALL` | — | Your callsign for DX cluster login (required with `--dx-cluster`) |
 | `--auth-token TOKEN` | — | Require `Authorization: Bearer <TOKEN>` for `/api/*` and WS channels |
+| `--auth-token-file PATH` | — | Read API/WS bearer token from a file |
 
 ### `station`
 
@@ -634,8 +637,10 @@ rigplane station --port 0
 
 `station` shares the radio connection flags from the top-level CLI, including
 `--host`, `--user`, `--pass-file`, `--backend`, `--serial-port`, and model/CI-V
-options. Prefer `RIGPLANE_AUTH_TOKEN` over `--auth-token` so the local API token
-does not appear in process listings.
+options. Prefer `--auth-token-file` or `RIGPLANE_AUTH_TOKEN` over `--auth-token`
+so the local API token does not appear in process listings. Explicit
+`--auth-token` wins over `--auth-token-file`; the file wins over
+`RIGPLANE_AUTH_TOKEN`.
 
 After the web listener binds, `station` writes one JSON startup event to stdout:
 
@@ -854,6 +859,7 @@ rigplane proxy --radio 192.168.1.100 --listen 10.8.0.1
 | `--dx-cluster HOST:PORT` | `web` | *(none)* | Connect to a DX cluster server for real-time spot overlays |
 | `--callsign CALL` | `web` | *(none)* | Your callsign for DX cluster login (required with `--dx-cluster`) |
 | `--auth-token TOKEN` | `web` | *(none)* | Require Bearer auth for API/WS endpoints |
+| `--auth-token-file PATH` | `web`, `station` | *(none)* | Read Bearer auth token from a file |
 | `--tls` | `web` | off | Enable HTTPS with auto-generated self-signed certificate |
 | `--tls-cert PATH` | `web` | *(none)* | Path to TLS certificate PEM file |
 | `--tls-key PATH` | `web` | *(none)* | Path to TLS private key PEM file |

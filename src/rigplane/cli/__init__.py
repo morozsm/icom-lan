@@ -977,6 +977,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Bearer token for API authentication (empty = no auth)",
     )
     web_p.add_argument(
+        "--auth-token-file",
+        dest="auth_token_file",
+        default="",
+        metavar="PATH",
+        help="Read Bearer token for API authentication from PATH",
+    )
+    web_p.add_argument(
         "--tls-cert",
         dest="tls_cert",
         default="",
@@ -1049,6 +1056,13 @@ def _build_parser() -> argparse.ArgumentParser:
         default="",
         metavar="TOKEN",
         help="Bearer token for API authentication (prefer RIGPLANE_AUTH_TOKEN)",
+    )
+    station_p.add_argument(
+        "--auth-token-file",
+        dest="auth_token_file",
+        default="",
+        metavar="PATH",
+        help="Read Bearer token for API authentication from PATH (preferred for supervisors)",
     )
     station_p.add_argument(
         "--no-discovery",
@@ -1569,6 +1583,10 @@ def _audio_frame_bytes(
     sample_rate: int, channels: int, frame_ms: int = _AUDIO_FRAME_MS
 ) -> int:
     return sample_rate * channels * _PCM_SAMPLE_WIDTH_BYTES * frame_ms // 1000
+
+
+def _read_auth_token_file(path: str) -> str:
+    return Path(path).expanduser().read_text(encoding="utf-8").strip()
 
 
 def _validate_audio_format_args(sample_rate: int, channels: int) -> str | None:
@@ -2738,11 +2756,21 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
 
     managed_runtime = getattr(args, "managed_runtime", False)
     auth_token = getattr(args, "auth_token", "")
+    auth_token_file = getattr(args, "auth_token_file", "")
+    if not auth_token and auth_token_file:
+        try:
+            auth_token = _read_auth_token_file(auth_token_file)
+        except OSError as exc:
+            print(
+                f"Error: failed to read --auth-token-file: {exc}",
+                file=sys.stderr,
+            )
+            return 1
     if managed_runtime and not auth_token:
         auth_token = os.environ.get("RIGPLANE_AUTH_TOKEN", "").strip()
     if managed_runtime and not auth_token:
         print(
-            "Error: managed mode requires auth. Set RIGPLANE_AUTH_TOKEN or pass --auth-token.",
+            "Error: managed mode requires auth. Set RIGPLANE_AUTH_TOKEN or pass --auth-token-file.",
             file=sys.stderr,
         )
         return 1
