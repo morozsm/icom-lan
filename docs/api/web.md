@@ -4,7 +4,8 @@ Built-in HTTP + WebSocket interface used by the browser UI and automation client
 
 ## Auth Model
 
-If web server is started with `--auth-token`, all `/api/*` HTTP routes require:
+If web server is started with `--auth-token`, `--auth-token-file`, or
+`RIGPLANE_AUTH_TOKEN` in managed mode, all `/api/*` HTTP routes require:
 
 ```
 Authorization: Bearer <token>
