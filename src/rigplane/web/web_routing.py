@@ -67,6 +67,20 @@ async def dispatch_http_request(
             )
             return
 
+    if path == "/healthz":
+        if method not in ("GET", "HEAD"):
+            await _send_response(writer, 405, "Method Not Allowed", b"", {})
+            return
+        await server._serve_health(writer, headers)
+        return
+
+    if path == "/readyz":
+        if method not in ("GET", "HEAD"):
+            await _send_response(writer, 405, "Method Not Allowed", b"", {})
+            return
+        await server._serve_ready(writer, headers)
+        return
+
     # Routes that accept POST/DELETE
     if path == "/api/v1/bridge":
         if method not in ("GET", "HEAD", "POST", "DELETE"):
@@ -222,6 +236,8 @@ async def dispatch_http_request(
 
     if path == "/api/v1/info":
         await server._serve_info(writer, headers)
+    elif path == "/api/v1/runtime":
+        await server._serve_runtime(writer, headers)
     elif path == "/api/v1/state":
         await server._serve_state(writer, headers)
     elif path == "/api/v1/capabilities":

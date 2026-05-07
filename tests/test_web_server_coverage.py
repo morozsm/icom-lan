@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import pathlib
 import time
 from types import SimpleNamespace
@@ -64,6 +65,13 @@ def _reader_with(data: bytes) -> asyncio.StreamReader:
     reader.feed_data(data)
     reader.feed_eof()
     return reader
+
+
+def _response_json(writer: _FakeWriter) -> tuple[int, dict]:
+    text = writer.buffer.decode("ascii", errors="replace")
+    status = int(text.split(" ", 2)[1])
+    body_start = text.index("\r\n\r\n") + 4
+    return status, json.loads(text[body_start:] or "{}")
 
 
 def _scope_radio(*, ready: bool = True, connected: bool = True) -> MagicMock:
@@ -261,6 +269,91 @@ async def test_handle_http_routes_and_405_404() -> None:
     assert srv2._serve_capabilities.await_count == 1
     assert srv2._serve_static.await_count == 2
     send_resp2.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_healthz_reports_process_liveness() -> None:
+    srv = WebServer(None, WebConfig(host="127.0.0.1", port=0))
+    writer = _FakeWriter()
+
+    await srv._handle_http(writer, "GET", "/healthz")  # noqa: SLF001
+
+    status, data = _response_json(writer)
+    assert status == 200
+    assert data["status"] == "ok"
+    assert data["version"]
+    assert isinstance(data["pid"], int)
+
+
+@pytest.mark.asyncio
+async def test_readyz_reflects_station_readiness() -> None:
+    ready_radio = SimpleNamespace(radio_ready=True, connected=True, capabilities=set())
+    ready_srv = WebServer(ready_radio, WebConfig(host="127.0.0.1", port=0))
+    ready_writer = _FakeWriter()
+
+    await ready_srv._handle_http(ready_writer, "GET", "/readyz")  # noqa: SLF001
+
+    status, data = _response_json(ready_writer)
+    assert status == 200
+    assert data == {"status": "ready", "radioReady": True}
+
+    not_ready_srv = WebServer(None, WebConfig(host="127.0.0.1", port=0))
+    not_ready_writer = _FakeWriter()
+
+    await not_ready_srv._handle_http(not_ready_writer, "GET", "/readyz")  # noqa: SLF001
+
+    status, data = _response_json(not_ready_writer)
+    assert status == 503
+    assert data == {"status": "not_ready", "radioReady": False}
+
+
+@pytest.mark.asyncio
+async def test_runtime_endpoint_reports_process_bind_radio_and_bridge_status() -> None:
+    radio = SimpleNamespace(
+        model="IC-7610",
+        backend_id="rigplane",
+        connected=True,
+        control_connected=True,
+        radio_ready=True,
+        capabilities=set(),
+    )
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0, auth_token="token"))
+    srv._server = _FakeAsyncServer()  # noqa: SLF001
+    srv._audio_bridge = SimpleNamespace(  # noqa: SLF001
+        running=True,
+        stats={"rx_frames": 3, "tx_frames": 4},
+    )
+    srv._runtime_log_path = "/tmp/rigplane.log"  # noqa: SLF001
+    srv._runtime_rigctld_addr = "127.0.0.1:4532"  # noqa: SLF001
+    writer = _FakeWriter()
+
+    await srv._handle_http(  # noqa: SLF001
+        writer,
+        "GET",
+        "/api/v1/runtime",
+        headers={"authorization": "Bearer token"},
+    )
+
+    status, data = _response_json(writer)
+    assert status == 200
+    assert data["pid"] > 0
+    assert data["uptimeSeconds"] >= 0
+    assert data["version"]
+    assert data["bind"] == {"host": "127.0.0.1", "port": 4242}
+    assert data["logPath"] == "/tmp/rigplane.log"
+    assert data["authRequired"] is True
+    assert data["backend"] == "rigplane"
+    assert data["radio"] == {
+        "model": "IC-7610",
+        "connected": True,
+        "controlConnected": True,
+        "radioReady": True,
+    }
+    assert data["rigctld"] == {"enabled": True, "address": "127.0.0.1:4532"}
+    assert data["bridge"]["running"] is True
+    assert data["bridge"]["stats"] == {"rx_frames": 3, "tx_frames": 4}
+    assert data["lastError"] is None
+    srv._server = None  # noqa: SLF001
 
 
 @pytest.mark.asyncio

@@ -308,7 +308,7 @@ def _apply_managed_runtime_defaults(args: argparse.Namespace) -> None:
     if getattr(args, "web_host", "0.0.0.0") == "0.0.0.0":
         args.web_host = "127.0.0.1"
     if getattr(args, "web_rigctld", None) is None:
-        args.web_rigctld = False
+        args.web_rigctld = True
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -2775,6 +2775,13 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     config_kwargs["radio_model"] = getattr(radio, "model", "IC-7610")
     config = WebConfig(**config_kwargs)
     server = WebServer(radio, config)
+    runtime_log_path = getattr(args, "runtime_log_path", None)
+    if isinstance(runtime_log_path, str) and runtime_log_path:
+        server._runtime_log_path = runtime_log_path
+    else:
+        log_file = os.environ.get("ICOM_LOG_FILE", "").strip()
+        if log_file and log_file.lower() not in ("off", "none", "-"):
+            server._runtime_log_path = str(Path(log_file).expanduser().resolve())
 
     # Start audio bridge.
     #
@@ -2856,8 +2863,9 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
         if wsjtx_compat:
             audio_route = resolve_audio_route(radio)
             wsjtx_data_mode, wsjtx_data_mod_input = rigctld_wsjtx_policy(audio_route)
+        rigctld_host = "127.0.0.1" if managed_runtime else "0.0.0.0"
         rigctld_config = RigctldConfig(
-            host="0.0.0.0",
+            host=rigctld_host,
             port=rigctld_port,
             wsjtx_compat=wsjtx_compat,
             wsjtx_data_mode=wsjtx_data_mode,
@@ -2873,14 +2881,17 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
             # ENETUNREACH, etc.) indicate a misconfigured environment and
             # must surface so the operator can fix it.
             if exc.errno == errno.EADDRINUSE:
+                server._runtime_last_error = f"rigctld bind failed: {exc}"
                 logger.warning(
-                    "rigctld disabled: failed to bind port %d: %s "
+                    "rigctld disabled: failed to bind %s:%d: %s "
                     "(another rigctld may already be running; pass --no-rigctld to silence)",
+                    rigctld_host,
                     rigctld_port,
                     exc,
                 )
                 rigctld_server = None
             else:
+                server._runtime_last_error = f"rigctld bind failed: {exc}"
                 logger.error(
                     "rigctld failed to start on port %d: %s (errno=%s)",
                     rigctld_port,
@@ -2890,7 +2901,8 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
                 raise
         else:
             rigctld_server = candidate
-            rigctld_addr = f"0.0.0.0:{rigctld_port}"
+            rigctld_addr = f"{rigctld_host}:{rigctld_port}"
+            server._runtime_rigctld_addr = rigctld_addr
 
     scheme = "https" if config_kwargs.get("tls") else "http"
     web_url = f"{scheme}://{args.web_host}:{args.web_port}/"
@@ -3057,6 +3069,7 @@ def main() -> None:
     if log_file:
         log_path = Path(log_file).expanduser().resolve()
         log_path.parent.mkdir(parents=True, exist_ok=True)
+        setattr(args, "runtime_log_path", str(log_path))
         max_bytes = _env_int("ICOM_LOG_MAX_BYTES", 50_000_000)
         backup_count = _env_int("ICOM_LOG_BACKUP_COUNT", 5)
         file_handler: logging.Handler = RotatingFileHandler(
