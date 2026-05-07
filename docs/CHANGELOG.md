@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] — 2026-05-07
+
+### Fixed
+- WSJT-X LAN TX audio on direct Icom LAN: send raw PCM when conninfo negotiates `PCM_1CH_16BIT` instead of pushing Opus bytes into the radio's PCM TX stream (#1430, #1448, 999953e2). Adds explicit TX codec tracking; routes WSJT-X packet modes to DATA2/LAN only for direct Icom multi-DATA radios; keeps DATA1 user-owned (prewarm/profile-apply/state-restore no longer rewrite DATA1 MOD input). Validated on IC-7610 LAN — continuous TX audio reaches the radio.
+
+### Other
+- Align `tests/test_pcm_e2e.py` with the new PCM-passthrough TX path: pin `_audio_tx_codec = AudioCodec.OPUS_1CH` on the test radio so the dummy transcoder is exercised, and use a properly-sized 1920-byte synthetic frame for loopback TX (6ad40e91, #1448 follow-up).
+
 ## [2.0.2] — 2026-05-06
 
 ### Added
@@ -1223,7 +1231,8 @@ These deprecation closures were announced in v0.19 and dropped on schedule.
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.0.2...HEAD
+[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.0.3...HEAD
+[2.0.3]: https://github.com/rigplane/rigplane-core/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/rigplane/rigplane-core/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/rigplane/rigplane-core/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/rigplane/rigplane-core/compare/v1.1.0...v2.0.0
