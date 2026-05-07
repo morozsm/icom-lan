@@ -2,6 +2,24 @@
 
 Built-in HTTP + WebSocket interface used by the browser UI and automation clients.
 
+## Stability Contract
+
+The managed-supervisor contract is versioned separately from the browser UI.
+The current contract version is `1`.
+
+Stable routes are source-compatible within the same major `/api/v1` namespace:
+
+- existing required response fields remain present;
+- new optional fields may be added without a version bump;
+- new enum/string values may be added when clients can ignore unknown values;
+- removing fields, changing field type, or changing route semantics requires a
+  new versioned route or an explicit migration note.
+
+Stable contract metadata is maintained in `rigplane.web.api_contract` and
+covered by tests. Pro and other supervisors should depend on the stable routes
+below, not on browser static assets, private handler classes, or routes marked
+diagnostic/experimental.
+
 ## Auth Model
 
 If web server is started with `--auth-token`, `--auth-token-file`, or
@@ -19,18 +37,28 @@ ws://host:8080/api/v1/ws?token=<token>
 
 ## HTTP Endpoints
 
-### Read Endpoints
+### Stable Supervisor Endpoints
+
+These routes are part of the Pro/supervisor compatibility surface:
 
 | Method | Path | Purpose |
 |-------|------|---------|
 | `GET` | `/healthz` | Process/API liveness, no API token required |
 | `GET` | `/readyz` | Station readiness, returns `503` until radio is ready |
-| `GET` | `/api/v1/info` | Runtime model/capability summary |
 | `GET` | `/api/v1/runtime` | Process, bind, radio, rigctld, bridge, and diagnostic runtime status |
+| `GET` | `/api/v1/info` | Runtime model/capability summary |
 | `GET` | `/api/v1/state` | Canonical current state snapshot |
 | `GET` | `/api/v1/capabilities` | Full profile-backed capabilities |
-| `GET` | `/api/v1/dx/spots` | Buffered DX spots |
+| `GET` | `/api/v1/audio/analysis` | Audio analysis snapshot when analyzer is active |
 | `GET` | `/api/v1/bridge` | Audio bridge status |
+| `POST` | `/api/v1/bridge` | Start audio bridge |
+| `DELETE` | `/api/v1/bridge` | Stop audio bridge |
+
+### Other Web UI Endpoints
+
+| Method | Path | Purpose |
+|-------|------|---------|
+| `GET` | `/api/v1/dx/spots` | Buffered DX spots |
 | `GET` | `/api/v1/band-plan/config` | Active band-plan region |
 | `GET` | `/api/v1/band-plan/layers` | Band-plan layers metadata |
 | `GET` | `/api/v1/band-plan/segments?start=<hz>&end=<hz>&layers=<csv>` | Band-plan overlay segments |
@@ -47,10 +75,29 @@ ws://host:8080/api/v1/ws?token=<token>
 | `POST` | `/api/v1/radio/connect` | Connect/reconnect radio control path |
 | `POST` | `/api/v1/radio/disconnect` | Disconnect radio control path |
 | `POST` | `/api/v1/radio/power` | Power on/off via CI-V power control |
-| `POST` | `/api/v1/bridge` | Start audio bridge |
-| `DELETE` | `/api/v1/bridge` | Stop audio bridge |
 | `POST` | `/api/v1/band-plan/config` | Change active region and reload band plans |
 | `POST` | `/api/v1/eibi/fetch` | Fetch/refresh EiBi dataset |
+
+### WebSocket Routes
+
+Stable supervisor routes:
+
+| Path | Purpose | Availability |
+|------|---------|--------------|
+| `/api/v1/ws` | Control events and commands | always |
+| `/api/v1/scope` | Hardware or audio FFT spectrum stream | when scope or audio FFT is available |
+| `/api/v1/audio` | Audio control and media frames | when radio/audio backend supports audio |
+| `/api/v1/audio-scope` | Audio FFT spectrum stream | when audio FFT is available |
+
+WebSocket auth accepts the same bearer header as HTTP. Query token auth is also
+accepted for browser/WebSocket clients that cannot set headers.
+
+### Internal And Diagnostic Surface
+
+Browser static files, `src/rigplane/web/static*`, handler class names, queue
+shapes, diagnostic upload routes, EiBi/Band Plan helpers, and DX cluster helper
+routes are not the Pro supervisor contract unless they are promoted into
+`rigplane.web.api_contract`.
 
 ---
 
