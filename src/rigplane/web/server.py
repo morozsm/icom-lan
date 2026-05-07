@@ -25,7 +25,9 @@ import hmac
 import json
 import logging
 import mimetypes
+import os
 import pathlib
+import time
 import urllib.parse
 from dataclasses import dataclass, field
 from collections.abc import Coroutine
@@ -324,6 +326,10 @@ class WebServer:
         self._radio = radio
         self._config = config or WebConfig()
         self._server: asyncio.Server | None = None
+        self._runtime_started_at = time.monotonic()
+        self._runtime_log_path: str | None = None
+        self._runtime_rigctld_addr: str | None = None
+        self._runtime_last_error: str | None = None
         self._client_tasks: set[asyncio.Task[None]] = set()
         self._scope_handlers: set["ScopeHandler"] = set()
         self._audio_scope_handlers: set["ScopeHandler"] = set()
@@ -1296,6 +1302,106 @@ class WebServer:
                     "controlConnected": control_connected,
                     "wsClients": len(self._client_tasks),
                 },
+            },
+            separators=(",", ":"),
+        ).encode()
+        await _send_json(writer, body, headers)
+
+    async def _serve_health(
+        self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None
+    ) -> None:
+        body = json.dumps(
+            {
+                "status": "ok",
+                "pid": os.getpid(),
+                "version": __version__,
+            },
+            separators=(",", ":"),
+        ).encode()
+        await _send_json(writer, body, headers)
+
+    async def _serve_ready(
+        self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None
+    ) -> None:
+        ready = self._radio_ready()
+        body = json.dumps(
+            {
+                "status": "ready" if ready else "not_ready",
+                "radioReady": ready,
+            },
+            separators=(",", ":"),
+        ).encode()
+        if ready:
+            await _send_json(writer, body, headers)
+        else:
+            await _send_response(
+                writer,
+                503,
+                "Service Unavailable",
+                body,
+                {"Content-Type": "application/json"},
+            )
+
+    def _runtime_bind_payload(self) -> dict[str, Any]:
+        if self._server is not None and self._server.sockets:
+            host, port = self._server.sockets[0].getsockname()[:2]
+            return {"host": str(host), "port": int(port)}
+        return {"host": self._config.host, "port": int(self._config.port)}
+
+    def _runtime_bridge_payload(self) -> dict[str, Any]:
+        bridge = self._audio_bridge
+        if bridge is None:
+            return {"enabled": False, "running": False}
+        stats = getattr(bridge, "stats", None)
+        if callable(stats):
+            stats = stats()
+        if not isinstance(stats, dict):
+            stats = {}
+        return {
+            "enabled": True,
+            "running": bool(getattr(bridge, "running", False)),
+            "stats": stats,
+        }
+
+    async def _serve_runtime(
+        self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None
+    ) -> None:
+        radio = self._radio
+        raw_connected = (
+            getattr(radio, "connected", False) if radio is not None else False
+        )
+        connected = raw_connected if isinstance(raw_connected, bool) else False
+        raw_control_connected = (
+            getattr(radio, "control_connected", False) if radio is not None else False
+        )
+        control_connected = (
+            raw_control_connected if isinstance(raw_control_connected, bool) else False
+        )
+        body = json.dumps(
+            {
+                "pid": os.getpid(),
+                "uptimeSeconds": round(time.monotonic() - self._runtime_started_at, 1),
+                "version": __version__,
+                "bind": self._runtime_bind_payload(),
+                "logPath": self._runtime_log_path,
+                "authRequired": bool(self._config.auth_token),
+                "backend": getattr(radio, "backend_id", None)
+                if radio is not None
+                else None,
+                "radio": {
+                    "model": getattr(radio, "model", self._config.radio_model)
+                    if radio is not None
+                    else self._config.radio_model,
+                    "connected": connected,
+                    "controlConnected": control_connected,
+                    "radioReady": self._radio_ready(),
+                },
+                "rigctld": {
+                    "enabled": self._runtime_rigctld_addr is not None,
+                    "address": self._runtime_rigctld_addr,
+                },
+                "bridge": self._runtime_bridge_payload(),
+                "lastError": self._runtime_last_error,
             },
             separators=(",", ":"),
         ).encode()

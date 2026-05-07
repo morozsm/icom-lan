@@ -794,7 +794,7 @@ def test_web_managed_parser_defaults_to_loopback_and_auth_required() -> None:
     assert args.command == "web"
     assert args.managed_runtime is True
     assert args.web_host == "127.0.0.1"
-    assert args.web_rigctld is False
+    assert args.web_rigctld is True
     assert args.auth_token == ""
 
 
@@ -807,7 +807,7 @@ def test_station_parser_is_managed_web_runtime() -> None:
     assert args.managed_runtime is True
     assert args.web_host == "127.0.0.1"
     assert args.web_port == 0
-    assert args.web_rigctld is False
+    assert args.web_rigctld is True
 
 
 @pytest.mark.asyncio
@@ -828,7 +828,7 @@ async def test_cmd_web_managed_requires_auth_token(
 
 
 @pytest.mark.asyncio
-async def test_cmd_web_managed_uses_env_auth_and_no_embedded_rigctld(
+async def test_cmd_web_managed_uses_env_auth_and_loopback_embedded_rigctld(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     radio = AsyncMock()
@@ -838,25 +838,40 @@ async def test_cmd_web_managed_uses_env_auth_and_no_embedded_rigctld(
     class FakeWebServer:
         def __init__(self, _radio, cfg):
             captured["cfg"] = cfg
+            self._runtime_log_path = None
 
         async def serve_forever(self):
+            captured["runtime_log_path"] = self._runtime_log_path
             raise asyncio.CancelledError
+
+    class FakeRigctldServer:
+        def __init__(self, _radio, cfg):
+            captured["rigctld_cfg"] = cfg
+
+        async def start(self):
+            return None
+
+        async def stop(self):
+            return None
 
     args = _web_cmd_args(web_bridge=None)
     args.managed_runtime = True
     args.auth_token = ""
-    args.web_rigctld = False
+    args.web_rigctld = True
+    args.runtime_log_path = "/tmp/rigplane-managed.log"
 
     with (
         patch("rigplane.web.server.WebServer", FakeWebServer),
-        patch("rigplane.rigctld.server.RigctldServer") as rigctld_cls,
+        patch("rigplane.rigctld.server.RigctldServer", FakeRigctldServer),
     ):
         assert await _cmd_web(radio, args) == 0
 
     cfg = captured["cfg"]
     assert cfg.auth_token == "env-token"
     assert cfg.host == "127.0.0.1"
-    rigctld_cls.assert_not_called()
+    assert captured["runtime_log_path"] == "/tmp/rigplane-managed.log"
+    rigctld_cfg = captured["rigctld_cfg"]
+    assert rigctld_cfg.host == "127.0.0.1"
 
 
 @pytest.mark.asyncio

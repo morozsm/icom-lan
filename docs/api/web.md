@@ -22,7 +22,10 @@ ws://host:8080/api/v1/ws?token=<token>
 
 | Method | Path | Purpose |
 |-------|------|---------|
+| `GET` | `/healthz` | Process/API liveness, no API token required |
+| `GET` | `/readyz` | Station readiness, returns `503` until radio is ready |
 | `GET` | `/api/v1/info` | Runtime model/capability summary |
+| `GET` | `/api/v1/runtime` | Process, bind, radio, rigctld, bridge, and diagnostic runtime status |
 | `GET` | `/api/v1/state` | Canonical current state snapshot |
 | `GET` | `/api/v1/capabilities` | Full profile-backed capabilities |
 | `GET` | `/api/v1/dx/spots` | Buffered DX spots |
@@ -47,6 +50,66 @@ ws://host:8080/api/v1/ws?token=<token>
 | `DELETE` | `/api/v1/bridge` | Stop audio bridge |
 | `POST` | `/api/v1/band-plan/config` | Change active region and reload band plans |
 | `POST` | `/api/v1/eibi/fetch` | Fetch/refresh EiBi dataset |
+
+---
+
+## `GET /healthz`
+
+Process liveness probe for local supervisors. This endpoint is intentionally
+outside `/api/*`, so it does not require bearer auth.
+
+```json
+{
+  "status": "ok",
+  "pid": 12345,
+  "version": "2.0.3"
+}
+```
+
+## `GET /readyz`
+
+Station readiness probe. Returns HTTP `200` when the attached radio is ready
+and HTTP `503` while the process is alive but the station is not ready.
+
+```json
+{
+  "status": "ready",
+  "radioReady": true
+}
+```
+
+## `GET /api/v1/runtime`
+
+Machine-readable runtime status for managed local supervisors and diagnostics.
+When auth is configured, this endpoint requires the same bearer token as other
+`/api/*` routes.
+
+```json
+{
+  "pid": 12345,
+  "uptimeSeconds": 12.3,
+  "version": "2.0.3",
+  "bind": { "host": "127.0.0.1", "port": 8080 },
+  "logPath": "/Users/me/Library/Logs/rigplane.log",
+  "authRequired": true,
+  "backend": "rigplane",
+  "radio": {
+    "model": "IC-7610",
+    "connected": true,
+    "controlConnected": true,
+    "radioReady": true
+  },
+  "rigctld": {
+    "enabled": true,
+    "address": "127.0.0.1:4532"
+  },
+  "bridge": {
+    "enabled": false,
+    "running": false
+  },
+  "lastError": null
+}
+```
 
 ---
 

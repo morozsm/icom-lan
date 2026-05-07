@@ -609,7 +609,7 @@ RIGPLANE_AUTH_TOKEN="$(openssl rand -hex 24)" rigplane station --port 0
 |--------|---------|-------------|
 | `--host` | `0.0.0.0` | Web server bind address |
 | `--port` | `8080` | Web server port |
-| `--managed` | off | Use managed local defaults: loopback bind, auth required, embedded rigctld disabled unless requested |
+| `--managed` | off | Use managed local defaults: loopback bind, auth required, embedded rigctld on loopback |
 | `--static-dir PATH` | — | Serve static files from a custom directory (default: built-in assets) |
 | `--bridge DEVICE` | — | Start audio bridge with named virtual device |
 | `--bridge-tx-device DEVICE` | — | Separate TX-only device for bidirectional bridge (e.g. `BlackHole 16ch`) |
@@ -624,8 +624,8 @@ RIGPLANE_AUTH_TOKEN="$(openssl rand -hex 24)" rigplane station --port 0
 
 Start the managed local station runtime. This is a convenience command for
 supervisors such as desktop shells: it runs the web/API server on loopback,
-requires API/WebSocket auth, and does not expose embedded rigctld unless
-`--rigctld` is explicit.
+requires API/WebSocket auth, and enables embedded rigctld on loopback for local
+clients such as RigPlane Pro.
 
 ```bash
 export RIGPLANE_AUTH_TOKEN="$(openssl rand -hex 24)"
