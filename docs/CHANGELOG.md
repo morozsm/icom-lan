@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-05-08
+
+### Added
+- Managed station runtime support for Pro/supervisor integrations: runtime mode, health endpoints, startup events, token-file auth, setup-wizard discovery JSON, and stable supervisor API documentation (#1439, #1440, #1441, #1442, #1443, #1444, #1445).
+- LAN/USB audio capability groundwork: radio-native audio policy contracts, USB audio device contracts and diagnostics, safe RX-only LAN audio probe CLI, JSON probe artifacts, cooldown/retry controls, and guarded profile proposal tooling (#1464, #1479, #1480, #1481, #1483, #1488).
+- Automated audio regression harnesses for WSJT-X and TX pipeline work: in-process TX pipeline, rigctld WSJT-X replay, opt-in OS audio smoke, and IC-7610 hardware validation tests (#1450, #1451, #1452, #1453).
+
+### Changed
+- WSJT-X compatibility now derives DATA/LAN policy from the resolved audio route instead of backend-name guards, preserving DATA1 as user-owned while selecting DATA2/LAN only for direct LAN radios that support it (#1446).
+- Icom LAN audio profiles now carry evidence-backed PCM-first policies for IC-705, IC-9700, and IC-7610; IC-7610 defaults to the hardware-probed 48 kHz matrix with mono PCM TX (#1477, #1490).
+- Browser audio routing keeps Opus as a consumer/web transport policy only; direct stock-radio LAN stream defaults remain radio-native PCM/u-law.
+
+### Fixed
+- LAN discovery now advertises the RigPlane service identity after the v2 rebrand (#1485).
+- Removed stale rebrand paths from agent commands and docs SEO metadata.
+
+### Docs
+- Added audio codec policy, audio capability probing, audio profile audit, USB audio negotiation, managed runtime packaging, CLI, API, and audio recipe documentation for the new runtime/audio contracts.
+
 ## [2.0.3] — 2026-05-07
 
 ### Fixed
@@ -1231,7 +1250,8 @@ These deprecation closures were announced in v0.19 and dropped on schedule.
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.0.3...HEAD
+[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/rigplane/rigplane-core/compare/v2.0.3...v2.1.0
 [2.0.3]: https://github.com/rigplane/rigplane-core/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/rigplane/rigplane-core/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/rigplane/rigplane-core/compare/v2.0.0...v2.0.1
