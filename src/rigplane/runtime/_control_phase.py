@@ -202,7 +202,12 @@ class ControlPhaseRuntime:
                 # Stereo rejection: downgrade to mono and retry once (#797).
                 # Mono rejection: raise immediately.
                 if getattr(h, "_last_status_error", 0) == 0xFFFFFFFF:
-                    if h._audio_codec in _STEREO_CODECS:
+                    codec_source = h._audio_stream_contract.rx_codec_source
+                    allow_stereo_fallback = (
+                        h._audio_codec in _STEREO_CODECS
+                        and codec_source is not AudioConfigSource.EXPLICIT
+                    )
+                    if allow_stereo_fallback:
                         # Single-RX firmwares (IC-7300/IC-705, possibly IC-9700)
                         # may reject stereo rx_codec at conninfo. Retry once with
                         # PCM_1CH_16BIT before failing. See issue #797.

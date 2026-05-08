@@ -154,6 +154,30 @@ class TestBuildParser:
         assert args.audio_command == "loopback"
         assert args.seconds == 3.0
 
+    def test_audio_probe(self):
+        p = _build_parser()
+        args = p.parse_args(
+            [
+                "audio",
+                "probe",
+                "--dry-run",
+                "--json",
+                "--output",
+                "probe.json",
+                "--duration",
+                "0.25",
+                "--limit",
+                "4",
+            ]
+        )
+        assert args.command == "audio"
+        assert args.audio_command == "probe"
+        assert args.dry_run is True
+        assert args.json is True
+        assert args.output == "probe.json"
+        assert args.duration == 0.25
+        assert args.limit == 4
+
     def test_ptt_on(self):
         p = _build_parser()
         args = p.parse_args(["ptt", "on"])

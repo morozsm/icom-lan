@@ -605,6 +605,53 @@ class TestConnectSessionRejection:
         assert radio._civ_port == 50001
 
     @pytest.mark.asyncio
+    async def test_explicit_stereo_codec_rejection_does_not_fallback(self) -> None:
+        """Explicit probe-style codec requests must preserve candidate evidence."""
+        radio = IcomRadio(
+            "192.168.1.100",
+            username="u",
+            password="p",
+            audio_codec=AudioCodec.PCM_2CH_16BIT,
+            audio_codec_explicit=True,
+        )
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+
+        async def _reject_status() -> int:
+            radio._last_status_error = 0xFFFFFFFF
+            return 0
+
+        send_mock = AsyncMock()
+
+        with (
+            patch.object(radio._control_phase, "_status_retry_pause", return_value=0.0),
+            patch.object(
+                radio._control_phase,
+                "_wait_for_packet",
+                new=AsyncMock(return_value=_build_login_response()),
+            ),
+            patch.object(radio._control_phase, "_send_token_ack", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_guid",
+                new=AsyncMock(return_value=b"\x00" * 16),
+            ),
+            patch.object(radio._control_phase, "_send_conninfo", new=send_mock),
+            patch.object(
+                radio._control_phase,
+                "_receive_civ_port",
+                new=AsyncMock(side_effect=_reject_status),
+            ),
+        ):
+            with pytest.raises(ConnectionError, match="rejected session allocation"):
+                await radio.connect()
+
+        assert send_mock.await_count == 1
+        assert radio.audio_stream_contract.rx_codec == AudioCodec.PCM_2CH_16BIT
+        assert radio.audio_stream_contract.rx_codec_source == AudioConfigSource.EXPLICIT
+        assert mt.disconnected is True
+
+    @pytest.mark.asyncio
     async def test_stereo_codec_fallback_raises_on_second_rejection(self) -> None:
         """Stereo rx_codec rejected twice → raise, no infinite loop."""
         radio = IcomRadio(
