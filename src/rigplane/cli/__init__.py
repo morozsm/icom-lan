@@ -24,6 +24,7 @@ __all__ = ["main", "check_ports_available"]
 
 import argparse
 import asyncio
+from dataclasses import replace
 import errno
 import json
 import logging
@@ -40,8 +41,20 @@ logger = logging.getLogger(__name__)
 
 from rigplane import __version__  # noqa: E402
 from rigplane.audio import AudioStats  # noqa: E402
+from rigplane.audio.probe import (  # noqa: E402
+    AudioProbeCandidate,
+    AudioProbeResult,
+    AudioProbeStatus,
+    build_stock_radio_lan_probe_matrix,
+)
+from rigplane.audio.probe_runner import (  # noqa: E402
+    build_probe_artifact,
+    dry_run_probe_results,
+    run_audio_probe,
+)
 from rigplane.audio.route import resolve_audio_route, rigctld_wsjtx_policy  # noqa: E402
 from rigplane.backends.config import (  # noqa: E402
+    BackendConfig,
     LanBackendConfig,
     SerialBackendConfig,
     YaesuCatBackendConfig,
@@ -585,6 +598,38 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=10.0,
         help="Loopback duration in seconds (default: 10)",
+    )
+
+    audio_probe_p = audio_sub.add_parser(
+        "probe",
+        help="Probe safe RX-only LAN audio stream candidates",
+        description=(
+            "Try radio-native LAN RX audio codec/sample-rate candidates and "
+            "emit a machine-readable evidence artifact. TX is intentionally "
+            "out of scope for this safe probe."
+        ),
+    )
+    audio_probe_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Emit the candidate matrix without connecting to the radio",
+    )
+    audio_probe_p.add_argument("--json", action="store_true", help="Output as JSON")
+    audio_probe_p.add_argument(
+        "--output",
+        help="Write the JSON artifact to this path",
+    )
+    audio_probe_p.add_argument(
+        "--duration",
+        type=float,
+        default=1.0,
+        help="RX observation duration per candidate in seconds (default: 1)",
+    )
+    audio_probe_p.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit candidates for smoke tests and staged hardware validation",
     )
 
     # bridge
@@ -1410,6 +1455,8 @@ async def _run(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
+    if args.command == "audio" and args.audio_command == "probe":
+        return await _cmd_audio_probe(config, args)
     radio = create_radio(config)
 
     if args.command in ("web", "station"):
@@ -1730,6 +1777,125 @@ async def _cmd_audio_caps(
                 else AudioStats.inactive().to_dict()
             )
     return 0
+
+
+async def _cmd_audio_probe(config: BackendConfig, args: argparse.Namespace) -> int:
+    """Run a safe RX-only LAN audio capability probe."""
+
+    if not isinstance(config, LanBackendConfig):
+        print("Error: audio probe requires a LAN backend.", file=sys.stderr)
+        return 1
+    duration_s = float(getattr(args, "duration", 1.0))
+    if duration_s <= 0:
+        print("Error: --duration must be > 0.", file=sys.stderr)
+        return 1
+    limit = getattr(args, "limit", None)
+    if limit is not None and int(limit) <= 0:
+        print("Error: --limit must be > 0.", file=sys.stderr)
+        return 1
+
+    candidates = build_stock_radio_lan_probe_matrix()
+    if limit is not None:
+        candidates = candidates[: int(limit)]
+
+    if getattr(args, "dry_run", False):
+        results = dry_run_probe_results(candidates)
+    else:
+        results = await run_audio_probe(
+            candidates,
+            lambda candidate: _attempt_stock_radio_lan_audio_probe(
+                config,
+                candidate,
+                duration_s=duration_s,
+            ),
+        )
+
+    model = config.model or "unknown"
+    artifact = build_probe_artifact(
+        model=model,
+        profile_id=model,
+        transport="stock_radio_lan",
+        results=results,
+        metadata={
+            "duration_s": duration_s,
+            "candidate_count": len(candidates),
+            "dry_run": bool(getattr(args, "dry_run", False)),
+        },
+    )
+    payload = artifact.to_dict()
+    output_path = getattr(args, "output", None)
+    if output_path:
+        Path(output_path).write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    if getattr(args, "json", False):
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        summary = payload["metadata"]["summary"]
+        print(
+            f"{len(candidates)} candidates: "
+            f"pass={summary['pass']} rejected={summary['rejected']} "
+            f"failed={summary['failed']} skipped={summary['skipped']}"
+        )
+        if output_path:
+            print(f"Wrote {output_path}")
+    sys.stdout.flush()
+    return 0
+
+
+async def _attempt_stock_radio_lan_audio_probe(
+    config: LanBackendConfig,
+    candidate: AudioProbeCandidate,
+    *,
+    duration_s: float,
+) -> AudioProbeResult:
+    """Attempt one RX-only candidate against a fresh radio session."""
+
+    probe_config = replace(
+        config,
+        audio_codec=candidate.rx_codec,
+        audio_sample_rate=candidate.sample_rate_hz,
+        audio_codec_explicit=True,
+        audio_sample_rate_explicit=True,
+        auto_recover_audio=False,
+    )
+    packets = 0
+    payload_bytes: int | None = None
+
+    def _on_packet(packet: Any) -> None:
+        nonlocal packets, payload_bytes
+        if packet is None:
+            return
+        packets += 1
+        data = getattr(packet, "data", b"") or b""
+        payload_bytes = len(data)
+
+    radio = create_radio(probe_config)
+    async with radio:
+        await radio.start_audio_rx_opus(_on_packet)
+        try:
+            await asyncio.sleep(duration_s)
+        finally:
+            await radio.stop_audio_rx_opus()
+
+    if packets > 0:
+        return AudioProbeResult(
+            candidate=candidate,
+            status=AudioProbeStatus.PASS,
+            phase="rx",
+            reason="rx-payload-stable",
+            rx_payload_bytes=payload_bytes,
+            observed_packets=packets,
+        )
+    return AudioProbeResult(
+        candidate=candidate,
+        status=AudioProbeStatus.FAILED,
+        phase="rx",
+        reason="no-rx-packets",
+        observed_packets=0,
+    )
 
 
 async def _cmd_audio_rx(radio: Radio, args: argparse.Namespace) -> int:
