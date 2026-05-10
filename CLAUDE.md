@@ -100,6 +100,35 @@ User-facing → **Russian**. Code/commits/docs/PR → **English**.
 Commits: `feat(#N):` / `fix(#N):` / `refactor:` / `test:` / `docs:` / `chore:`
 One change per commit. Full test suite before push.
 
+### Multi-machine Git hygiene
+
+Development runs across a local laptop and a dev Mac mini, often with several
+agents. Before editing:
+
+```bash
+git fetch --all --tags --prune
+git status --short --branch
+python3 ~/.codex/skills/repo-hygiene/scripts/repo_inventory.py --roots /Users/moroz/Projects --summary
+```
+
+Rules:
+
+- never work directly on `main`;
+- use `codex/<issue-or-task>` for agent work;
+- use `git pull --ff-only --tags` only on a clean branch with a normal upstream;
+- do not reset, clean, delete, or rebase uncertain work without explicit user
+  approval;
+- report or snapshot dirty trees before sync.
+
+`main` is protected. Non-trivial PRs require independent agent review before
+merge. The implementation agent cannot self-review. The review must be visible
+in the PR and include either `Agent Review: PASS` or `Agent Review: BLOCKED`.
+
+Release branches are exceptional: use `release/<major.minor>` only when a
+public release needs stabilization while `main` moves ahead. Tags remain the
+published artifact source of truth, and release-branch hotfixes must return to
+`main`.
+
 ---
 
 ## Completion criteria
