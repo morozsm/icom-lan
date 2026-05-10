@@ -81,21 +81,23 @@ Use the global `repo-hygiene` skill for cross-repo inventory and cleanup.
 `main` is protected. Changes should land through PRs.
 
 RigPlane's standard automation gate is `.github/workflows/agent-review-gate.yml`.
-It passes only after a normal PR comment contains `Agent Review: PASS`. Use the
-required status check `Agent Review Gate` instead of GitHub required approving
+It updates the required commit status `Agent Review Gate` on the current PR
+head SHA and passes only after a normal PR comment contains `Agent Review:
+PASS` for that head. Use this status instead of GitHub required approving
 reviews; same-user approval restrictions break automated agent flow.
 
 Every non-trivial PR requires independent agent review before merge. The
 implementation agent may not be the review agent.
 
-- `Agent Review: PASS` means the PR may merge once required checks are green and
-  the PR is not draft.
+- `Agent Review: PASS` means the PR may merge once required checks are green,
+  the PASS comment is fresh for the current head, and the PR is not draft.
 - `Agent Review: BLOCKED` must include concrete problems, file/line references
   where applicable, risk, required fixes, and checks to run.
 - The implementation agent must address BLOCKED feedback, push updates, and
   rerun or wait for checks before merge.
-- A failed `Agent Review Gate` without BLOCKED feedback usually means no PASS
-  comment exists yet; perform the review instead of skipping the PR.
+- A failed `Agent Review Gate` without BLOCKED feedback usually means no fresh
+  PASS comment exists for the current head; perform or refresh the review
+  instead of skipping the PR.
 - Cancelled checks must be rerun with `gh run rerun <run-id>` or a new push,
   then watched to completion.
 - Draft PRs must not merge. Determine why the PR is draft, finish the missing
