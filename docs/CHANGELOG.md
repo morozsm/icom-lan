@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-05-11
+
+### Added
+- Added a friendly station-server discovery and status contract for desktop
+  supervisors: UDP discovery now advertises the station-server schema, endpoint
+  URLs, readiness, auth-required, backend, display name, and radio metadata
+  while preserving legacy discovery fields (#1498).
+- Added `GET /api/v1/station` and exposed station readiness in
+  `GET /api/v1/runtime`, giving setup tools a stable machine-readable and
+  human-readable status payload for LAN station-server discovery (#1498).
+
+### Docs
+- Documented the new station-server discovery/status payloads and readiness
+  states for supervisors and setup tools (#1498).
+
 ## [2.1.2] — 2026-05-09
 
 ### Added
@@ -1279,7 +1294,8 @@ These deprecation closures were announced in v0.19 and dropped on schedule.
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.1.2...HEAD
+[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/rigplane/rigplane-core/compare/v2.1.2...v2.2.0
 [2.1.2]: https://github.com/rigplane/rigplane-core/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/rigplane/rigplane-core/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/rigplane/rigplane-core/compare/v2.0.3...v2.1.0
