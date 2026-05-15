@@ -19,7 +19,11 @@ jobs:
     if: >-
       github.event_name != 'push' ||
       contains(github.event.head_commit.message, '[full-ci]')
-    runs-on: ubuntu-latest
+    # Self-hosted Mac mini build-tier runner. Python 3.11/3.12/3.13, uv,
+    # Node 24, Rust, and the Tauri/audio system libs are pre-baked in the
+    # image, so the matrix avoids ubuntu-latest pickup + apt install passes.
+    # Operator doc: rigplane-tower/docs/development/mac-mini-self-hosted-runners.md.
+    runs-on: [self-hosted, linux, build]
     timeout-minutes: 25
     strategy:
       matrix:
