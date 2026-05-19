@@ -1,0 +1,34 @@
+{
+  "$schema": {
+    "_comment": "Source catalog for RigPlane Core. See CONTRIBUTING.md for the contributor flow. Keys follow scope.subscope.verbOrNoun (lowerCamelCase, ASCII, [a-zA-Z0-9.], <=80 chars). Interpolation uses {name}. A literal opening brace is written as '{'. Plurals use CLDR suffixes (.zero/.one/.two/.few/.many/.other). Glossary tokens (VFO/CW/MHz/brand names like RigPlane, Tower, rigctld, Hamlib) must never be translated — see frontend/src/lib/i18n/CONTRIBUTING.md sections 'Non-translatable tokens' and 'Glossary tokens'."
+  },
+
+  "common.action.save": "Save",
+  "common.action.cancel": "Cancel",
+  "common.action.retry": "Retry",
+
+  "core.statusbar.connection.connected": "Connected",
+  "core.statusbar.connection.notConnected": "Not Connected",
+  "core.statusbar.connection.connectingTo": "Connecting to {radio} on {transport}…",
+
+  "core.diagnostics.sendReport.title": "Send Diagnostic Report",
+  "core.diagnostics.sendReport.confirm": "Send Report",
+  "core.diagnostics.attachedFiles.one": "1 file attached",
+  "core.diagnostics.attachedFiles.other": "{count} files attached",
+
+  "core.settings.language.label": "Language",
+  "core.settings.language.helpText": "Choose the language used by the RigPlane UI. Radio mode codes such as {modeToken} stay in English regardless of locale.",
+
+  "core.error.transport.timeout.title": "Connection Timed Out",
+  "core.error.transport.timeout.body": "No response from {host}. Check that the radio is powered on and reachable.",
+  "core.error.literalBrace.example": "Use '{'name} to refer to a placeholder.",
+
+  "core.toast.licenseExpired": "Your license has expired. Reactivate to continue.",
+  "core.toast.updateAvailable": "An update is available: {version}.",
+  "core.toast.readinessNoRadio": "No radio is connected. Choose a radio in Setup.",
+  "core.toast.unknown": "Something went wrong. Try again later.",
+
+  "glossary.callsign": "callsign",
+  "glossary.squelch": "squelch",
+  "glossary.bandPlan": "band plan"
+}
