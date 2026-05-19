@@ -5,6 +5,7 @@
   import { buildMonitorOptions, formatMonitorStatus } from './audio-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
   import AudioRoutingControl from './AudioRoutingControl.svelte';
+  import { t } from '$lib/i18n';
 
   const handlers = getRxAudioHandlers();
   let props = $derived(deriveRxAudioProps());
@@ -50,7 +51,7 @@
       variant="hardware-illuminated"
       />
       <div class="output-indicator" class:audio-disconnected={showDisconnected}>
-        {#if showDisconnected}Audio link lost — reconnecting…{:else}{statusText}{/if}
+        {#if showDisconnected}{t('core.overlay.audioLinkLost')}{:else}{statusText}{/if}
       </div>
       {#if props.hasDualReceiver}
         <AudioRoutingControl />

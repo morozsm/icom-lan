@@ -25,6 +25,7 @@
   import KeyboardHandler from './KeyboardHandler.svelte';
   import StatusBar from './StatusBar.svelte';
   import MetersDockPanel from '../panels/MetersDockPanel.svelte';
+  import { t } from '$lib/i18n';
   import {
     parseVfoLayoutScaleOverrides,
     resolveVfoLayoutProfile,
@@ -319,14 +320,14 @@
 <Toast />
 
 {#if runtime.radioPowerOn === false}
-  <div class="power-off-overlay" role="dialog" aria-modal="true" aria-label="Radio is powered off">
+  <div class="power-off-overlay" role="dialog" aria-modal="true" aria-label={t('core.overlay.poweredOff.label')}>
     <div class="power-off-content">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
         <line x1="12" y1="2" x2="12" y2="12" />
       </svg>
-      <span class="power-off-label">Radio is powered off</span>
-      <span class="power-off-hint">Use the ON button in the status bar to power up</span>
+      <span class="power-off-label">{t('core.overlay.poweredOff.label')}</span>
+      <span class="power-off-hint">{t('core.overlay.poweredOff.hint')}</span>
     </div>
   </div>
 {/if}
@@ -336,9 +337,9 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="settings-backdrop" onclick={() => (settingsOpen = false)} onkeydown={(e) => { if (e.key === 'Escape') settingsOpen = false; }}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="settings-modal" role="dialog" aria-modal="true" aria-label="Settings" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') settingsOpen = false; }}>
+    <div class="settings-modal" role="dialog" aria-modal="true" aria-label={t('core.settings.dialogLabel')} tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') settingsOpen = false; }}>
       <div class="settings-header">
-        <span class="settings-title">SETTINGS</span>
+        <span class="settings-title">{t('core.settings.title')}</span>
         <button class="settings-close" onclick={() => (settingsOpen = false)}>✕</button>
       </div>
       <div class="settings-content">
