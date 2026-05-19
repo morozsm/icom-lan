@@ -75,6 +75,8 @@ mockups/
 scripts/
 # But CI scripts under .github/ are tracked.
 !.github/scripts/
+# And frontend tooling scripts (e.g. i18n lint) are tracked.
+!frontend/scripts/
 
 # Local RAG / AI tooling
 .rag-update.sh

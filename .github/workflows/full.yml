@@ -58,6 +58,11 @@ jobs:
           cd frontend
           npm ci
 
+      - name: i18n catalog lint
+        run: |
+          cd frontend
+          npm run i18n:check
+
       - name: Frontend type-check
         run: |
           cd frontend
