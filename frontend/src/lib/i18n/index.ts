@@ -42,6 +42,7 @@ import { registerCatalog, resolve, setMissingKeyHandler } from './runtime';
 import { resolvePlural } from './plural';
 import { resolvePseudo } from './pseudo';
 import { getLocale, setLocale, STORAGE_KEY, SUPPORTED_LOCALES } from './store.svelte';
+import { applyContractOnBoot } from './locale-contract';
 import {
   PSEUDO_LOCALE,
   SOURCE_LOCALE,
@@ -55,6 +56,13 @@ import {
 // on-the-fly by `resolvePseudo`; no JSON file ships for it.
 registerCatalog('en-US', enUSCatalog as Record<string, unknown>);
 registerCatalog('ja-JP', jaJPCatalog as Record<string, unknown>);
+
+// Cross-app locale preference contract (RP-ML-012A): if Pro launched this
+// Core surface with a `?locale=` query or wrote the shared `proLocale.v1`
+// envelope to `localStorage`, apply it once at boot. No-op when there is
+// no Pro hint, so standalone Core keeps its existing precedence rules.
+// See `docs/i18n/locale-contract.md` and `./locale-contract.ts`.
+applyContractOnBoot();
 
 /**
  * Resolve a message key for the active locale, applying `{name}`
