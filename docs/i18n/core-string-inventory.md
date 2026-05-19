@@ -471,13 +471,23 @@ Notes: `>>VFO` / `<<VFO` / `CLR` / `VFO -> M` are glossary-stable (hardware
 mnemonics). `Yes`/`No`/`Cancel`/`Click to edit name`/`No stored channels…`
 are ordinary translatable copy.
 
-### P1.5 — VfoHeader, mobile VFO bar, BandPlan / EiBi overlays
+### P1.5 — VFO header, ops, panel, mobile VFO bar, BandPlan / EiBi overlays
 
 Files:
 
 - `frontend/src/components-v2/layout/VfoHeader.svelte:172,206,212` — labels
   `SCOPE`, `SPLIT`, `RX {rxFrequency} TX {txFrequency}`; title
   `Speak current frequency aloud`.
+- `frontend/src/components-v2/vfo/VfoOps.svelte` — 5 user-facing prose
+  `title=` tooltips: `Equalize VFOs`, `SPLIT` mode toggle, `DUAL WATCH`,
+  `Exchange VFOs`, `Transmit on receive VFO`. Glossary-stable tokens
+  (`SPLIT`, `DUAL WATCH`) appear inside ordinary tooltip prose; both
+  the token and the surrounding sentence need catalog keys for QA, only
+  the surrounding sentence is meaningfully translatable.
+- `frontend/src/components-v2/vfo/VfoPanel.svelte`,
+  `frontend/src/components-v2/vfo/ActiveReceiverToggle.svelte` —
+  acknowledged in scope; the extraction agent in RP-ML-005 should walk
+  the entire `components-v2/vfo/` directory rather than spot-check.
 - `frontend/src/components/spectrum/BandPlanOverlay.svelte:243–290` —
   aria-labels `Close band info`, `Band segment details`; popup key labels
   `Freq`, `Mode`, `Layer`, `License`, `Station`, `Language`, `Schedule`.
@@ -540,8 +550,12 @@ Files:
   `Pull to refresh`.
 - `frontend/src/components-v2/controls/CollapsiblePanel.svelte:184` —
   aria-label `Drag to reorder`.
+- `frontend/src/components-v2/controls/value-control/DualParamRenderer.svelte`
+  — long aria-label `RF gain and squelch (single control)…` and any
+  paired descriptive copy. Long accessibility prose is a pseudo-locale
+  layout-stress candidate.
 
-Estimated string count: ~7.
+Estimated string count: ~8.
 
 ### P1.9 — SDR test skin
 
