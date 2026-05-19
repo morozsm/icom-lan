@@ -11,7 +11,7 @@
   "common.action.copied": "コピーしました",
 
   "core.app.backendError": "サーバーエラー: {detail}",
-  "core.app.serverUnreachable": "複数回の試行後もサーバーに接続できません。接続を確認して手動で再読み込みしてください。",
+  "core.app.serverUnreachable": "何度試してもサーバーに接続できません。接続を確認して手動で再読み込みしてください。",
   "core.app.retryIndicator": "再試行 {attempt}/{max}、次の試行まで {seconds} 秒…",
 
   "core.statusbar.connection.connected": "接続済み",
@@ -83,7 +83,7 @@
   "core.diagnostics.attachedFiles.one": "ファイル 1 件を添付",
   "core.diagnostics.attachedFiles.other": "ファイル {count} 件を添付",
   "core.diagnostics.sendReport.dialogTitle": "診断レポートを送信",
-  "core.diagnostics.sendReport.helpText": "最近のログと設定の機密情報を伏せた診断バンドルを作成します。アップロードする前に全体をプレビューできます。",
+  "core.diagnostics.sendReport.helpText": "最近のログと設定から機密情報を伏せた診断バンドルを作成します。アップロードする前に全体をプレビューできます。",
   "core.diagnostics.sendReport.fieldDescribe": "問題の内容",
   "core.diagnostics.sendReport.placeholderDescribe": "問題が発生したときに何をしていましたか?",
   "core.diagnostics.sendReport.fieldIssueUrl": "Issue の URL (任意)",
@@ -94,7 +94,7 @@
   "core.diagnostics.sendReport.placeholderCallsign": "N0CALL",
   "core.diagnostics.sendReport.generatingButton": "生成中…",
   "core.diagnostics.sendReport.generatePreviewButton": "プレビューを生成",
-  "core.diagnostics.sendReport.previewHelp": "下のバンドルを確認してください。「送信」をクリックするまで、何もこの端末から送信されません。",
+  "core.diagnostics.sendReport.previewHelp": "下のバンドルを確認してください。「送信」をクリックするまで、この端末から何も送信されません。",
   "core.diagnostics.sendReport.metaEndpoint": "エンドポイント",
   "core.diagnostics.sendReport.metaTotalSize": "合計サイズ",
   "core.diagnostics.sendReport.metaFiles": "ファイル",
