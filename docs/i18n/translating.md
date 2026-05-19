@@ -354,3 +354,22 @@ and a maintainer will pick it up:
 When in doubt, leave it alone and ask in the PR description — over-
 translating an abbreviation is harder to spot in review than missing
 prose.
+
+## Companion docs
+
+These live alongside this guide:
+
+- [Core string inventory](./core-string-inventory.md) — exhaustive map of
+  every translatable string by UI surface (status bar, settings, dialogs,
+  panels, mobile sheets, accessibility, etc.) with file/line refs. Useful
+  when you want to know "where will this catalog key actually show up?"
+- [Locale preference contract](./locale-contract.md) — how Core and
+  embedded Pro coordinate the active locale (URL query parameter,
+  `localStorage` envelope, precedence rules). Translators rarely need
+  this, but UI developers integrating new surfaces do.
+
+The strategy-level glossary (which terms are translatable, plural rules,
+per-locale §2.D reserved terms for `ja-JP` and `ru-RU`, etc.) lives at
+`rigplane-strategy/docs/i18n/glossary-and-policy.md` — a private repo,
+not on the published docs site. The relevant rules are mirrored in this
+guide; you do not need to read the strategy doc.
