@@ -21,6 +21,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "lint": "eslint src/",
     "lint:boundaries": "eslint src/components-v2/panels/ src/components-v2/layout/",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test -c ./playwright.config.ts"
