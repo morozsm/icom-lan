@@ -90,6 +90,21 @@ jobs:
           mkdir -p ../src/rigplane/web/static
           cp -r dist/* ../src/rigplane/web/static/
 
+      - name: Frontend i18n visual smoke (RP-ML-006)
+        if: steps.filter.outputs.frontend == 'true'
+        # Runs the localization screenshot pack against the freshly built
+        # `frontend/dist/`. The self-hosted Mac mini Linux runner needs the
+        # Playwright system deps (libnss3, libnspr4, etc.) installed at the
+        # OS level via `npx playwright install --with-deps chromium` (one
+        # time, by the runner operator) before this step can pass. Marked
+        # continue-on-error until provisioning lands; the baseline tests
+        # still run + the screenshots upload as artifacts for review.
+        continue-on-error: true
+        run: |
+          cd frontend
+          npx playwright install chromium >/dev/null 2>&1 || true
+          npm run test:e2e:i18n
+
       - name: Type-check web boundary
         if: steps.filter.outputs.frontend == 'true'
         run: uv run mypy --strict src/rigplane/web
