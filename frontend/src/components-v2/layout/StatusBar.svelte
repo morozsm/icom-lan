@@ -3,6 +3,7 @@
   import ThemePicker from '../controls/ThemePicker.svelte';
   import SendReportDialog from '../dialogs/SendReportDialog.svelte';
   import { runtime } from '$lib/runtime';
+  import { t } from '$lib/i18n';
   import {
     getRadioStatus,
     getConnectionStatus,
@@ -51,10 +52,10 @@
 
   let powerTooltip = $derived(
     radioPowerOn === true
-      ? 'Toggle power (radio is ON — click to power off)'
+      ? t('core.statusbar.power.toggleOn')
       : radioPowerOn === false
-        ? 'Toggle power (radio is OFF — click to power on)'
-        : 'Toggle power (radio state unknown — click to toggle)'
+        ? t('core.statusbar.power.toggleOff')
+        : t('core.statusbar.power.toggleUnknown')
   );
 
   // When radio is powered off, override statuses that depend on the radio
@@ -78,22 +79,26 @@
   let radioHealthLabel = $derived.by(() => {
     switch (radioHealth?.likelyCause) {
       case 'radio_network_lost':
-        return 'radio link lost';
+        return t('core.statusbar.health.radioLinkLost');
       case 'radio_not_responding':
-        return radioHealth.readiness === 'delayed' ? 'radio response delayed' : 'radio not responding';
+        return radioHealth.readiness === 'delayed'
+          ? t('core.statusbar.health.radioResponseDelayed')
+          : t('core.statusbar.health.radioNotResponding');
       case 'radio_powered_off_likely':
-        return 'radio appears powered off or unreachable';
+        return t('core.statusbar.health.radioPoweredOff');
       case 'server_unreachable':
-        return 'server unreachable';
+        return t('core.statusbar.health.serverUnreachable');
       default:
-        return !rigConnected && radioState === 'connected' ? 'rig offline' : '';
+        return !rigConnected && radioState === 'connected'
+          ? t('core.statusbar.health.rigOffline')
+          : '';
     }
   });
 
   let connectionTooltip = $derived(
     controlState === 'connected'
-      ? 'Disconnect from radio (control link active)'
-      : 'Connect to radio (control link inactive)'
+      ? t('core.statusbar.connection.toggleActive')
+      : t('core.statusbar.connection.toggleInactive')
   );
 
   function stateColor(state: string): string {
@@ -114,8 +119,10 @@
 
   function handleConnectionToggle() {
     const isConnected = controlState === 'connected';
-    const action = isConnected ? 'Disconnect' : 'Connect';
-    if (!confirm(`${action}?`)) return;
+    const prompt = isConnected
+      ? t('core.statusbar.connection.confirmDisconnect')
+      : t('core.statusbar.connection.confirmConnect');
+    if (!confirm(prompt)) return;
     if (isConnected) {
       runtime.system.disconnect();
     } else {
@@ -125,18 +132,18 @@
 
   async function handlePowerToggle() {
     if (radioPowerOn === true) {
-      if (!confirm('Turn OFF the radio?')) return;
+      if (!confirm(t('core.statusbar.power.confirmTurnOff'))) return;
       try {
         await runtime.system.powerOff();
       } catch (err) {
-        alert(`Failed to turn off radio: ${err}`);
+        alert(t('core.statusbar.power.failedTurnOff', { detail: String(err) }));
       }
     } else {
-      if (!confirm('Turn ON the radio?')) return;
+      if (!confirm(t('core.statusbar.power.confirmTurnOn'))) return;
       try {
         await runtime.system.powerOn();
       } catch (err) {
-        alert(`Failed to turn on radio: ${err}`);
+        alert(t('core.statusbar.power.failedTurnOn', { detail: String(err) }));
       }
     }
   }
@@ -173,35 +180,35 @@
 </script>
 
 {#if controlState === 'disconnected'}
-  <div class="control-link-lost">Control link lost</div>
+  <div class="control-link-lost">{t('core.statusbar.controlLinkLost')}</div>
 {/if}
 <div class="status-bar">
   <div class="status-indicators">
-    <span class="indicator" role="status" title="Radio ↔ Server: {radioState}{radioHealthLabel ? ` (${radioHealthLabel})` : ''}" style="--indicator-color: {stateColor(radioIndicatorState)}">
+    <span class="indicator" role="status" title={radioHealthLabel ? t('core.statusbar.indicator.radioWithReason', { state: radioState, reason: radioHealthLabel }) : t('core.statusbar.indicator.radio', { state: radioState })} style="--indicator-color: {stateColor(radioIndicatorState)}">
       <span class="indicator-dot"></span>
       <Radio size={12} color="currentColor" strokeWidth={2.5} />
     </span>
-    <span class="indicator" role="status" title="Control WebSocket: {controlState}" style="--indicator-color: {stateColor(controlState)}">
+    <span class="indicator" role="status" title={t('core.statusbar.indicator.control', { state: controlState })} style="--indicator-color: {stateColor(controlState)}">
       <span class="indicator-dot"></span>
       <Cable size={12} color="currentColor" strokeWidth={2.5} />
     </span>
     {#if hasAnyScope()}
-      <span class="indicator" role="status" title="Scope WebSocket: {scopeState}" style="--indicator-color: {stateColor(scopeState)}">
+      <span class="indicator" role="status" title={t('core.statusbar.indicator.scope', { state: scopeState })} style="--indicator-color: {stateColor(scopeState)}">
         <span class="indicator-dot"></span>
         <Activity size={12} color="currentColor" strokeWidth={2.5} />
       </span>
     {/if}
     {#if hasAudio()}
-      <span class="indicator" role="status" title="Audio WebSocket: {audioState}" style="--indicator-color: {stateColor(audioState)}">
+      <span class="indicator" role="status" title={t('core.statusbar.indicator.audio', { state: audioState })} style="--indicator-color: {stateColor(audioState)}">
         <span class="indicator-dot"></span>
         <Volume2 size={12} color="currentColor" strokeWidth={2.5} />
       </span>
     {/if}
-    <span class="indicator" role="status" title="State HTTP: {httpState}" style="--indicator-color: {stateColor(httpState)}">
+    <span class="indicator" role="status" title={t('core.statusbar.indicator.http', { state: httpState })} style="--indicator-color: {stateColor(httpState)}">
       <span class="indicator-dot"></span>
       <ArrowDownUp size={12} color="currentColor" strokeWidth={2.5} />
       {#if httpState === 'disconnected'}
-        <span class="http-lost-label">offline</span>
+        <span class="http-lost-label">{t('core.statusbar.offline')}</span>
       {/if}
     </span>
   </div>
@@ -212,36 +219,36 @@
         <span class="np-icon">📻</span>
         <span class="np-station">{nowPlaying.station}</span>
         <span class="np-lang">{nowPlaying.city ? `${nowPlaying.city}, ${nowPlaying.state}` : nowPlaying.language_name}</span>
-        {#if nowPlaying.on_air}<span class="np-live">LIVE</span>{/if}
+        {#if nowPlaying.on_air}<span class="np-live">{t('core.statusbar.nowPlaying.live')}</span>{/if}
       </button>
       {#if nowPlayingExpanded}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="np-backdrop" onclick={() => (nowPlayingExpanded = false)} onkeydown={(e) => { if (e.key === 'Escape') nowPlayingExpanded = false; }}>
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="np-detail" role="dialog" tabindex="-1" aria-modal="true" aria-label="Station details" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); nowPlayingExpanded = false; } }}>
+          <div class="np-detail" role="dialog" tabindex="-1" aria-modal="true" aria-label={t('core.statusbar.nowPlaying.dialogLabel')} onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); nowPlayingExpanded = false; } }}>
             <div class="np-detail-header">
               <span>📻 {nowPlaying.station}</span>
               <button class="np-close" onclick={() => (nowPlayingExpanded = false)}>✕</button>
             </div>
             <div class="np-detail-grid">
-              <span class="np-label">Frequency:</span><span>{nowPlaying.freq_khz} kHz</span>
+              <span class="np-label">{t('core.statusbar.nowPlaying.frequency')}</span><span>{nowPlaying.freq_khz} kHz</span>
               {#if nowPlaying.city}
-                <span class="np-label">Location:</span><span>{nowPlaying.city}, {nowPlaying.state}</span>
+                <span class="np-label">{t('core.statusbar.nowPlaying.location')}</span><span>{nowPlaying.city}, {nowPlaying.state}</span>
               {/if}
-              <span class="np-label">Language:</span><span>{nowPlaying.language_name}</span>
+              <span class="np-label">{t('core.statusbar.nowPlaying.language')}</span><span>{nowPlaying.language_name}</span>
               {#if !nowPlaying.city}
-                <span class="np-label">Country:</span><span>{nowPlaying.country}</span>
-                <span class="np-label">Target:</span><span>{nowPlaying.target}</span>
+                <span class="np-label">{t('core.statusbar.nowPlaying.country')}</span><span>{nowPlaying.country}</span>
+                <span class="np-label">{t('core.statusbar.nowPlaying.target')}</span><span>{nowPlaying.target}</span>
               {/if}
               {#if nowPlaying.time_str !== 'local'}
-                <span class="np-label">Schedule:</span><span>{nowPlaying.time_str} UTC {nowPlaying.days || '(daily)'}</span>
+                <span class="np-label">{t('core.statusbar.nowPlaying.schedule')}</span><span>{nowPlaying.time_str} UTC {nowPlaying.days || '(daily)'}</span>
               {/if}
-              <span class="np-label">Band:</span><span>{nowPlaying.band}</span>
+              <span class="np-label">{t('core.statusbar.nowPlaying.band')}</span><span>{nowPlaying.band}</span>
               {#if nowPlaying.remarks}
-                <span class="np-label">Details:</span><span>{nowPlaying.remarks}</span>
+                <span class="np-label">{t('core.statusbar.nowPlaying.details')}</span><span>{nowPlaying.remarks}</span>
               {/if}
               {#if nowPlaying.source}
-                <span class="np-label">Source:</span><span class="np-source">{nowPlaying.source}</span>
+                <span class="np-label">{t('core.statusbar.nowPlaying.source')}</span><span class="np-source">{nowPlaying.source}</span>
               {/if}
             </div>
           </div>
@@ -255,33 +262,33 @@
       type="button"
       class="control-btn report-btn"
       onclick={() => (reportOpen = true)}
-      title="Send diagnostic report"
-      aria-label="Send diagnostic report"
+      title={t('core.statusbar.report.tooltip')}
+      aria-label={t('core.statusbar.report.tooltip')}
     >
       <Bug size={14} strokeWidth={2} />
-      <span class="btn-label">Report</span>
+      <span class="btn-label">{t('core.statusbar.report.button')}</span>
     </button>
     {#if onSettings}
       <button
         type="button"
         class="control-btn settings-btn"
         onclick={onSettings}
-        title="Show settings"
-        aria-label="Show settings"
+        title={t('core.statusbar.settings.tooltip')}
+        aria-label={t('core.statusbar.settings.tooltip')}
       >
         <Settings size={14} strokeWidth={2} />
       </button>
     {/if}
-    <label class="skin-switcher" title="Select UI skin">
+    <label class="skin-switcher" title={t('core.statusbar.skin.selectorLabel')}>
       {#if layoutMode === 'lcd-cockpit' || layoutMode === 'lcd-scope'}
         <Tv size={14} strokeWidth={2} aria-hidden="true" />
       {:else}
         <Monitor size={14} strokeWidth={2} aria-hidden="true" />
       {/if}
-      <span class="sr-only">Skin</span>
+      <span class="sr-only">{t('core.statusbar.skin.srLabel')}</span>
       <select
         class="skin-select"
-        aria-label="Select UI skin"
+        aria-label={t('core.statusbar.skin.selectorLabel')}
         value={layoutMode}
         onchange={handleSkinChange}
       >
@@ -298,7 +305,7 @@
       title={connectionTooltip}
     >
       <Unplug size={14} strokeWidth={2} />
-      <span class="btn-label">{controlState === 'connected' ? 'Disconnect' : 'Connect'}</span>
+      <span class="btn-label">{controlState === 'connected' ? t('core.statusbar.connection.actionDisconnect') : t('core.statusbar.connection.actionConnect')}</span>
     </button>
     <button
       type="button"
@@ -308,7 +315,7 @@
       title={powerTooltip}
     >
       <Power size={14} strokeWidth={2} />
-      <span class="btn-label">{radioPowerOn === true ? 'OFF' : 'ON'}</span>
+      <span class="btn-label">{radioPowerOn === true ? t('core.statusbar.power.labelOff') : t('core.statusbar.power.labelOn')}</span>
     </button>
   </div>
 </div>

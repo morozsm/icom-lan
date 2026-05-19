@@ -21,6 +21,7 @@
   import SpectrumToolbar from './SpectrumToolbar.svelte';
   import BandPlanOverlay from './BandPlanOverlay.svelte';
   import EiBiBrowser from './EiBiBrowser.svelte';
+  import { t } from '$lib/i18n';
   import { deriveIfShift } from '../../components-v2/panels/filter-controls';
   import { getCapabilities } from '../../lib/stores/capabilities.svelte';
   import { resolveFilterModeConfig } from '../../components-v2/wiring/state-adapter';
@@ -376,7 +377,7 @@
     </div>
     <div class="spectrum-area" class:panning={dragging} bind:this={spectrumArea} onpointerdown={handleDragStart} role="presentation">
       {#if !scopeConnected}
-        <div class="scope-disconnected-overlay">Scope disconnected — reconnecting…</div>
+        <div class="scope-disconnected-overlay">{t('core.overlay.scopeDisconnected')}</div>
       {/if}
       <BandPlanOverlay {startFreq} {endFreq} visible={showBandPlan} {hiddenLayers} />
       <SpectrumCanvas data={scopePixels} options={spectrumOptions} {spanHz} {enableAvg} {enablePeakHold} onRegisterPush={(fn) => spectrumPush = fn} />

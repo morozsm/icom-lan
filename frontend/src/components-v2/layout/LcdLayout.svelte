@@ -29,6 +29,7 @@
   import StatusBar from './StatusBar.svelte';
   import { makeKeyboardHandlers } from '../wiring/command-bus';
   import Toast from '../../components/shared/Toast.svelte';
+  import { t } from '$lib/i18n';
 
   // Twin-skin variant selector (#887). Default preserves today's behavior.
   // `scope` currently falls through to cockpit until C-PR1 (#895) delivers
@@ -48,7 +49,7 @@
     try {
       await runtime.system.powerOn();
     } catch (err) {
-      alert(`Failed to power on: ${err}`);
+      alert(t('core.overlay.poweredOff.failedPowerOn', { detail: String(err) }));
     }
   }
 
@@ -101,19 +102,19 @@
 <Toast />
 
 {#if runtime.radioPowerOn === false}
-  <div class="power-off-overlay" aria-label="Radio is powered off">
+  <div class="power-off-overlay" aria-label={t('core.overlay.poweredOff.label')}>
     <div class="power-off-content">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
         <line x1="12" y1="2" x2="12" y2="12" />
       </svg>
-      <span class="power-off-label">Radio is powered off</span>
+      <span class="power-off-label">{t('core.overlay.poweredOff.label')}</span>
       <button class="power-on-btn" onclick={handlePowerOn}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
           <line x1="12" y1="2" x2="12" y2="12" />
         </svg>
-        Power ON
+        {t('core.overlay.poweredOff.powerOnButton')}
       </button>
     </div>
   </div>

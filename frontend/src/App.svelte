@@ -5,6 +5,7 @@
   import LocalExtensionsHost from './lib/local-extensions/LocalExtensionsHost.svelte';
   import { initMediaSession, destroyMediaSession } from './lib/media/media-session';
   import { runtime } from './lib/runtime/frontend-runtime';
+  import { t } from '$lib/i18n';
   import './app.css';
 
   let backendError = $state<string | null>(null);
@@ -47,7 +48,7 @@
         backendError = null;
       } catch (err) {
         console.error('init error:', err);
-        backendError = `Backend error: ${err}`;
+        backendError = t('core.app.backendError', { detail: String(err) });
         if (retryCount < MAX_RETRIES) {
           const delay = RETRY_DELAYS[Math.min(retryCount, RETRY_DELAYS.length - 1)];
           retrying = true;
@@ -56,7 +57,7 @@
           retryTimer = setTimeout(() => location.reload(), delay);
           retryCount++;
         } else {
-          backendError = 'Server unreachable after multiple attempts. Check connection and reload manually.';
+          backendError = t('core.app.serverUnreachable');
           retrying = false;
         }
       }
@@ -83,7 +84,7 @@
       {#if retrying}
         <div class="retry-indicator">
           <span class="spinner"></span>
-          <span>Retry {retryAttempt}/{MAX_RETRIES}, next attempt in {retryDelaySec}s…</span>
+          <span>{t('core.app.retryIndicator', { attempt: retryAttempt, max: MAX_RETRIES, seconds: retryDelaySec })}</span>
         </div>
       {/if}
     </div>
