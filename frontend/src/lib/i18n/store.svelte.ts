@@ -97,4 +97,21 @@ export function _resetLocale(): void {
   locale = detectFromBrowser();
 }
 
-export { SUPPORTED_LOCALES, STORAGE_KEY };
+/**
+ * Set the active locale WITHOUT persisting to `rigplane.i18n.locale`.
+ *
+ * Reserved for the cross-app locale preference contract
+ * (`locale-contract.ts`, RP-ML-012A). The contract module reads a Pro-side
+ * hint (URL query or shared `localStorage` envelope) on boot and applies it
+ * here so the Pro setting can override the existing Core stored value
+ * without stomping it permanently — the next standalone launch without a
+ * Pro hint will fall back to the user's stable Core preference.
+ *
+ * Not part of the public UI surface; do not call from components.
+ */
+export function _applyExternalLocale(next: LocaleCode): void {
+  if (!isSupported(next)) return;
+  locale = next;
+}
+
+export { SUPPORTED_LOCALES, STORAGE_KEY, isSupported };
