@@ -1,0 +1,17 @@
+{
+  "$schema": {
+    "_comment": "Pilot locale scaffold (ja-JP). Missing keys fall back to en-US silently in production. Add translations here following the same key set as en-US.json. Brand names (RigPlane, Tower, rigctld, Hamlib, CI-V) and radio abbreviations (VFO, CW, USB, LSB, AM, FM, MHz, kHz, Hz, dB, dBm, etc.) MUST stay verbatim in English even inside Japanese sentences. See ../CONTRIBUTING.md."
+  },
+
+  "core.statusbar.connection.connected": "接続済み",
+  "core.statusbar.connection.notConnected": "未接続",
+  "core.statusbar.connection.connectingTo": "{radio} に {transport} で接続中…",
+
+  "core.settings.language.label": "言語",
+
+  "core.diagnostics.attachedFiles.other": "{count} 個のファイルを添付",
+
+  "glossary.callsign": "コールサイン",
+  "glossary.squelch": "スケルチ",
+  "glossary.bandPlan": "バンドプラン"
+}
