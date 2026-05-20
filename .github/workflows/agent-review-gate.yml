@@ -20,10 +20,10 @@ jobs:
   agent-review:
     name: Update Agent Review Gate status
     if: github.event_name == 'pull_request' || github.event.issue.pull_request
-    # Self-hosted Mac mini gate-tier runner. API-only workflow via
-    # actions/github-script -- no compile/test toolchain needed. See
-    # rigplane-tower/docs/development/mac-mini-self-hosted-runners.md.
-    runs-on: [self-hosted, linux, gate]
+    # API-only workflow via actions/github-script -- no compile/test toolchain
+    # needed. Keep this on GitHub-hosted runners so PR merges are not blocked
+    # when self-hosted build runners are offline or occupied.
+    runs-on: ubuntu-latest
     timeout-minutes: 2
 
     steps:
