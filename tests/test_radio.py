@@ -771,6 +771,23 @@ class TestAckSinkRobustness:
 
         assert radio._civ_request_tracker.pending_count == 0
 
+    @pytest.mark.asyncio
+    async def test_pump_uses_current_generation_after_reconnect(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        radio._civ_runtime.start_pump()
+        try:
+            radio._civ_runtime.advance_generation("unit-test-reconnect")
+
+            mock_transport.queue_response_on_send(1, _freq_response(14_074_000))
+            mock_transport.queue_response_on_send(2, _mode_response(Mode.USB))
+
+            assert await radio.get_freq() == 14_074_000
+            assert await radio.get_mode_info() == (Mode.USB, 1)
+            assert radio._civ_request_tracker.timeout_count == 0
+        finally:
+            await radio._civ_runtime.stop_pump()
+
 
 class TestScopeCallbackSafety:
     """Scope callback failures must not break command routing."""
