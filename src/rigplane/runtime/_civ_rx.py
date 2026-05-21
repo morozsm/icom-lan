@@ -160,9 +160,7 @@ class CivRuntime:
     def start_pump(self) -> None:
         """Start always-on CI-V receive pump."""
         if self._host._civ_rx_task is None or self._host._civ_rx_task.done():
-            self._host._civ_rx_task = asyncio.create_task(
-                self._civ_rx_loop(self._host._civ_epoch)
-            )
+            self._host._civ_rx_task = asyncio.create_task(self._civ_rx_loop())
 
     async def stop_pump(self) -> None:
         """Stop CI-V receive pump and fail pending request futures."""
@@ -507,7 +505,7 @@ class CivRuntime:
         )
         return non_scope_packets + kept_scope
 
-    async def _civ_rx_loop(self, generation: int) -> None:
+    async def _civ_rx_loop(self) -> None:
         """Continuously consume CI-V transport packets and route events."""
         assert self._host._civ_transport is not None
         self._host._last_civ_data_received = time.monotonic()
@@ -544,7 +542,10 @@ class CivRuntime:
                         except ValueError:
                             continue
                         try:
-                            await self._route_civ_frame(frame, generation=generation)
+                            await self._route_civ_frame(
+                                frame,
+                                generation=self._host._civ_epoch,
+                            )
                         except Exception:
                             logger.exception(
                                 "Unhandled exception while routing CI-V frame"
