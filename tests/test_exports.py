@@ -25,6 +25,7 @@ def test_public_api_surface() -> None:
         # --- Tier 1: Backend configs ---
         "BackendConfig",
         "LanBackendConfig",
+        "RigctldBackendConfig",
         "SerialBackendConfig",
         "YaesuCatBackendConfig",
         # --- Tier 1: Radio + capability protocols ---
