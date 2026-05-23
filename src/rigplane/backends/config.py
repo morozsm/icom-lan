@@ -140,7 +140,10 @@ class RigctldBackendConfig:
 
 
 BackendConfig = (
-    LanBackendConfig | SerialBackendConfig | YaesuCatBackendConfig | RigctldBackendConfig
+    LanBackendConfig
+    | SerialBackendConfig
+    | YaesuCatBackendConfig
+    | RigctldBackendConfig
 )
 
 __all__ = [
