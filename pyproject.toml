@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rigplane"
-version = "2.3.0"
+version = "2.3.1"
 description = "Multi-vendor radio control library and Web UI for IP-connected ham transceivers (Icom, Yaesu, Xiegu, Lab599) — no wfview/hamlib required"
 readme = "README.md"
 license = "MIT"

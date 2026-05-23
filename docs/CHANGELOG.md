@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.1] — 2026-05-23
+
+### Added
+- TX audio streams now expose write-health snapshots with queued, dropped,
+  attempted, completed, failed, and last-error counters for diagnosing local
+  transmit paths (#1553, 9125216b).
+
+### Fixed
+- PortAudio playback now uses the callback ring, coalesces small writes,
+  increases write chunk size, and keeps playback writes nonblocking to reduce
+  local audio underruns (#1554, #1555, #1556, #1557, #1559, 2dcf7973,
+  f7021beb, 763f2fd0, af51ce12).
+- CI-V reconnect recovery now stays tied to the current generation, retries
+  with ephemeral local ports when needed, and avoids spurious recovery after
+  benign transport churn (#1546, #1550, c29a8a9a, 2169cc4a, 11e682be).
+- rigctld power status responses are now compatible with WSJT-X clients
+  (c064e5f4).
+- Opus TX fails closed when no transcoder is available instead of accepting
+  unsupported PCM-through-Opus paths (#1569, c86da7b0).
+- LAN data-port cooldown recovery now reconnects cleanly after the radio holds
+  the port in cooldown (#1572, #1573, a6976a2c).
+
+### Docs
+- Added public docs-site analytics and IndexNow post-deploy pings, and tuned
+  the indexing policy for rigplane.dev (#1552, #1571, #1574, c50cadfb,
+  a513a0ad, 36662cb7).
+- Documented the PortAudio callback-ring intent and kept audio implementation
+  comments public-safe (#1561, #1562, 94884a98, fdd37686).
+
 ## [2.3.0] — 2026-05-20
 
 ### Added
@@ -1342,7 +1371,8 @@ These deprecation closures were announced in v0.19 and dropped on schedule.
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.3.1...HEAD
+[2.3.1]: https://github.com/rigplane/rigplane-core/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/rigplane/rigplane-core/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/rigplane/rigplane-core/compare/v2.1.2...v2.2.0
 [2.1.2]: https://github.com/rigplane/rigplane-core/compare/v2.1.1...v2.1.2
