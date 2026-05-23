@@ -120,11 +120,36 @@ class YaesuCatBackendConfig:
             raise ValueError("tx_device override must be a non-empty string.")
 
 
-BackendConfig = LanBackendConfig | SerialBackendConfig | YaesuCatBackendConfig
+@dataclass(frozen=True, slots=True)
+class RigctldBackendConfig:
+    """Configuration for an external Hamlib rigctld TCP backend."""
+
+    backend: Literal["rigctld"] = "rigctld"
+    host: str = ""
+    port: int = 4532
+    timeout: float = 5.0
+    model: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.host.strip():
+            raise ValueError("rigctld backend requires non-empty host.")
+        if not (1 <= self.port <= 65535):
+            raise ValueError("rigctld backend port must be in range 1..65535.")
+        if self.timeout <= 0:
+            raise ValueError("timeout must be > 0.")
+
+
+BackendConfig = (
+    LanBackendConfig
+    | SerialBackendConfig
+    | YaesuCatBackendConfig
+    | RigctldBackendConfig
+)
 
 __all__ = [
     "BackendConfig",
     "LanBackendConfig",
+    "RigctldBackendConfig",
     "SerialBackendConfig",
     "YaesuCatBackendConfig",
 ]

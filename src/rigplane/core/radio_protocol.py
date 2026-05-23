@@ -232,6 +232,7 @@ class Radio(Protocol):
           - ``"rigplane"``    — Icom LAN/CI-V-over-Ethernet (IC-7610, IC-9700, …)
           - ``"icom_serial"`` — Icom serial CI-V (IC-7300, IC-705, …)
           - ``"yaesu_cat"``   — Yaesu CAT (FTX-1, …)
+          - ``"rigctld"``     — external Hamlib rigctld TCP adapter
         """
         ...
 

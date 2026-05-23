@@ -15,7 +15,11 @@ from rigplane.cli import (
     check_ports_available,
     main,
 )
-from rigplane.backends.config import LanBackendConfig, SerialBackendConfig
+from rigplane.backends.config import (
+    LanBackendConfig,
+    RigctldBackendConfig,
+    SerialBackendConfig,
+)
 
 
 class TestParseFrequency:
@@ -561,6 +565,11 @@ class TestBackendArgs:
         assert args.backend == "serial"
         assert args.serial_port == "/dev/tty.test"
 
+    def test_backend_rigctld(self):
+        p = _build_parser()
+        args = p.parse_args(["--backend", "rigctld", "--host", "localhost", "status"])
+        assert args.backend == "rigctld"
+
     def test_serial_port_flag(self):
         p = _build_parser()
         args = p.parse_args(["--serial-port", "/dev/tty.usbmodem1", "status"])
@@ -787,6 +796,49 @@ class TestAutoDiscovery:
         args = p.parse_args(["--serial-port", "/dev/ttyUSB0", "status"])
         config = await _build_backend_config(args)
         assert isinstance(config, SerialBackendConfig)
+
+    async def test_rigctld_backend_uses_external_default_port(self):
+        p = _build_parser()
+        args = p.parse_args(["--backend", "rigctld", "--host", "localhost", "status"])
+        config = await _build_backend_config(args)
+        assert isinstance(config, RigctldBackendConfig)
+        assert config.host == "localhost"
+        assert config.port == 4532
+
+    async def test_web_rigctld_backend_ignores_server_port_for_radio_port(self):
+        p = _build_parser()
+        args = p.parse_args(
+            [
+                "web",
+                "--radio-backend",
+                "rigctld",
+                "--radio-host",
+                "localhost",
+                "--port",
+                "8081",
+            ]
+        )
+        config = await _build_backend_config(args)
+        assert isinstance(config, RigctldBackendConfig)
+        assert config.port == 4532
+        assert args.web_port == 8081
+
+    async def test_rigctld_backend_honors_explicit_control_port(self):
+        p = _build_parser()
+        args = p.parse_args(
+            [
+                "--backend",
+                "rigctld",
+                "--host",
+                "localhost",
+                "--control-port",
+                "4540",
+                "status",
+            ]
+        )
+        config = await _build_backend_config(args)
+        assert isinstance(config, RigctldBackendConfig)
+        assert config.port == 4540
 
 
 class TestPresets:

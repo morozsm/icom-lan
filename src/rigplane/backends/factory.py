@@ -9,6 +9,7 @@ from ..radio_protocol import Radio
 from .config import (
     BackendConfig,
     LanBackendConfig,
+    RigctldBackendConfig,
     SerialBackendConfig,
     YaesuCatBackendConfig,
 )
@@ -16,6 +17,7 @@ from .ic7300.serial import Ic7300SerialRadio
 from .ic705.serial import Ic705SerialRadio
 from .ic9700.serial import Ic9700SerialRadio
 from .icom7610.serial import Icom7610SerialRadio
+from .rigctld_client.radio import RigctldClientRadio
 from .yaesu_cat.radio import YaesuCatRadio
 
 
@@ -53,6 +55,13 @@ def create_radio(config: BackendConfig) -> Radio:
             rx_device=config.rx_device,
             tx_device=config.tx_device,
             audio_sample_rate=config.audio_sample_rate,
+        )
+    if isinstance(config, RigctldBackendConfig):
+        return RigctldClientRadio(
+            host=config.host,
+            port=config.port,
+            timeout=config.timeout,
+            model=config.model,
         )
     if isinstance(config, SerialBackendConfig):
         # Route to model-specific serial backend
@@ -105,13 +114,14 @@ def create_radio(config: BackendConfig) -> Radio:
         )
 
     backend = getattr(config, "backend", None)
-    if backend in {"lan", "serial", "yaesu-cat"}:
+    if backend in {"lan", "serial", "yaesu-cat", "rigctld"}:
         raise TypeError(
             "Unsupported config instance for backend "
             f"{backend!r}; use typed backend config dataclasses."
         )
     raise ValueError(
-        "Unsupported backend. Expected backend 'lan', 'serial', or 'yaesu-cat'."
+        "Unsupported backend. Expected backend 'lan', 'serial', "
+        "'yaesu-cat', or 'rigctld'."
     )
 
 

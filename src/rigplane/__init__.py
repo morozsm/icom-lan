@@ -33,6 +33,7 @@ __version__ = _pkg_version("rigplane")
 from .backends import (  # noqa: F401, E402
     BackendConfig,
     LanBackendConfig,
+    RigctldBackendConfig,
     SerialBackendConfig,
     YaesuCatBackendConfig,
     create_radio,
@@ -272,6 +273,7 @@ __all__ = [
     # --- Tier 1: Backend configs ---
     "BackendConfig",
     "LanBackendConfig",
+    "RigctldBackendConfig",
     "SerialBackendConfig",
     "YaesuCatBackendConfig",
     # --- Tier 1: Radio + capability protocols ---

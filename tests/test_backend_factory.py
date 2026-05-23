@@ -9,11 +9,13 @@ import pytest
 from rigplane import IcomRadio, create_radio
 from rigplane.backends.config import (
     LanBackendConfig,
+    RigctldBackendConfig,
     SerialBackendConfig,
     YaesuCatBackendConfig,
 )
 from rigplane.backends.icom7610 import Icom7610SerialRadio
 from rigplane.backends.yaesu_cat.radio import YaesuCatRadio
+from rigplane.backends.rigctld_client.radio import RigctldClientRadio
 from rigplane.backends.icom7610.drivers.contracts import (
     AudioDriver,
     CivLink,
@@ -127,6 +129,11 @@ class TestCreateRadioFactory:
         radio = create_radio(YaesuCatBackendConfig(device="/dev/ttyUSB0"))
         assert isinstance(radio, YaesuCatRadio)
         assert radio.backend_id == "yaesu_cat"
+
+    def test_rigctld_backend_config_has_rigctld_backend_id(self) -> None:
+        radio = create_radio(RigctldBackendConfig(host="localhost"))
+        assert isinstance(radio, RigctldClientRadio)
+        assert radio.backend_id == "rigctld"
 
     def test_create_radio_rejects_unknown_backend(self) -> None:
         @dataclass(slots=True)

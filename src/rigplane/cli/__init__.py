@@ -62,6 +62,7 @@ from rigplane.audio.route import resolve_audio_route, rigctld_wsjtx_policy  # no
 from rigplane.backends.config import (  # noqa: E402
     BackendConfig,
     LanBackendConfig,
+    RigctldBackendConfig,
     SerialBackendConfig,
     YaesuCatBackendConfig,
 )
@@ -373,6 +374,22 @@ def _has_global_connection_options_after_command(argv: list[str]) -> bool:
     )
 
 
+def _has_explicit_radio_control_port(argv: list[str]) -> bool:
+    command_index = _first_command_index(argv)
+    global_tokens = argv if command_index is None else argv[:command_index]
+    if any(
+        _token_matches_option(token, {"--control-port", "--port"})
+        for token in global_tokens
+    ):
+        return True
+    if command_index is not None and argv[command_index] == "web":
+        return any(
+            _token_matches_option(token, {"--radio-control-port"})
+            for token in argv[command_index + 1 :]
+        )
+    return False
+
+
 def _print_common_cli_hint(argv: list[str]) -> None:
     if "discover" in argv and "web" in argv:
         print(
@@ -434,6 +451,7 @@ class _RigplaneArgumentParser(argparse.ArgumentParser):
             if exc.code != 0:
                 _print_common_cli_hint(argv)
             raise
+        parsed._explicit_control_port = _has_explicit_radio_control_port(argv)  # noqa: SLF001
         _apply_managed_runtime_defaults(parsed)
         _warn_web_host_ambiguity(parsed)
         return parsed
@@ -546,9 +564,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--backend",
-        choices=["lan", "serial", "yaesu-cat"],
+        choices=["lan", "serial", "yaesu-cat", "rigctld"],
         default=None,
-        help="Backend type: lan (default), serial, or yaesu-cat. Auto-inferred from --serial-port if set.",
+        help="Backend type: lan (default), serial, yaesu-cat, or rigctld. Auto-inferred from --serial-port if set.",
     )
     p.add_argument(
         "--serial-port",
@@ -1115,7 +1133,7 @@ def _build_parser() -> argparse.ArgumentParser:
     web_radio.add_argument(
         "--radio-backend",
         dest="backend",
-        choices=["lan", "serial", "yaesu-cat"],
+        choices=["lan", "serial", "yaesu-cat", "rigctld"],
         default=argparse.SUPPRESS,
         metavar="TYPE",
         help="Radio backend type for the web UI backend",
@@ -1541,7 +1559,12 @@ def check_ports_available(ports: list[int]) -> None:
 
 async def _build_backend_config(
     args: argparse.Namespace,
-) -> LanBackendConfig | SerialBackendConfig | YaesuCatBackendConfig:
+) -> (
+    LanBackendConfig
+    | SerialBackendConfig
+    | YaesuCatBackendConfig
+    | RigctldBackendConfig
+):
     """Build typed backend config from parsed CLI args.
 
     Runs auto-discovery when host / serial-port is not provided.
@@ -1570,6 +1593,24 @@ async def _build_backend_config(
             model=model_name,
             rx_device=getattr(args, "rx_device", None) or None,
             tx_device=getattr(args, "tx_device", None) or None,
+        )
+    if backend == "rigctld":
+        if serial_port:
+            print(
+                "Warning: --serial-port is ignored when --backend rigctld is used.",
+                file=sys.stderr,
+            )
+        host = getattr(args, "host", _HOST_NOT_SET)
+        if not host or host == _HOST_NOT_SET:
+            raise ValueError("rigctld backend requires --host.")
+        explicit_port = bool(getattr(args, "_explicit_control_port", False))
+        env_port = bool(_get_env("ICOM_PORT", ""))
+        port = args.control_port if explicit_port or env_port else 4532
+        return RigctldBackendConfig(
+            host=host,
+            port=port,
+            timeout=args.timeout,
+            model=model_name,
         )
     if backend == "serial":
         host = getattr(args, "host", _HOST_NOT_SET)
