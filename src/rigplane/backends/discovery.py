@@ -85,12 +85,12 @@ class RadioDiscoveryResult:
     address: int | str
     description: str | None = None
     hwid: str | None = None
+    usb_audio: dict[str, Any] | None = None
     vid: int | None = None
     pid: int | None = None
     manufacturer: str | None = None
     product: str | None = None
     serial_number: str | None = None
-    usb_audio: dict[str, Any] | None = None
 
 
 @dataclass

@@ -787,6 +787,26 @@ class TestProbeSerialYaesuCat:
 # ---------------------------------------------------------------------------
 
 
+def test_radio_discovery_result_legacy_positional_usb_audio_binding() -> None:
+    usb_audio = {"rx_device_index": 6}
+
+    result = RadioDiscoveryResult(
+        "/dev/ttyUSB0",
+        "civ",
+        "IC-7610",
+        "icom_ic7610",
+        115200,
+        0x98,
+        "USB Serial",
+        "USB VID:PID=10C4:EA60",
+        usb_audio,
+    )
+
+    assert result.usb_audio is usb_audio
+    assert result.vid is None
+    assert result.pid is None
+
+
 class TestDiscoverSerialRadios:
     @pytest.mark.asyncio
     async def test_civ_radio_detected(self) -> None:
