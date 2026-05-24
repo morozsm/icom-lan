@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] — 2026-05-24
+
+### Added
+- External rigctld client backend that talks to a separately managed `rigctld`
+  process so Core can interoperate with Hamlib-managed transports without
+  hosting its own rigctld (#1579, 32753adf).
+- Safe Hamlib probe ranking internals that score candidate transports without
+  committing to them, used by the discover flow (#1581, 68907f6c).
+- Serial inventory now includes Hamlib metadata for each enumerated port so
+  upstream UIs can present capability and provenance hints (#1580, f6b4ca35).
+- Hamlib provider validation in the discover CLI to confirm a candidate probe
+  matches the expected radio profile before activation (#1582, 7e2f04a0).
+
+### Fixed
+- Hardened the Windows core runtime — process lifecycle, signal handling, and
+  cleanup paths now align with the desktop shell's expectations on Windows
+  (#1594, 4ec683f8).
+
+### Docs
+- Defined the public Hamlib provider contract, the provider strategy
+  alignment, the agent handoff, and the rigplane.dev provider guide so external
+  integrations have a single source of truth for the Hamlib path (#1577,
+  #1583, #1590, #1592, f6b0c099, bd9cbbf4, 3e6c5a8e, c2d73d74).
+
 ## [2.3.1] — 2026-05-23
 
 ### Added
@@ -1371,7 +1395,8 @@ These deprecation closures were announced in v0.19 and dropped on schedule.
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.3.1...HEAD
+[Unreleased]: https://github.com/rigplane/rigplane-core/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/rigplane/rigplane-core/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/rigplane/rigplane-core/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/rigplane/rigplane-core/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/rigplane/rigplane-core/compare/v2.1.2...v2.2.0
