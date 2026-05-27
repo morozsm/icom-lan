@@ -263,7 +263,7 @@ def test_icom_serial_backend_exposes_bridge_surface() -> None:
 async def test_bridge_runs_against_icom_serial_backend() -> None:
     """End-to-end-ish: the bridge claims ownership of a real Icom *serial*
     backend and forwards an inbound CI-V frame (raw pipe inherited via
-    _IcomSerialRadioBase(CoreRadio)) — proving it is not Icom-LAN-only."""
+    _IcomSerialRadioBase(CoreRadio)) — proving it is not limited to Icom LAN."""
     from rigplane.backends.icom7610.serial import Icom7610SerialRadio
 
     radio = Icom7610SerialRadio(device="/dev/null")
