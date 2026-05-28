@@ -51,6 +51,7 @@ logger = logging.getLogger(__name__)
 CIV_HEADER_SIZE = 0x15
 _SCOPE_BACKLOG_SHED_THRESHOLD = 256
 _SCOPE_BACKLOG_KEEP_LATEST = 64
+_RAW_RECEIVED_FRAME_BYTES_LIMIT = 256
 
 __all__ = [
     "CivRuntime",
@@ -174,6 +175,7 @@ class CivRuntime:
         # late soft_reconnect from firing after an explicit disconnect
         # (Codex P1 on PR #851).
         self._reconnect_task: asyncio.Task[None] | None = None
+        self._raw_received_frame_bytes: dict[int, bytes] = {}
 
     # ------------------------------------------------------------------
     # Public API (design doc)
@@ -353,7 +355,8 @@ class CivRuntime:
         return RawCivTransactionResult(
             status=status,
             frame=frame,
-            frame_bytes=self._civ_frame_to_bytes(frame),
+            frame_bytes=self._take_raw_received_frame_bytes(frame)
+            or self._civ_frame_to_bytes(frame),
         )
 
     async def send_civ_raw(
@@ -401,6 +404,20 @@ class CivRuntime:
                 data=frame.data,
             ),
         )
+
+    def _remember_raw_received_frame_bytes(
+        self, frame: CivFrame, frame_bytes: bytes
+    ) -> None:
+        """Keep exact inbound bytes for parsed frames returned through futures."""
+        self._raw_received_frame_bytes[id(frame)] = bytes(frame_bytes)
+        while len(self._raw_received_frame_bytes) > _RAW_RECEIVED_FRAME_BYTES_LIMIT:
+            self._raw_received_frame_bytes.pop(
+                next(iter(self._raw_received_frame_bytes))
+            )
+
+    def _take_raw_received_frame_bytes(self, frame: CivFrame) -> bytes | None:
+        """Return exact inbound bytes for a parsed frame when still available."""
+        return self._raw_received_frame_bytes.pop(id(frame), None)
 
     def start_worker(self) -> None:
         """Start serialized CI-V commander."""
@@ -693,6 +710,7 @@ class CivRuntime:
                             frame = parse_civ_frame(frame_bytes)
                         except ValueError:
                             continue
+                        self._remember_raw_received_frame_bytes(frame, frame_bytes)
                         self.deliver_raw_civ(frame_bytes)
                         try:
                             await self._route_civ_frame(

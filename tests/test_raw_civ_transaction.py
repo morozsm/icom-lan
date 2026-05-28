@@ -9,7 +9,13 @@ from test_radio import MockTransport
 
 from rigplane import IC_7610_ADDR
 from rigplane.commands import CONTROLLER_ADDR, build_civ_frame, parse_civ_frame
-from rigplane.core.civ import CivEvent, CivEventType
+from rigplane.core.civ import (
+    CivEvent,
+    CivEventType,
+    CivRequestTracker,
+    request_key_from_frame,
+)
+from rigplane.core.exceptions import ConnectionError as RigplaneConnectionError
 from rigplane.radio import IcomRadio
 from rigplane.types import bcd_encode
 
@@ -78,6 +84,25 @@ async def test_raw_civ_transaction_data_response_success(
     assert result.frame_bytes == response
     assert result.frame.command == 0x03
     assert result.frame.data == bcd_encode(14_074_000)
+
+
+async def test_raw_civ_transaction_command29_response_preserves_wire_bytes(
+    radio: IcomRadio, transport: MockTransport
+) -> None:
+    response = bytes.fromhex("FEFEE098290103FD")
+    transport.queue_response_on_send(1, _wrap(response))
+
+    result = await radio.send_civ_transaction(
+        0x29,
+        data=b"\x01\x03",
+        expect="data",
+        timeout=0.2,
+    )
+
+    assert result.status == "response"
+    assert result.frame.command == 0x03
+    assert result.frame.receiver == 0x01
+    assert result.frame_bytes == response
 
 
 async def test_raw_civ_transaction_expect_none_is_fire_and_forget(
@@ -149,6 +174,65 @@ async def test_raw_civ_transaction_ack_ignores_orphan_ack_backlog(
         )
 
     assert radio.external_cat_session_active is False
+    assert tracker.pending_count == 0
+
+
+async def test_raw_civ_transaction_rejects_missing_civ_transport_without_claim(
+    radio: IcomRadio,
+) -> None:
+    radio._civ_transport = None
+
+    with pytest.raises(RigplaneConnectionError, match="Not connected to radio"):
+        await radio.send_civ_transaction(
+            0x1A,
+            sub=0x05,
+            data=b"\x01\x53\x01",
+            expect="ack",
+            timeout=0.01,
+        )
+
+    assert radio.external_cat_session_active is False
+    assert radio._civ_request_tracker.pending_count == 0
+
+
+async def test_raw_civ_transaction_cleans_stale_waiters_and_backlog(
+    radio: IcomRadio, transport: MockTransport
+) -> None:
+    tracker = CivRequestTracker(stale_ttl=0.0)
+    radio._civ_request_tracker = tracker
+    radio._civ_epoch = tracker.generation
+    radio._civ_waiter_ttl_gc_interval = 0.0
+
+    assert tracker.resolve(
+        CivEvent(type=CivEventType.ACK, frame=parse_civ_frame(_ack()))
+    )
+
+    stale_ack = tracker.register_ack(wait=True, consume_backlog=False)
+    stale_response = tracker.register_response(
+        request_key_from_frame(
+            parse_civ_frame(build_civ_frame(radio._radio_addr, CONTROLLER_ADDR, 0x03))
+        )
+    )
+    assert tracker.pending_count == 2
+
+    transport.queue_response_on_send(1, _wrap(_ack()))
+
+    result = await radio.send_civ_transaction(
+        0x1A,
+        sub=0x05,
+        data=b"\x01\x53\x01",
+        expect="ack",
+        timeout=0.2,
+    )
+
+    assert result.status == "ack"
+    assert tracker.pending_count == 0
+    assert tracker.snapshot_stats()["stale_cleaned"] == 2
+    assert tracker.snapshot_stats()["ack_backlog_drops"] == 1
+    with pytest.raises(asyncio.TimeoutError, match="CI-V ACK waiter expired"):
+        stale_ack.result()
+    with pytest.raises(asyncio.TimeoutError, match="CI-V response waiter expired"):
+        stale_response.result()
 
 
 async def test_raw_civ_transaction_timeout_releases_owner(radio: IcomRadio) -> None:
@@ -156,6 +240,8 @@ async def test_raw_civ_transaction_timeout_releases_owner(radio: IcomRadio) -> N
         await radio.send_civ_transaction(0x03, expect="data", timeout=0.01)
 
     assert radio.external_cat_session_active is False
+    assert radio._civ_request_tracker.pending_count == 0
+    assert radio._civ_request_tracker.timeout_count == 1
 
 
 async def test_raw_civ_transaction_rejects_competing_owner(radio: IcomRadio) -> None:
@@ -184,6 +270,8 @@ async def test_external_cat_begin_rejects_active_raw_transaction(
     with pytest.raises(asyncio.CancelledError):
         await task
     assert radio.external_cat_session_active is False
+    assert radio._civ_request_tracker.pending_count == 0
+    assert radio._civ_request_tracker.timeout_count == 0
 
 
 async def test_raw_civ_transaction_session_releases_on_cancellation(
@@ -200,6 +288,8 @@ async def test_raw_civ_transaction_session_releases_on_cancellation(
         await task
 
     assert radio.external_cat_session_active is False
+    assert radio._civ_request_tracker.pending_count == 0
+    assert radio._civ_request_tracker.timeout_count == 0
 
 
 def _wrap(civ_frame: bytes) -> bytes:

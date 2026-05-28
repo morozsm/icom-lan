@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `POST /api/v1/civ/transaction` for scoped raw CI-V transactions with
   explicit `expect` modes (`none`, `ack`, `data`), deterministic ACK/NAK/data
   JSON results, bounded timeouts, and CI-V ownership guarding (#1622, #1623).
+- Documented Python usage for response-capable raw CI-V HTTP transactions
+  (#1626).
 
 ## [2.4.0] — 2026-05-24
 

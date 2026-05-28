@@ -418,6 +418,43 @@ async def test_http_raw_civ_transaction_rejects_read_only() -> None:
 
 
 @pytest.mark.asyncio
+async def test_http_raw_civ_transaction_requires_auth_when_configured() -> None:
+    radio = _radio()
+    radio.send_civ_transaction = AsyncMock()
+    srv = WebServer(
+        radio,
+        WebConfig(host="127.0.0.1", port=0, auth_token="secret"),
+    )
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "data": "015301", "expect": "ack"},
+    )
+
+    assert writer.response_status == 401
+    assert writer.response_body["error"] == "unauthorized"
+    radio.send_civ_transaction.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_rejects_missing_radio() -> None:
+    srv = WebServer(None, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "data": "015301", "expect": "ack"},
+    )
+
+    assert writer.response_status == 503
+    assert writer.response_body == {
+        "error": "no_radio",
+        "message": "No radio configured",
+    }
+
+
+@pytest.mark.asyncio
 async def test_http_raw_civ_transaction_rejects_unsupported_backend() -> None:
     srv = WebServer(_radio_without_civ(), WebConfig(host="127.0.0.1", port=0))
 
@@ -429,6 +466,34 @@ async def test_http_raw_civ_transaction_rejects_unsupported_backend() -> None:
 
     assert writer.response_status == 409
     assert writer.response_body["error"] == "unsupported_command"
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_owner_conflict_maps_to_409() -> None:
+    radio = _radio()
+    radio.send_civ_transaction = AsyncMock(
+        side_effect=RuntimeError("CI-V stream is already owned by external")
+    )
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x03, "expect": "data", "timeout_ms": 10},
+    )
+
+    assert writer.response_status == 409
+    assert writer.response_body == {
+        "error": "civ_owner_conflict",
+        "message": "CI-V stream is already owned by external",
+    }
+    radio.send_civ_transaction.assert_awaited_once_with(
+        0x03,
+        sub=None,
+        data=b"",
+        expect="data",
+        timeout=0.01,
+    )
 
 
 @pytest.mark.asyncio

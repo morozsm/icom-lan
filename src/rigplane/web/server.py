@@ -33,7 +33,7 @@ import time
 import urllib.parse
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TextIO, cast
+from typing import TYPE_CHECKING, Any, TextIO
 
 from .. import __version__
 from .._bounded_queue import BoundedQueue
@@ -253,7 +253,7 @@ def _serialize_keyboard_config(profile: "RadioProfile") -> dict[str, object] | N
 
 def _runtime_capabilities(radio: "Radio | None") -> set[str]:
     """Backward-compatible alias to shared runtime_capabilities helper."""
-    return cast(set[str], runtime_capabilities(radio))
+    return runtime_capabilities(radio)
 
 
 def _supports_scope(radio: "Radio | None") -> bool:
@@ -510,7 +510,7 @@ class WebServer:
 
     def _radio_ready(self) -> bool:
         """Backend view of radio readiness (CI-V healthy)."""
-        return cast(bool, radio_ready(self._radio))
+        return radio_ready(self._radio)
 
     async def ensure_startup_ready(self, timeout: float = 5.0) -> None:
         """Assert that the attached radio is ready before exposing the server."""
@@ -726,20 +726,17 @@ class WebServer:
         """Return the canonical public state payload for web consumers."""
         revision = self._radio_poller.revision if self._radio_poller is not None else 0
         health = self._build_radio_health()
-        return cast(
-            dict[str, Any],
-            build_public_state_payload(
-                self._radio_state,
-                radio=self._radio,
-                revision=revision,
-                receiver_count=self._get_profile().receiver_count,
-                updated_at=updated_at,
-                scope_clients=len(self._scope_handlers),
-                control_clients=len(self._control_event_queues),
-                audio_clients=len(self._audio_broadcaster._clients),
-                radio_health=health,
-                health_revision=self._health_revision,
-            ),
+        return build_public_state_payload(
+            self._radio_state,
+            radio=self._radio,
+            revision=revision,
+            receiver_count=self._get_profile().receiver_count,
+            updated_at=updated_at,
+            scope_clients=len(self._scope_handlers),
+            control_clients=len(self._control_event_queues),
+            audio_clients=len(self._audio_broadcaster._clients),
+            radio_health=health,
+            health_revision=self._health_revision,
         )
 
     def _build_radio_health(self) -> dict[str, Any]:
@@ -762,7 +759,7 @@ class WebServer:
             self._health_revision += 1
             self._health_since_monotonic = now
         health["sinceMs"] = int(max(0.0, now - self._health_since_monotonic) * 1000)
-        return cast(dict[str, Any], health)
+        return health
 
     def broadcast_notification(
         self,

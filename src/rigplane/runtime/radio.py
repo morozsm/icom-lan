@@ -1344,7 +1344,9 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         self._external_cat_session_owner = "external"
 
     def end_external_cat_session(self) -> None:
-        """Release external-CAT-session ownership. Idempotent."""
+        """Release legacy external-CAT-session ownership. Idempotent."""
+        if self._external_cat_session_owner not in (None, "external"):
+            return
         self._external_cat_session = False
         self._external_cat_session_owner = None
 

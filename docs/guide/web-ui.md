@@ -250,6 +250,40 @@ matching data response. NAK returns HTTP `200` with `ok: false`,
 `status: "nak"`, and `error: "radio_nak"`. Timeouts return HTTP `504`.
 Transactions are not batch steps; keep batches fire-and-forget or structured.
 
+The same transaction can be sent from a small Python tool:
+
+```python
+import json
+import urllib.request
+
+base_url = "http://127.0.0.1:8080"
+token = None  # or "your-token"
+
+payload = {
+    "id": "display-type-b",
+    "command": 26,
+    "sub": 5,
+    "data": "015301",
+    "expect": "ack",
+    "timeout_ms": 1000,
+}
+
+request = urllib.request.Request(
+    f"{base_url}/api/v1/civ/transaction",
+    data=json.dumps(payload).encode("utf-8"),
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
+if token:
+    request.add_header("Authorization", f"Bearer {token}")
+
+with urllib.request.urlopen(request, timeout=5) as response:
+    result = json.load(response)
+
+if not result["ok"]:
+    raise SystemExit(result)
+```
+
 DATA mode commands use the active radio profile's numeric DATA value. For the
 current IC-9700 profile, `set_data_mode` uses `mode: 0` for OFF and `mode: 1`
 for DATA. Its modulation input source values are `0 = MIC`, `1 = ACC`,

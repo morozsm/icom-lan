@@ -283,6 +283,40 @@ behavior, defaults to `"data"` for compatibility, and must be one of:
 `timeout_ms` is optional and must be positive when present. All waits are
 bounded by the timeout.
 
+Python example:
+
+```python
+import json
+import urllib.request
+
+base_url = "http://127.0.0.1:8080"
+token = None  # or "your-token"
+
+payload = {
+    "id": "display-type-b",
+    "command": 26,
+    "sub": 5,
+    "data": "015301",
+    "expect": "ack",
+    "timeout_ms": 1000,
+}
+
+request = urllib.request.Request(
+    f"{base_url}/api/v1/civ/transaction",
+    data=json.dumps(payload).encode("utf-8"),
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
+if token:
+    request.add_header("Authorization", f"Bearer {token}")
+
+with urllib.request.urlopen(request, timeout=5) as response:
+    result = json.load(response)
+
+if not result["ok"]:
+    raise SystemExit(result)
+```
+
 ACK response:
 
 ```json
