@@ -224,6 +224,295 @@ async def test_http_command_rejects_raw_civ_wait_response() -> None:
 
 
 @pytest.mark.asyncio
+async def test_http_raw_civ_transaction_ack_success() -> None:
+    radio = _radio()
+    frame = SimpleNamespace(
+        command=0xFB,
+        sub=None,
+        data=b"",
+    )
+    radio.send_civ_transaction = AsyncMock(
+        return_value=SimpleNamespace(
+            status="ack",
+            frame=frame,
+            frame_bytes=bytes.fromhex("fefee0a2fbfd"),
+        )
+    )
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {
+            "id": "display-type-b",
+            "command": 0x1A,
+            "sub": 0x05,
+            "data": "015301",
+            "expect": "ack",
+            "timeout_ms": 1000,
+        },
+    )
+
+    assert writer.response_status == 200
+    assert writer.response_body == {
+        "id": "display-type-b",
+        "ok": True,
+        "status": "ack",
+        "result": {
+            "frame": "FEFEE0A2FBFD",
+            "command": 0xFB,
+            "sub": None,
+            "data": "",
+        },
+    }
+    radio.send_civ_transaction.assert_awaited_once_with(
+        0x1A,
+        sub=0x05,
+        data=b"\x01\x53\x01",
+        expect="ack",
+        timeout=1.0,
+    )
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_nak_returns_ok_false() -> None:
+    radio = _radio()
+    frame = SimpleNamespace(command=0xFA, sub=None, data=b"")
+    radio.send_civ_transaction = AsyncMock(
+        return_value=SimpleNamespace(
+            status="nak",
+            frame=frame,
+            frame_bytes=bytes.fromhex("fefee0a2fafd"),
+        )
+    )
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "data": "015301", "expect": "ack"},
+    )
+
+    assert writer.response_status == 200
+    assert writer.response_body["ok"] is False
+    assert writer.response_body["status"] == "nak"
+    assert writer.response_body["error"] == "radio_nak"
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_data_nak_returns_ok_false() -> None:
+    radio = _radio()
+    frame = SimpleNamespace(command=0xFA, sub=None, data=b"")
+    radio.send_civ_transaction = AsyncMock(
+        return_value=SimpleNamespace(
+            status="nak",
+            frame=frame,
+            frame_bytes=bytes.fromhex("fefee0a2fafd"),
+        )
+    )
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x03, "expect": "data"},
+    )
+
+    assert writer.response_status == 200
+    assert writer.response_body["ok"] is False
+    assert writer.response_body["status"] == "nak"
+    assert writer.response_body["error"] == "radio_nak"
+    radio.send_civ_transaction.assert_awaited_once_with(
+        0x03,
+        sub=None,
+        data=b"",
+        expect="data",
+        timeout=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_expect_none_returns_sent() -> None:
+    radio = _radio()
+    radio.send_civ_transaction = AsyncMock(
+        return_value=SimpleNamespace(
+            status="sent",
+            frame=None,
+            frame_bytes=None,
+        )
+    )
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "sub": 0x05, "data": "015301", "expect": "none"},
+    )
+
+    assert writer.response_status == 200
+    assert writer.response_body == {
+        "ok": True,
+        "status": "sent",
+        "result": {"frame": None, "command": None, "sub": None, "data": None},
+    }
+    radio.send_civ_transaction.assert_awaited_once_with(
+        0x1A,
+        sub=0x05,
+        data=b"\x01\x53\x01",
+        expect="none",
+        timeout=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_rejects_invalid_expect() -> None:
+    radio = _radio()
+    radio.send_civ_transaction = AsyncMock()
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "data": "015301", "expect": "auto"},
+    )
+
+    assert writer.response_status == 400
+    assert writer.response_body["error"] == "invalid_request"
+    assert "expect must be one of" in writer.response_body["message"]
+    radio.send_civ_transaction.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_rejects_nonpositive_timeout() -> None:
+    radio = _radio()
+    radio.send_civ_transaction = AsyncMock()
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "data": "015301", "expect": "ack", "timeout_ms": 0},
+    )
+
+    assert writer.response_status == 400
+    assert writer.response_body["error"] == "invalid_request"
+    assert "timeout_ms must be positive" in writer.response_body["message"]
+    radio.send_civ_transaction.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_rejects_read_only() -> None:
+    radio = _radio()
+    radio.send_civ_transaction = AsyncMock()
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0, read_only=True))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "data": "015301", "expect": "ack"},
+    )
+
+    assert writer.response_status == 403
+    assert writer.response_body["error"] == "read_only"
+    radio.send_civ_transaction.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_requires_auth_when_configured() -> None:
+    radio = _radio()
+    radio.send_civ_transaction = AsyncMock()
+    srv = WebServer(
+        radio,
+        WebConfig(host="127.0.0.1", port=0, auth_token="secret"),
+    )
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "data": "015301", "expect": "ack"},
+    )
+
+    assert writer.response_status == 401
+    assert writer.response_body["error"] == "unauthorized"
+    radio.send_civ_transaction.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_rejects_missing_radio() -> None:
+    srv = WebServer(None, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "data": "015301", "expect": "ack"},
+    )
+
+    assert writer.response_status == 503
+    assert writer.response_body == {
+        "error": "no_radio",
+        "message": "No radio configured",
+    }
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_rejects_unsupported_backend() -> None:
+    srv = WebServer(_radio_without_civ(), WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x1A, "data": "015301", "expect": "ack"},
+    )
+
+    assert writer.response_status == 409
+    assert writer.response_body["error"] == "unsupported_command"
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_owner_conflict_maps_to_409() -> None:
+    radio = _radio()
+    radio.send_civ_transaction = AsyncMock(
+        side_effect=RuntimeError("CI-V stream is already owned by external")
+    )
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x03, "expect": "data", "timeout_ms": 10},
+    )
+
+    assert writer.response_status == 409
+    assert writer.response_body == {
+        "error": "civ_owner_conflict",
+        "message": "CI-V stream is already owned by external",
+    }
+    radio.send_civ_transaction.assert_awaited_once_with(
+        0x03,
+        sub=None,
+        data=b"",
+        expect="data",
+        timeout=0.01,
+    )
+
+
+@pytest.mark.asyncio
+async def test_http_raw_civ_transaction_timeout_maps_to_504() -> None:
+    radio = _radio()
+    radio.send_civ_transaction = AsyncMock(side_effect=TimeoutError("timed out"))
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    writer = await _post_json(
+        srv,
+        "/api/v1/civ/transaction",
+        {"command": 0x03, "expect": "data", "timeout_ms": 10},
+    )
+
+    assert writer.response_status == 504
+    assert writer.response_body["error"] == "transaction_timeout"
+
+
+@pytest.mark.asyncio
 async def test_http_command_rejects_raw_civ_when_backend_does_not_support_it() -> None:
     srv = WebServer(_radio_without_civ(), WebConfig(host="127.0.0.1", port=0))
 

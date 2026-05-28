@@ -39,6 +39,7 @@ from .. import __version__
 from .._bounded_queue import BoundedQueue
 from ..radio_state import RadioState
 from ..capabilities import CAP_AUDIO, CAP_SCOPE
+from ..exceptions import TimeoutError as RigplaneTimeoutError
 from ..audio_analyzer import AudioAnalyzer
 from ..audio_fft_scope import AudioFftScope
 from ..env_config import (
@@ -70,6 +71,7 @@ from .websocket import (  # noqa: TID251
     make_accept_key,
     negotiate_deflate,
 )
+from ..radio_protocol import CivTransactionCapable
 
 if TYPE_CHECKING:
     from ..audio_bridge import AudioBridge
@@ -2203,6 +2205,181 @@ class WebServer:
             return
 
         await _send_response(writer, 404, "Not Found", b"", {})
+
+    @staticmethod
+    def _parse_civ_byte(value: Any, name: str, *, required: bool = True) -> int | None:
+        if value is None:
+            if required:
+                raise ValueError(f"missing required '{name}' parameter")
+            return None
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be an integer byte") from exc
+        if not 0 <= parsed <= 0xFF:
+            raise ValueError(f"{name} must be 0-255, got {parsed}")
+        return parsed
+
+    @staticmethod
+    def _parse_civ_hex_data(value: Any) -> bytes:
+        if value is None:
+            return b""
+        if not isinstance(value, str):
+            raise ValueError("data must be a hex string")
+        if len(value) % 2 != 0:
+            raise ValueError("data must be an even-length hex string")
+        if any(ch not in "0123456789abcdefABCDEF" for ch in value):
+            raise ValueError("data must be a compact hex string")
+        return bytes.fromhex(value)
+
+    @staticmethod
+    def _parse_civ_transaction_timeout(value: Any) -> float | None:
+        if value is None:
+            return None
+        try:
+            timeout_ms = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("timeout_ms must be a positive number") from exc
+        if timeout_ms <= 0:
+            raise ValueError("timeout_ms must be positive")
+        return timeout_ms / 1000.0
+
+    @staticmethod
+    def _serialize_civ_transaction_result(result: Any) -> dict[str, Any]:
+        frame = getattr(result, "frame", None)
+        frame_bytes = getattr(result, "frame_bytes", None)
+        if frame is None:
+            return {
+                "frame": None,
+                "command": None,
+                "sub": None,
+                "data": None,
+            }
+        return {
+            "frame": frame_bytes.hex().upper() if frame_bytes is not None else None,
+            "command": frame.command,
+            "sub": frame.sub,
+            "data": frame.data.hex().upper(),
+        }
+
+    async def _handle_http_civ_transaction(
+        self,
+        writer: asyncio.StreamWriter,
+        headers: dict[str, str] | None = None,
+        reader: asyncio.StreamReader | None = None,
+    ) -> None:
+        """Handle POST /api/v1/civ/transaction."""
+        if self._radio is None:
+            await self._send_json(
+                writer,
+                503,
+                "Service Unavailable",
+                {"error": "no_radio", "message": "No radio configured"},
+            )
+            return
+
+        payload = await self._read_json_object(writer, headers, reader)
+        if payload is None:
+            return
+
+        if self._config.read_only:
+            await self._send_json(
+                writer,
+                403,
+                "Forbidden",
+                {
+                    "error": "read_only",
+                    "message": "raw CI-V transactions are disabled in read-only mode",
+                },
+            )
+            return
+
+        if not isinstance(self._radio, CivTransactionCapable):
+            await self._send_json(
+                writer,
+                409,
+                "Conflict",
+                {
+                    "error": "unsupported_command",
+                    "message": "active backend does not support raw CI-V transactions",
+                },
+            )
+            return
+
+        try:
+            command = self._parse_civ_byte(payload.get("command"), "command")
+            sub = self._parse_civ_byte(payload.get("sub"), "sub", required=False)
+            data = self._parse_civ_hex_data(payload.get("data", ""))
+            raw_expect = payload.get("expect", "data")
+            if raw_expect not in ("none", "ack", "data"):
+                raise ValueError("expect must be one of: none, ack, data")
+            timeout = self._parse_civ_transaction_timeout(payload.get("timeout_ms"))
+        except ValueError as exc:
+            await self._send_json(
+                writer,
+                400,
+                "Bad Request",
+                {"error": "invalid_request", "message": str(exc)},
+            )
+            return
+
+        try:
+            assert command is not None
+            result = await self._radio.send_civ_transaction(
+                command,
+                sub=sub,
+                data=data,
+                expect=raw_expect,
+                timeout=timeout,
+            )
+        except (RigplaneTimeoutError, TimeoutError):
+            await self._send_json(
+                writer,
+                504,
+                "Gateway Timeout",
+                {
+                    "error": "transaction_timeout",
+                    "message": "raw CI-V transaction timed out",
+                },
+            )
+            return
+        except RuntimeError as exc:
+            message = str(exc)
+            if "already owned" in message:
+                await self._send_json(
+                    writer,
+                    409,
+                    "Conflict",
+                    {"error": "civ_owner_conflict", "message": message},
+                )
+                return
+            await self._send_json(
+                writer,
+                500,
+                "Internal Server Error",
+                {"error": "transaction_failed", "message": message},
+            )
+            return
+        except ValueError as exc:
+            await self._send_json(
+                writer,
+                400,
+                "Bad Request",
+                {"error": "invalid_request", "message": str(exc)},
+            )
+            return
+
+        status = getattr(result, "status", "response")
+        response: dict[str, Any] = {
+            "ok": status != "nak",
+            "status": status,
+            "result": self._serialize_civ_transaction_result(result),
+        }
+        if status == "nak":
+            response["error"] = "radio_nak"
+        if "id" in payload:
+            response["id"] = payload["id"]
+        await self._send_json(writer, 200, "OK", response)
 
     async def _handle_http_single_command(
         self,
