@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "tool": "rigplane-validation-matrix",
+  "mode": "hardware",
+  "core_version": "2.5.1",
+  "radio": {
+    "model": "IC-7300",
+    "profile_id": "ic7300"
+  },
+  "transport": {
+    "backend": "lan",
+    "host": "192.168.55.40",
+    "port": 50001
+  },
+  "safety": {
+    "tx_allowed": false,
+    "tuner_allowed": false
+  },
+  "levels": [
+    {
+      "level": 2,
+      "checks": [
+        {
+          "check_id": "freq.write",
+          "capability": "",
+          "level": 2,
+          "status": "pass",
+          "declaration": "supported",
+          "summary": "Frequency set accepted."
+        },
+        {
+          "check_id": "freq.reverse_sync",
+          "capability": "",
+          "level": 2,
+          "status": "fail",
+          "declaration": "supported",
+          "summary": "Radio-side frequency change not reflected in core state.",
+          "failure_domain": "readback",
+          "evidence": {
+            "write_ok": true,
+            "readback_ok": false
+          }
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "summary": {
+      "pass": 1,
+      "fail": 1,
+      "skip": 0,
+      "unsupported": 0,
+      "manual_required": 0,
+      "blocked": 0
+    }
+  }
+}

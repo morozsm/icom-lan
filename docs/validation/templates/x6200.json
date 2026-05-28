@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "radio": {
+    "model": "X6200",
+    "profile_id": "x6200"
+  },
+  "entries": [
+    {
+      "check_id": "discovery.identify",
+      "capability": "",
+      "level": 1,
+      "declaration": "supported",
+      "summary": "Radio identifies on the configured transport.",
+      "tx_adjacent": false
+    },
+    {
+      "check_id": "freq.write",
+      "capability": "",
+      "level": 2,
+      "declaration": "supported",
+      "summary": "Set frequency via CI-V write.",
+      "tx_adjacent": false
+    },
+    {
+      "check_id": "freq.reverse_sync",
+      "capability": "",
+      "level": 2,
+      "declaration": "supported",
+      "summary": "Radio-side frequency change is reflected back to core state.",
+      "tx_adjacent": false
+    },
+    {
+      "check_id": "audio.rx",
+      "capability": "audio",
+      "level": 4,
+      "declaration": "manual_required",
+      "summary": "Receive audio stream check (operator-verified).",
+      "tx_adjacent": false
+    },
+    {
+      "check_id": "scope.capture",
+      "capability": "scope",
+      "level": 4,
+      "declaration": "unsupported_pending_evidence",
+      "summary": "Spectrum scope not declared in the X6200 profile; pending evidence.",
+      "tx_adjacent": false
+    },
+    {
+      "check_id": "tuner.tune",
+      "capability": "tuner",
+      "level": 5,
+      "declaration": "manual_required",
+      "summary": "Antenna tuner tune cycle (requires operator authorization).",
+      "tx_adjacent": true
+    },
+    {
+      "check_id": "tx.ptt",
+      "capability": "tx",
+      "level": 5,
+      "declaration": "manual_required",
+      "summary": "PTT key/unkey (requires operator authorization).",
+      "tx_adjacent": true
+    }
+  ]
+}
