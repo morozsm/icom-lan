@@ -37,7 +37,11 @@ from rigplane.audio.route import (
     resolve_lan_audio_stream_request,
 )
 from rigplane.core._bounded_queue import BoundedQueue
-from rigplane.runtime._civ_rx import CivRuntime
+from rigplane.runtime._civ_rx import (
+    CivRuntime,
+    RawCivExpectation,
+    RawCivTransactionResult,
+)
 from rigplane.runtime._dual_rx_runtime import DualRxRuntimeMixin
 from rigplane.runtime._scope_runtime import ScopeRuntimeMixin
 
@@ -765,6 +769,7 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         # External CAT-session ownership (MOR-166 slice 2): when True, cooperating
         # pollers pause so they do not pollute an external master's byte stream.
         self._external_cat_session: bool = False
+        self._external_cat_session_owner: str | None = None
         self._civ_rx_task: asyncio.Task[None] | None = None
         self._civ_data_watchdog_task: asyncio.Task[None] | None = None
         self._audio_watchdog_task: asyncio.Task[None] | None = None
@@ -1327,13 +1332,75 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
 
         Cooperating pollers (e.g. the web ``RadioPoller``) pause their own CI-V
         traffic while this is set, so they do not pollute the owner's byte
-        stream. Idempotent.
+        stream. Idempotent when the external owner already holds the session.
         """
+        if self._external_cat_session:
+            current = self._external_cat_session_owner or "external"
+            if current == "external":
+                self._external_cat_session_owner = "external"
+                return
+            raise RuntimeError(f"CI-V stream is already owned by {current}")
         self._external_cat_session = True
+        self._external_cat_session_owner = "external"
 
     def end_external_cat_session(self) -> None:
         """Release external-CAT-session ownership. Idempotent."""
         self._external_cat_session = False
+        self._external_cat_session_owner = None
+
+    def _claim_external_cat_session(self, owner: str) -> None:
+        """Claim exclusive CI-V stream ownership for a scoped transaction."""
+        if self._external_cat_session:
+            current = self._external_cat_session_owner or "external"
+            raise RuntimeError(f"CI-V stream is already owned by {current}")
+        self._external_cat_session = True
+        self._external_cat_session_owner = owner
+
+    def _release_external_cat_session(self, owner: str) -> None:
+        """Release a transaction claim without disturbing another owner."""
+        if self._external_cat_session_owner not in (None, owner):
+            return
+        self._external_cat_session = False
+        self._external_cat_session_owner = None
+
+    async def send_civ_transaction(
+        self,
+        command: int,
+        sub: int | None = None,
+        data: bytes | None = None,
+        *,
+        expect: RawCivExpectation = "data",
+        timeout: float | None = None,
+    ) -> RawCivTransactionResult:
+        """Send one raw CI-V command with explicit response semantics.
+
+        This is intentionally separate from the web poller's fire-and-forget
+        queue. While the transaction is active, cooperating pollers pause via
+        ``external_cat_session_active`` so their background traffic cannot
+        consume or pollute the caller's response.
+        """
+        self._check_connected()
+        if not 0 <= command <= 0xFF:
+            raise ValueError(f"command must be 0-255, got {command}")
+        if sub is not None and not 0 <= sub <= 0xFF:
+            raise ValueError(f"sub must be 0-255, got {sub}")
+        if expect not in ("none", "ack", "data"):
+            raise ValueError(f"unsupported CI-V expectation: {expect!r}")
+
+        payload = data or b""
+        frame = build_civ_frame(
+            self._radio_addr, CONTROLLER_ADDR, command, sub=sub, data=payload
+        )
+        owner = "raw-civ-transaction"
+        self._claim_external_cat_session(owner)
+        try:
+            return await self._civ_runtime.execute_civ_transaction(
+                frame,
+                expect=expect,
+                timeout=timeout,
+            )
+        finally:
+            self._release_external_cat_session(owner)
 
     async def reconcile_state(self) -> None:
         """Re-read full radio state after an external session changed the rig.

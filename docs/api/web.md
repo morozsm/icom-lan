@@ -60,6 +60,7 @@ These routes are part of the Pro/supervisor compatibility surface:
 | `DELETE` | `/api/v1/bridge` | Stop audio bridge |
 | `POST` | `/api/v1/commands` | Enqueue one structured radio command |
 | `POST` | `/api/v1/commands/batch` | Apply a stateless ordered command batch |
+| `POST` | `/api/v1/civ/transaction` | Send one scoped raw CI-V transaction with explicit response handling |
 
 ### Other Web UI Endpoints
 
@@ -84,6 +85,7 @@ These routes are part of the Pro/supervisor compatibility surface:
 | `POST` | `/api/v1/radio/power` | Power on/off via CI-V power control |
 | `POST` | `/api/v1/commands` | Enqueue one structured radio command |
 | `POST` | `/api/v1/commands/batch` | Apply a stateless ordered command batch |
+| `POST` | `/api/v1/civ/transaction` | Send one scoped raw CI-V transaction |
 | `POST` | `/api/v1/band-plan/config` | Change active region and reload band plans |
 | `POST` | `/api/v1/eibi/fetch` | Fetch/refresh EiBi dataset |
 
@@ -242,8 +244,91 @@ structured RigPlane commands. `command` and `sub` are byte values from `0` to
 `255`; `sub` may be omitted. `data` is an even-length hexadecimal string. The
 HTTP command is fire-and-forget: RigPlane enqueues the CI-V write through the
 same single-owner command queue, but does not return CI-V response bytes or
-claim readback verification. `wait_response` is reserved for a future
-transaction-capable API and is rejected when `true`.
+claim readback verification. `wait_response` is rejected when `true`; use
+`POST /api/v1/civ/transaction` when the caller needs an ACK, NAK, or data
+response.
+
+## `POST /api/v1/civ/transaction`
+
+Scoped raw CI-V transaction endpoint for local automation that needs a
+deterministic radio response. This endpoint bypasses the normal
+`RadioPoller` command queue, claims the CI-V stream while the transaction is
+active, and releases that claim on success, NAK, timeout, error, or
+cancellation. It uses the existing runtime CI-V receive pump and request
+tracker; it does not create a second raw listener path.
+
+Request:
+
+```json
+{
+  "id": "display-type-b",
+  "command": 26,
+  "sub": 5,
+  "data": "015301",
+  "expect": "ack",
+  "timeout_ms": 1000
+}
+```
+
+`command` and `sub` are byte values from `0` to `255`; `sub` may be omitted.
+`data` is an even-length compact hexadecimal string. `expect` is required by
+behavior, defaults to `"data"` for compatibility, and must be one of:
+
+| Value | Behavior |
+|-------|----------|
+| `"none"` | Send the raw CI-V frame and return `status: "sent"` without waiting |
+| `"ack"` | Wait for the next CI-V ACK or NAK and return `status: "ack"` or `"nak"` |
+| `"data"` | Wait for the matching data response for the request command/sub |
+
+`timeout_ms` is optional and must be positive when present. All waits are
+bounded by the timeout.
+
+ACK response:
+
+```json
+{
+  "id": "display-type-b",
+  "ok": true,
+  "status": "ack",
+  "result": {
+    "frame": "FEFEE0A2FBFD",
+    "command": 251,
+    "sub": null,
+    "data": ""
+  }
+}
+```
+
+NAK response uses HTTP `200` with deterministic failure JSON:
+
+```json
+{
+  "ok": false,
+  "status": "nak",
+  "error": "radio_nak",
+  "result": {
+    "frame": "FEFEE0A2FAFD",
+    "command": 250,
+    "sub": null,
+    "data": ""
+  }
+}
+```
+
+Errors:
+
+| HTTP | Error | Meaning |
+|------|-------|---------|
+| `400` | `invalid_request` | Malformed command/sub/data/expect/timeout |
+| `403` | `read_only` | Server is running in read-only mode |
+| `409` | `unsupported_command` | Active backend does not expose raw CI-V transactions |
+| `409` | `civ_owner_conflict` | Another external CAT/transaction owner already owns the CI-V stream |
+| `503` | `no_radio` | No radio backend is configured |
+| `504` | `transaction_timeout` | Expected ACK/data response did not arrive before timeout |
+
+Use this endpoint only for model-specific commands where callers need the
+wire-level result. Keep normal profile/control automation on
+`/api/v1/commands` or `/api/v1/commands/batch`.
 
 ## `POST /api/v1/commands/batch`
 

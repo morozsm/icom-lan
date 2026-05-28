@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, cast
+from typing import Literal
 
 from rigplane.core.civ import (
     CivEvent,
@@ -16,6 +18,7 @@ from rigplane.core.civ import (
 from rigplane.commands.commander import IcomCommander, Priority
 from rigplane.commands import (
     CONTROLLER_ADDR,
+    build_civ_frame,
     parse_bool_response,
     parse_civ_frame,
     parse_frequency_response,
@@ -49,7 +52,25 @@ CIV_HEADER_SIZE = 0x15
 _SCOPE_BACKLOG_SHED_THRESHOLD = 256
 _SCOPE_BACKLOG_KEEP_LATEST = 64
 
-__all__ = ["CivRuntime", "CIV_HEADER_SIZE"]
+__all__ = [
+    "CivRuntime",
+    "CIV_HEADER_SIZE",
+    "RawCivExpectation",
+    "RawCivTransactionResult",
+    "RawCivTransactionStatus",
+]
+
+RawCivExpectation = Literal["none", "ack", "data"]
+RawCivTransactionStatus = Literal["sent", "ack", "nak", "response"]
+
+
+@dataclass(frozen=True, slots=True)
+class RawCivTransactionResult:
+    """Deterministic result for one response-capable raw CI-V transaction."""
+
+    status: RawCivTransactionStatus
+    frame: CivFrame | None = None
+    frame_bytes: bytes | None = None
 
 _CMD14_RECEIVER_LEVEL_FIELDS = {
     0x01: "af_level",
@@ -230,6 +251,110 @@ class CivRuntime:
             deadline_monotonic=deadline_monotonic,
         )
 
+    async def execute_civ_transaction(
+        self,
+        civ_frame: bytes,
+        *,
+        expect: RawCivExpectation,
+        timeout: float | None = None,
+    ) -> RawCivTransactionResult:
+        """Execute one explicitly-scoped raw CI-V transaction.
+
+        Unlike the poller/commander path, this does not infer whether a command
+        should ACK or return data. The caller must choose ``none``, ``ack``, or
+        ``data`` so vendor-specific commands remain deterministic.
+        """
+        assert self._host._civ_transport is not None
+        self._ensure_civ_runtime()
+
+        if expect not in ("none", "ack", "data"):
+            raise ValueError(f"unsupported CI-V expectation: {expect!r}")
+        if timeout is not None and timeout <= 0:
+            raise ValueError("timeout must be positive")
+
+        parsed_frame = parse_civ_frame(civ_frame)
+        request_key = request_key_from_frame(parsed_frame)
+        deadline_monotonic = time.monotonic() + (
+            timeout if timeout is not None else self._host._civ_get_timeout
+        )
+
+        self._cleanup_stale_civ_waiters()
+
+        if expect == "none":
+            self.start_pump()
+            await self._send_civ_frame_now(civ_frame)
+            return RawCivTransactionResult(status="sent")
+
+        await self._drain_ack_sinks_before_blocking()
+        dropped_backlog = self._host._civ_request_tracker.drop_ack_backlog()
+        if dropped_backlog:
+            logger.debug(
+                "Dropped %d orphan ACK/NAK backlog frame(s) before raw transaction",
+                dropped_backlog,
+            )
+        remaining_total = deadline_monotonic - time.monotonic()
+        if remaining_total <= 0:
+            raise asyncio.TimeoutError("CI-V response timed out")
+
+        pending_waiters: list[asyncio.Future[CivFrame]] = []
+        try:
+            if expect == "ack":
+                pending_or_token = self._host._civ_request_tracker.register_ack(
+                    wait=True,
+                    consume_backlog=False,
+                )
+                if isinstance(pending_or_token, int):
+                    raise RuntimeError("ACK waiter registration returned sink token")
+                pending_waiters.append(pending_or_token)
+            else:
+                pending_waiters.append(
+                    self._host._civ_request_tracker.register_response(request_key)
+                )
+                nak_pending_or_token = self._host._civ_request_tracker.register_ack(
+                    wait=True,
+                    consume_backlog=False,
+                    nak_only=True,
+                )
+                if isinstance(nak_pending_or_token, int):
+                    raise RuntimeError("ACK waiter registration returned sink token")
+                pending_waiters.append(nak_pending_or_token)
+
+            self.start_pump()
+            await self._send_civ_frame_now(civ_frame)
+            remaining = deadline_monotonic - time.monotonic()
+            if remaining <= 0:
+                raise asyncio.TimeoutError("CI-V response timed out")
+            done, _ = await asyncio.wait(
+                pending_waiters,
+                timeout=remaining,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if not done:
+                raise asyncio.TimeoutError("CI-V response timed out")
+            frame = next(iter(done)).result()
+        except asyncio.TimeoutError:
+            self._host._civ_request_tracker.note_timeout()
+            logger.debug(
+                "CI-V transaction 0x%02X timed out",
+                request_key.command,
+            )
+            raise asyncio.TimeoutError("CI-V response timed out") from None
+        finally:
+            for pending in pending_waiters:
+                self._host._civ_request_tracker.unregister(pending)
+
+        if frame.command == 0xFA:
+            status: RawCivTransactionStatus = "nak"
+        elif frame.command == 0xFB:
+            status = "ack"
+        else:
+            status = "response"
+        return RawCivTransactionResult(
+            status=status,
+            frame=frame,
+            frame_bytes=self._civ_frame_to_bytes(frame),
+        )
+
     async def send_civ_raw(
         self,
         civ_frame: bytes,
@@ -248,6 +373,32 @@ class CivRuntime:
             dedupe=dedupe,
             wait_response=wait_response,
             timeout=timeout,
+        )
+
+    async def _send_civ_frame_now(self, civ_frame: bytes) -> None:
+        """Send one CI-V frame directly through the runtime transport."""
+        assert self._host._civ_transport is not None
+        now = time.monotonic()
+        delta = now - self._host._last_civ_send_monotonic
+        if delta < self._host._civ_min_interval:
+            await asyncio.sleep(self._host._civ_min_interval - delta)
+
+        pkt = self._wrap_civ(civ_frame)
+        await self._host._civ_transport.send_tracked(pkt)
+        self._host._last_civ_send_monotonic = time.monotonic()
+
+    @staticmethod
+    def _civ_frame_to_bytes(frame: CivFrame) -> bytes:
+        """Rebuild canonical CI-V bytes from a parsed frame."""
+        return cast(
+            bytes,
+            build_civ_frame(
+                frame.to_addr,
+                frame.from_addr,
+                frame.command,
+                sub=frame.sub,
+                data=frame.data,
+            ),
         )
 
     def start_worker(self) -> None:

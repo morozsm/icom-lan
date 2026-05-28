@@ -226,6 +226,30 @@ bytes or readback verification. Use it for model-specific gaps such as
 display/menu settings; prefer structured commands for normal profile steps
 where RigPlane already has a command.
 
+When a raw CI-V operation needs a radio response, use
+`POST /api/v1/civ/transaction` instead of `send_civ`. The transaction endpoint
+temporarily claims the CI-V stream, sends one frame, and waits according to an
+explicit expectation:
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/civ/transaction \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "id": "display-type-b",
+    "command": 26,
+    "sub": 5,
+    "data": "015301",
+    "expect": "ack",
+    "timeout_ms": 1000
+  }'
+```
+
+`expect` must be `none`, `ack`, or `data`. `none` sends without waiting and
+returns `status: "sent"`; `ack` waits for ACK/NAK; `data` waits for the
+matching data response. NAK returns HTTP `200` with `ok: false`,
+`status: "nak"`, and `error: "radio_nak"`. Timeouts return HTTP `504`.
+Transactions are not batch steps; keep batches fire-and-forget or structured.
+
 DATA mode commands use the active radio profile's numeric DATA value. For the
 current IC-9700 profile, `set_data_mode` uses `mode: 0` for OFF and `mode: 1`
 for DATA. Its modulation input source values are `0 = MIC`, `1 = ACC`,
