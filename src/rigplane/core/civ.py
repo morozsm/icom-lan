@@ -311,9 +311,7 @@ class CivRequestTracker:
             self._ack_backlog.popleft()
             self._ack_backlog_drops += 1
 
-    def _pop_matching_ack_backlog(
-        self, *, nak_only: bool
-    ) -> _AckBacklogEntry | None:
+    def _pop_matching_ack_backlog(self, *, nak_only: bool) -> _AckBacklogEntry | None:
         """Pop the oldest backlog entry matching an ACK waiter filter."""
         if not self._ack_backlog:
             return None

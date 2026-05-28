@@ -72,6 +72,7 @@ class RawCivTransactionResult:
     frame: CivFrame | None = None
     frame_bytes: bytes | None = None
 
+
 _CMD14_RECEIVER_LEVEL_FIELDS = {
     0x01: "af_level",
     0x02: "rf_gain",
