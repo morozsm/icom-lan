@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "tool": "rigplane-validation-matrix",
+  "mode": "hardware",
+  "core_version": "2.5.1",
+  "radio": {
+    "model": "IC-7300",
+    "profile_id": "ic7300"
+  },
+  "transport": {
+    "backend": "lan",
+    "host": "192.168.55.40",
+    "port": 50001
+  },
+  "safety": {
+    "tx_allowed": false,
+    "tuner_allowed": false
+  },
+  "levels": [
+    {
+      "level": 1,
+      "checks": [
+        {
+          "check_id": "discovery.identify",
+          "capability": "",
+          "level": 1,
+          "status": "pass",
+          "declaration": "supported",
+          "summary": "Radio identified."
+        }
+      ]
+    },
+    {
+      "level": 2,
+      "checks": [
+        {
+          "check_id": "freq.write",
+          "capability": "",
+          "level": 2,
+          "status": "pass",
+          "declaration": "supported",
+          "summary": "Frequency set accepted."
+        }
+      ]
+    },
+    {
+      "level": 4,
+      "checks": [
+        {
+          "check_id": "audio.rx",
+          "capability": "audio",
+          "level": 4,
+          "status": "fail",
+          "declaration": "supported",
+          "summary": "No RX audio packets observed.",
+          "failure_domain": "audio",
+          "evidence": {
+            "packets": 0
+          },
+          "error": "rx-stream-timeout"
+        },
+        {
+          "check_id": "scope.capture",
+          "capability": "scope",
+          "level": 4,
+          "status": "unsupported",
+          "declaration": "unsupported_pending_evidence",
+          "summary": "Scope capture not attempted."
+        }
+      ]
+    },
+    {
+      "level": 5,
+      "checks": [
+        {
+          "check_id": "tx.ptt",
+          "capability": "tx",
+          "level": 5,
+          "status": "blocked",
+          "declaration": "manual_required",
+          "summary": "TX not authorized by operator.",
+          "failure_domain": "command_execution"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "summary": {
+      "pass": 2,
+      "fail": 1,
+      "skip": 0,
+      "unsupported": 1,
+      "manual_required": 0,
+      "blocked": 1
+    }
+  }
+}
