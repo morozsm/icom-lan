@@ -145,9 +145,10 @@ If backend recovery is already in progress, `radio_connect` returns:
 
 These are representative command names, not the complete catalog. The HTTP and
 WebSocket command surfaces share the same command names and `params` objects.
-Lower-level Python/CI-V examples are documented in
-[CI-V Commands](commands.md). A full HTTP/WS command catalog is tracked in
-[rigplane-core#1604](https://github.com/rigplane/rigplane-core/issues/1604).
+The full command catalog — every name, parameter shape, capability gate, and
+batch-eligibility flag — is published in
+[HTTP / WebSocket Command Catalog](../api/command-catalog.md).
+Lower-level Python/CI-V examples are documented in [CI-V Commands](commands.md).
 
 ## HTTP Structured Commands
 
@@ -177,11 +178,14 @@ curl -X POST http://127.0.0.1:8080/api/v1/commands/batch \
   }'
 ```
 
-Batch steps are executed in exact request order through the radio command queue.
-Repeated commands in one batch are preserved. The response includes one result
-per executed, timed-out, failed, or skipped step. `continue_on_error`, when
-provided, must be a JSON boolean. Core does not persist named profiles or stored
-batches; callers send the full sequence each time.
+Batch steps are executed in exact request order. Structured command steps go
+through the radio command queue; raw CI-V transaction steps use
+`send_civ_transaction()` and wait for the requested ACK, NAK, data response, or
+timeout before the next step starts. Repeated commands in one batch are
+preserved. The response includes one result per executed, timed-out, failed, or
+skipped step. `continue_on_error`, when provided, must be a JSON boolean. Core
+does not persist named profiles or stored batches; callers send the full
+sequence each time.
 
 The batch path is designed for local profile switching from tools such as
 Stream Deck, MQTT gateways, shell scripts, and station supervisors:
@@ -248,7 +252,8 @@ curl -X POST http://127.0.0.1:8080/api/v1/civ/transaction \
 returns `status: "sent"`; `ack` waits for ACK/NAK; `data` waits for the
 matching data response. NAK returns HTTP `200` with `ok: false`,
 `status: "nak"`, and `error: "radio_nak"`. Timeouts return HTTP `504`.
-Transactions are not batch steps; keep batches fire-and-forget or structured.
+Inside `POST /api/v1/commands/batch`, use a `raw_civ_transaction` step when a
+batch needs the same wire-level ACK, NAK, or data response before continuing.
 
 The same transaction can be sent from a small Python tool:
 

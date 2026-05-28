@@ -112,12 +112,10 @@ over WebSocket, single-command HTTP, and batch HTTP.
 
 The current public docs include common command examples in
 [Web UI: Common commands](../guide/web-ui.md#common-commands), and lower-level
-Python/CI-V command examples in [CI-V Commands](../guide/commands.md). A full
-machine-readable HTTP/WS command catalog with every command name, parameter
-shape, capability gate, and batch-eligibility flag is tracked in
-[rigplane-core#1604](https://github.com/rigplane/rigplane-core/issues/1604).
-Until that catalog is published, the implementation source of truth is
-`ControlHandler` in `src/rigplane/web/handlers/control.py`.
+Python/CI-V command examples in [CI-V Commands](../guide/commands.md). The full
+machine-readable HTTP/WS command catalog — every command name, parameter shape,
+capability gate, and batch-eligibility flag — is published in
+[HTTP / WebSocket Command Catalog](command-catalog.md).
 
 ### Internal And Diagnostic Surface
 
@@ -574,9 +572,10 @@ must be a JSON boolean at the batch root. A transaction step-level
 `continue_on_error` field is invalid. Raw CI-V transaction failures that obey
 the continuation rule include `nak`, `timed_out`, `owner_conflict`,
 `unsupported`, `read_only`, `no_radio`, `failed_validation`, and
-`failed_execution`. Queue-bypassing commands such as `get_*`, `send_cw_text`,
-and direct helper operations are rejected in batches with
-`unsupported_in_batch`; use `POST /api/v1/commands` for those one-off calls.
+`failed_execution`. Commands marked `Batch: No` in the command catalog, such
+as `send_cw_text`, read-only getter commands, and direct helper operations, are
+rejected in batches with `unsupported_in_batch`; use
+`POST /api/v1/commands` for those one-off calls.
 
 Timeout with `continue_on_error: true`:
 

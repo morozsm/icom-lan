@@ -2464,7 +2464,7 @@ class WebServer:
                 {"error": "read_only", "message": str(exc)},
             )
             return
-        except ValueError as exc:
+        except (ValueError, KeyError, TypeError) as exc:
             await self._send_json(
                 writer,
                 400,
@@ -2898,7 +2898,7 @@ class WebServer:
                     }
                 )
                 step = None
-            except (ValueError, RuntimeError) as exc:
+            except (ValueError, RuntimeError, KeyError, TypeError) as exc:
                 message = str(exc)
                 error = (
                     "unsupported_command"
