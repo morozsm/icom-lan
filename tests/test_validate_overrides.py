@@ -215,3 +215,45 @@ def test_radio_validate_path_applies_overrides(
     assert "filter_width.set" in overrides["applied"]
     checks = {c["check_id"]: c for level in artifact["levels"] for c in level["checks"]}
     assert checks["filter_width.set"]["summary"] == "VIA RADIO-VALIDATE"
+
+
+def test_radio_validate_no_overrides_flag_parses_and_skips_merge(
+    tmp_path: Any, monkeypatch: Any, capsys: Any
+) -> None:
+    """``radio-validate <model> --no-overrides`` parses and skips the merge.
+
+    Regression for the review gap: the ``--no-overrides`` escape hatch existed
+    only on the ``validate`` parser, so ``radio-validate`` rejected it at argparse
+    time (SystemExit 2). This asserts the flag parses through the real
+    ``_build_parser()`` AND that the override merge is skipped — while the same
+    override file IS applied when the flag is absent.
+    """
+    _write_override(
+        tmp_path / f"{PROFILE_ID}.json",
+        entries=[{"check_id": "rf_gain.set", "declaration": "excluded"}],
+    )
+    monkeypatch.setattr(_validate, "_overrides_dir", lambda: tmp_path)
+
+    # Without the flag: the override file IS applied (rf_gain.set excluded).
+    args_on = _parse(["radio-validate", MODEL, "--json"])
+    rc_on = _radio_validate.run(args_on)
+    assert rc_on == 0
+    artifact_on = json.loads(capsys.readouterr().out)
+    assert artifact_on["metadata"].get("overrides") is not None
+    checks_on = {
+        c["check_id"] for level in artifact_on["levels"] for c in level["checks"]
+    }
+    assert "rf_gain.set" not in checks_on
+
+    # With the flag: it PARSES (no SystemExit) and the merge is skipped.
+    args_off = _parse(["radio-validate", MODEL, "--json", "--no-overrides"])
+    assert args_off.no_overrides is True
+    rc_off = _radio_validate.run(args_off)
+    assert rc_off == 0
+    artifact_off = json.loads(capsys.readouterr().out)
+    assert artifact_off["metadata"].get("overrides") is None
+    checks_off = {
+        c["check_id"] for level in artifact_off["levels"] for c in level["checks"]
+    }
+    # Not excluded — the override was skipped.
+    assert "rf_gain.set" in checks_off

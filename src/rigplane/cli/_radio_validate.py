@@ -115,6 +115,16 @@ def add_subparser(sub: Any) -> argparse.ArgumentParser:
         ),
     )
     p.add_argument(
+        "--no-overrides",
+        dest="no_overrides",
+        action="store_true",
+        help=(
+            "Skip auto-applying the per-profile override file "
+            "(docs/validation/templates/<profile_id>.json). Escape hatch for "
+            "deterministic CI runs. No effect when --template is given."
+        ),
+    )
+    p.add_argument(
         "--operator-id",
         dest="operator_id",
         default=None,
