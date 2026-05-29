@@ -67,6 +67,77 @@ from rigplane.validation.schema import (
 )
 
 
+def _overrides_dir() -> Path:
+    """Return the path to the per-profile override directory (ADR §4.1).
+
+    Override files live at ``docs/validation/templates/<profile_id>.json``.
+    Mirrors the dev/installed resolution used by ``cli.__init__._rigs_dir``:
+    prefer a copy shipped next to the package, else resolve relative to the
+    repo root in a development checkout.
+    """
+    # Installed layout: rigplane/docs/validation/templates/ next to the package.
+    # (this file is rigplane/cli/_validate.py → up two levels to rigplane/)
+    pkg_dir = (
+        Path(__file__).resolve().parent.parent / "docs" / "validation" / "templates"
+    )
+    if pkg_dir.is_dir():
+        return pkg_dir
+    # Development layout: repo_root/docs/validation/templates/
+    # (parents[3] from src/rigplane/cli/_validate.py = repo root)
+    return Path(__file__).resolve().parents[3] / "docs" / "validation" / "templates"
+
+
+def _apply_overrides(
+    template: MatrixTemplate, profile_id: str
+) -> tuple[MatrixTemplate, dict[str, Any] | None]:
+    """Auto-apply a per-profile override FILE onto a generated *template*.
+
+    Returns ``(possibly-merged template, audit dict or None)``. The audit dict,
+    when present, mirrors the :class:`~rigplane.validation.MergeReport`:
+    ``{"applied": [...], "appended": [...], "excluded": [...], "rejected": [...]}``.
+
+    Resolution and policy (ADR §4.1):
+
+    * No ``<profile_id>.json`` in the override dir → ``(template, None)``: a rig
+      with no override file still gets the full generated matrix.
+    * The file lacks a top-level ``"override": true`` → ``(template, None)``: it
+      is a FULL legacy template, not a sparse patch, and is not auto-applied.
+    * Otherwise the file is parsed and merged via the pure override layer.
+
+    Never raises: a malformed or unreadable override file degrades to a stderr
+    warning and ``(template, None)`` so a broken override can never block
+    validation. The pure :func:`merge_overrides` enforces the tx/tuner safety
+    invariant, so unsafe relaxations are refused and recorded in ``rejected``.
+    """
+    path = _overrides_dir() / f"{profile_id}.json"
+    if not path.is_file():
+        return template, None
+
+    try:
+        from rigplane.validation import merge_overrides, parse_override_dict
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict) or data.get("override") is not True:
+            # Full template, not a sparse patch — do not auto-apply.
+            return template, None
+        patch = parse_override_dict(data)
+        merged, report = merge_overrides(template, patch)
+    except (OSError, ValueError, SchemaValidationError) as exc:
+        print(
+            f"Warning: ignoring override file {path}: {exc}",
+            file=sys.stderr,
+        )
+        return template, None
+
+    audit = {
+        "applied": list(report.applied),
+        "appended": list(report.appended),
+        "excluded": list(report.excluded),
+        "rejected": list(report.rejected),
+    }
+    return merged, audit
+
+
 def _hamlib_caps_to_tokens(caps: HamlibCaps) -> frozenset[str]:
     """Flatten a HamlibCaps into the set of registry hamlib_token strings the
     model supports, for Generator B."""
@@ -172,6 +243,16 @@ def add_subparser(sub: Any) -> argparse.ArgumentParser:
         ),
     )
     p.add_argument(
+        "--no-overrides",
+        dest="no_overrides",
+        action="store_true",
+        help=(
+            "Skip auto-applying the per-profile override file "
+            "(docs/validation/templates/<profile_id>.json). Escape hatch for "
+            "deterministic CI runs. No effect when --template is given."
+        ),
+    )
+    p.add_argument(
         "--operator-id",
         dest="operator_id",
         default=None,
@@ -254,6 +335,13 @@ def run(args: argparse.Namespace) -> int:
             # "both": will build per-provider templates below; use native for
             # dry-run / safety-block path.
             template = _generate_template(args, profile, "native")
+        # Auto-apply the per-profile override file (single chokepoint). The
+        # "both" path re-merges per provider inside _run_hardware_both; for the
+        # single-provider + dry-run paths this is the merge that executes.
+        overrides_audit: dict[str, Any] | None = None
+        if not getattr(args, "no_overrides", False):
+            template, overrides_audit = _apply_overrides(template, profile.id)
+        args._overrides_audit = overrides_audit
 
     authorized = bool(args.tx_allowed or args.tuner_allowed)
     safety = OperatorSafetyBlock(
@@ -280,6 +368,7 @@ def run(args: argparse.Namespace) -> int:
             rc, artifact = asyncio.run(_run_hardware_hamlib(args, template, safety))
         else:
             rc, artifact = asyncio.run(_run_hardware(args, template, safety))
+        artifact = _stamp_overrides(artifact, getattr(args, "_overrides_audit", None))
         if getattr(args, "compare", None):
             artifact = _attach_comparison(artifact, args.compare)
         _emit_artifact(artifact, args)
@@ -301,6 +390,7 @@ def run(args: argparse.Namespace) -> int:
         metadata={**artifact.metadata, "provider": "native"},
         generated_at=_utcnow_iso(),
     )
+    artifact = _stamp_overrides(artifact, getattr(args, "_overrides_audit", None))
     if getattr(args, "compare", None):
         artifact = _attach_comparison(artifact, args.compare)
     _emit_artifact(artifact, args)
@@ -321,6 +411,13 @@ async def _run_hardware_both(
 
     tmpl_native = _generate_template(args, profile, "native")
     tmpl_hamlib = _generate_template(args, profile, "hamlib")
+
+    # Auto-apply the per-profile override file to BOTH provider templates so
+    # the merged matrices execute and the (native) audit reaches the artifact.
+    overrides_audit: dict[str, Any] | None = None
+    if not getattr(args, "no_overrides", False):
+        tmpl_native, overrides_audit = _apply_overrides(tmpl_native, profile.id)
+        tmpl_hamlib, _ = _apply_overrides(tmpl_hamlib, profile.id)
 
     # Sequential: native first, then hamlib (serial port must release between).
     rc_n, art_n = await _run_hardware(args, tmpl_native, safety)
@@ -347,16 +444,27 @@ async def _run_hardware_both(
         "rows": rows,
         "dimensions": dims,
     }
-    art_n = dataclasses.replace(
-        art_n,
-        metadata={
-            **art_n.metadata,
-            "generated_from": "profile",
-            "comparison": comparison,
-        },
-    )
+    metadata: dict[str, Any] = {
+        **art_n.metadata,
+        "generated_from": "profile",
+        "comparison": comparison,
+    }
+    if overrides_audit is not None:
+        metadata["overrides"] = overrides_audit
+    art_n = dataclasses.replace(art_n, metadata=metadata)
     _emit_artifact(art_n, args)
     return rc_n if rc_n else rc_h
+
+
+def _stamp_overrides(
+    artifact: ValidationArtifact, audit: dict[str, Any] | None
+) -> ValidationArtifact:
+    """Fold the override audit into ``metadata["overrides"]`` when non-None."""
+    if audit is None:
+        return artifact
+    return dataclasses.replace(
+        artifact, metadata={**artifact.metadata, "overrides": audit}
+    )
 
 
 def _emit_artifact(artifact: ValidationArtifact, args: argparse.Namespace) -> None:
