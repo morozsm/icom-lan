@@ -35,13 +35,34 @@ setups resolve even without topology.
 Platform support:
 - **macOS**: Full topology-based resolution via ``/usr/sbin/ioreg`` for both
   FTDI/CP210x and CDC-ACM (``usbmodem``) serial ports.
-- **Linux**: Topology resolution not yet implemented (``/sys`` sysfs traversal
-  is future work); relies on name-based / robust-identity fallback and the
-  optional ``[usb] rx_device``/``tx_device`` override escape hatch.
+- **Linux**: Full topology-based resolution via ``/sys`` sysfs traversal for
+  both CDC-ACM (``ttyACM*``, e.g. the X6200's WCH CH342) and FTDI/CP210x
+  (``ttyUSB*``) serial ports. The serial port and each ALSA card are resolved
+  to their USB device node; the audio card sharing the **longest common
+  USB-device path prefix** (same physical device or hub) with the serial port
+  is the link, with ``idVendor``/``idProduct`` as a robust-identity tie-break
+  (MOR-228).
 - **Windows**: Topology resolution not implemented; same fallback path.
 
-For Linux/Windows multi-radio disambiguation, capture the exact audio device
+For Windows multi-radio disambiguation, capture the exact audio device
 names on hardware and set the ``[usb]`` override in ``audio.toml`` (MOR-219).
+
+**Algorithm (Linux — sysfs)**:
+
+1. Serial port → USB device path: read ``<sysfs_root>/class/tty/<ttyXXX>/device``
+   and ``realpath`` it into the USB tree (``.../usbN/N-x[.y]/...``). The USB
+   *device* node is the deepest ancestor whose basename has no ``:`` (an
+   interface node is ``N-x:c.i``; its parent device node is ``N-x``).
+2. Each ALSA card → USB device path: enumerate
+   ``<sysfs_root>/class/sound/card*/device`` and ``realpath`` likewise.
+3. Link = the audio card whose USB device path shares the **longest common
+   USB-device path prefix** with the serial port (same physical device/hub).
+4. Map to ``sounddevice`` indices by **identity**: the ALSA card name (the USB
+   ``product`` string) is the CoreAudio/PortAudio device-name key, matched
+   against the :func:`_cluster_usb_audio_devices` clusters with same-name rank
+   (shared with the macOS path, MOR-230).
+5. Robust-identity fallback: ``idVendor``/``idProduct`` read from the USB node
+   disambiguate when the topology prefix match is ambiguous.
 """
 
 from __future__ import annotations
@@ -96,7 +117,8 @@ def resolve_audio_for_serial_port(
     """
     if platform.system() == "Darwin":
         return _resolve_macos(serial_port, sounddevice_module=sounddevice_module)
-    # Future: Linux sysfs resolution
+    elif platform.system() == "Linux":
+        return _resolve_linux(serial_port, sounddevice_module=sounddevice_module)
     logger.info(
         "usb-audio-resolve: platform %s — topology resolution not supported, "
         "falling back to name-based selection",
@@ -201,6 +223,339 @@ def _resolve_macos(
         serial_port=serial_port,
         location_prefix=serial_prefix,
     )
+
+
+# ---------------------------------------------------------------------------
+# Linux — sysfs topology resolution (MOR-228)
+# ---------------------------------------------------------------------------
+
+
+def _resolve_linux(
+    serial_port: str,
+    *,
+    sounddevice_module: object | None = None,
+    sysfs_root: str = "/sys",
+) -> AudioDeviceMapping | None:
+    """Linux-specific resolution via the ``/sys`` (sysfs) USB topology.
+
+    Args:
+        serial_port: Serial port path (``/dev/ttyACM0``, ``/dev/ttyUSB0``).
+        sounddevice_module: Injected ``sounddevice`` module (for testing).
+        sysfs_root: Root of the sysfs tree. Injectable so tests can point at a
+            fixture directory; defaults to the real ``/sys``.
+
+    Algorithm: resolve the serial port and every ALSA card to their USB device
+    node under sysfs, pick the audio card sharing the longest common
+    USB-device path prefix with the serial port, then map that card's name to
+    ``sounddevice`` indices by identity (name + same-name rank).
+    """
+    # 1. Serial port → USB device node.
+    tty_name = _extract_linux_tty_name(serial_port)
+    if tty_name is None:
+        logger.warning(
+            "usb-audio-resolve: cannot extract Linux tty name from %r", serial_port
+        )
+        return None
+
+    serial_dev = _sysfs_usb_device_for_tty(sysfs_root, tty_name)
+    if serial_dev is None:
+        logger.warning(
+            "usb-audio-resolve: no USB device node for tty %r under %s",
+            tty_name,
+            sysfs_root,
+        )
+        return None
+
+    # 2. Each ALSA card → USB device node.
+    cards = _sysfs_usb_audio_cards(sysfs_root)
+    if not cards:
+        logger.warning(
+            "usb-audio-resolve: no USB-backed ALSA cards found under %s", sysfs_root
+        )
+        return None
+
+    # 3. Link = audio card with the longest common USB-device path prefix.
+    best: tuple[str, str] | None = None  # (card_dev, card_name)
+    best_score = -1
+    serial_ids = _read_usb_ids(serial_dev)
+    for card_dev, card_name in cards:
+        score = _common_usb_path_score(serial_dev, card_dev)
+        # Robust-identity tie-break: a card on the SAME physical device as the
+        # serial port (shared idVendor:idProduct) wins ties. This disambiguates
+        # composite radios where audio + CAT live on one USB device.
+        if serial_ids is not None and _read_usb_ids(card_dev) == serial_ids:
+            score += 1
+        if score > best_score:
+            best_score = score
+            best = (card_dev, card_name)
+
+    if best is None or best_score <= 0:
+        logger.warning(
+            "usb-audio-resolve: no ALSA card shares a USB path with %s (serial %s)",
+            serial_port,
+            serial_dev,
+        )
+        return None
+
+    matched_card_dev, matched_card_name = best
+
+    # 4. Map the matched card to sounddevice indices by identity.
+    sd: Any = sounddevice_module
+    if sd is None:
+        try:
+            import sounddevice as sd_mod
+
+            sd = sd_mod
+        except ImportError:
+            logger.warning(
+                "usb-audio-resolve: sounddevice not available, cannot map indices"
+            )
+            return None
+
+    devices = list(sd.query_devices())
+
+    # Rank the matched card among USB-backed cards carrying the same name, in
+    # sysfs card order — mirrors the macOS same-name rank semantics so
+    # _cluster_usb_audio_devices can be shared unchanged (MOR-230).
+    same_name_rank = sum(
+        1
+        for c_dev, c_name in cards
+        if c_name == matched_card_name and c_dev < matched_card_dev
+    )
+    pair = _pair_audio_cluster_by_name(devices, matched_card_name, same_name_rank)
+    if pair is None:
+        logger.warning(
+            "usb-audio-resolve: could not pair sounddevice cluster for ALSA card "
+            "%r rank %d (cards=%s)",
+            matched_card_name,
+            same_name_rank,
+            [(n, d) for d, n in cards],
+        )
+        return None
+
+    rx_idx, tx_idx = pair
+
+    vid_pid = _read_usb_ids(matched_card_dev)
+    location_prefix = _usb_path_location_prefix(matched_card_dev)
+    logger.info(
+        "usb-audio-resolve: %s → ALSA card %r (%s) → RX device [%d], TX device [%d]",
+        serial_port,
+        matched_card_name,
+        f"{vid_pid[0]}:{vid_pid[1]}" if vid_pid else "vid:pid unknown",
+        rx_idx,
+        tx_idx,
+    )
+
+    return AudioDeviceMapping(
+        rx_device_index=rx_idx,
+        tx_device_index=tx_idx,
+        serial_port=serial_port,
+        location_prefix=location_prefix,
+    )
+
+
+def _extract_linux_tty_name(serial_port: str) -> str | None:
+    """Extract the Linux tty kernel name from a serial port path.
+
+    Recognises both CDC-ACM (``ttyACM*``) and USB-serial (``ttyUSB*``) device
+    nodes. These are the two enumeration schemes Linux uses for USB CI-V
+    bridges: ``ttyACM*`` for CDC-ACM composite bridges (the X6200's WCH CH342),
+    ``ttyUSB*`` for FTDI/CP210x. This is the Linux counterpart of the macOS
+    :func:`_extract_tty_suffix`; it is deliberately separate because the sysfs
+    lookup keys on the full kernel name (``ttyACM0``), not a chip-serial suffix.
+
+    >>> _extract_linux_tty_name("/dev/ttyACM0")
+    'ttyACM0'
+    >>> _extract_linux_tty_name("/dev/ttyUSB1")
+    'ttyUSB1'
+    >>> _extract_linux_tty_name("/dev/cu.usbserial-201410") is None
+    True
+    """
+    m = re.search(r"(tty(?:ACM|USB)\d+)", serial_port)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _usb_device_node_from_realpath(real: str) -> str | None:
+    """Walk up a realpath'd sysfs path to the nearest USB *device* node.
+
+    A USB device node basename looks like ``1-1`` or ``1-1.4`` (bus-port[.port]
+    with no colon). A USB *interface* node basename looks like ``1-1:1.0``
+    (device``:``config.interface). ``<...>/device`` symlinks for tty and sound
+    classes point at an interface node, so we ascend until the basename has no
+    ``:`` and matches the device-node shape, returning that absolute path.
+
+    Returns ``None`` if no USB device node is found in the ancestry.
+    """
+    parts = real.split("/")
+    # Walk from the deepest component upward.
+    for i in range(len(parts), 0, -1):
+        base = parts[i - 1]
+        if ":" in base:
+            continue
+        if re.fullmatch(r"\d+-\d+(?:\.\d+)*", base):
+            return "/".join(parts[:i])
+    return None
+
+
+def _sysfs_usb_device_for_tty(sysfs_root: str, tty_name: str) -> str | None:
+    """Resolve ``<sysfs_root>/class/tty/<tty_name>/device`` to its USB node."""
+    import os
+
+    link = os.path.join(sysfs_root, "class", "tty", tty_name, "device")
+    try:
+        real = os.path.realpath(link)
+    except OSError:
+        return None
+    if not os.path.exists(real):
+        return None
+    return _usb_device_node_from_realpath(real)
+
+
+def _sysfs_usb_audio_cards(sysfs_root: str) -> list[tuple[str, str]]:
+    """Enumerate USB-backed ALSA cards as ``(usb_device_path, card_name)``.
+
+    For each ``<sysfs_root>/class/sound/card*`` whose ``device`` symlink lands
+    in the USB tree, return the USB device node path and the card's product
+    name (the USB ``product`` string, which is the PortAudio/ALSA device-name
+    identity key). Sorted by USB device path for deterministic same-name rank.
+    """
+    import glob
+    import os
+
+    cards: list[tuple[str, str]] = []
+    pattern = os.path.join(sysfs_root, "class", "sound", "card*")
+    for card_dir in sorted(glob.glob(pattern)):
+        if not re.fullmatch(r"card\d+", os.path.basename(card_dir)):
+            continue
+        link = os.path.join(card_dir, "device")
+        try:
+            real = os.path.realpath(link)
+        except OSError:
+            continue
+        if not os.path.exists(real):
+            continue
+        usb_dev = _usb_device_node_from_realpath(real)
+        if usb_dev is None:
+            continue
+        name = _read_sysfs_str(os.path.join(usb_dev, "product"))
+        if name is None:
+            name = os.path.basename(card_dir)
+        cards.append((usb_dev, name))
+    return sorted(cards, key=lambda c: c[0])
+
+
+def _common_usb_path_score(serial_dev: str, card_dev: str) -> int:
+    """Score the shared USB-device path prefix length of two device nodes.
+
+    Splits each device's bus-port path (e.g. ``1-1.4`` → ``["1", "1", "4"]``)
+    and counts matching leading components. A higher score means the two
+    devices sit deeper on the same physical hub branch; an equal full path
+    means they are the *same* USB device (composite radio).
+    """
+    a = _usb_path_components(serial_dev)
+    b = _usb_path_components(card_dev)
+    score = 0
+    for x, y in zip(a, b):
+        if x != y:
+            break
+        score += 1
+    return score
+
+
+def _usb_path_components(usb_dev: str) -> list[str]:
+    """Split a USB device node basename into bus/port components.
+
+    ``.../usb1/1-1.4`` → ``["1", "1", "4"]`` (bus, then each port hop).
+    """
+    import os
+
+    base = os.path.basename(usb_dev)
+    m = re.fullmatch(r"(\d+)-(\d+(?:\.\d+)*)", base)
+    if not m:
+        return []
+    bus = m.group(1)
+    ports = m.group(2).split(".")
+    return [bus, *ports]
+
+
+def _usb_path_location_prefix(usb_dev: str) -> int | None:
+    """Derive an integer ``location_prefix`` from a USB device path.
+
+    There is no macOS-style ``locationID`` on Linux; we synthesise a stable
+    small integer from the bus and root-port hops (``bus<<8 | first_port``) so
+    AudioDeviceMapping carries a sensible, comparable hub identity. Returns
+    ``None`` if the path cannot be parsed.
+    """
+    comps = _usb_path_components(usb_dev)
+    if len(comps) < 2:
+        return None
+    try:
+        bus = int(comps[0])
+        root_port = int(comps[1])
+    except ValueError:
+        return None
+    return (bus << 8) | root_port
+
+
+def _read_usb_ids(usb_dev: str) -> tuple[str, str] | None:
+    """Read ``(idVendor, idProduct)`` from a USB device node, lowercased."""
+    import os
+
+    vid = _read_sysfs_str(os.path.join(usb_dev, "idVendor"))
+    pid = _read_sysfs_str(os.path.join(usb_dev, "idProduct"))
+    if vid is None or pid is None:
+        return None
+    return vid.lower(), pid.lower()
+
+
+def _read_sysfs_str(path: str) -> str | None:
+    """Read and strip a sysfs attribute file, or ``None`` on failure/empty."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            value = fh.read().strip()
+    except OSError:
+        return None
+    return value or None
+
+
+def _pair_audio_cluster_by_name(
+    devices: list[Any],
+    card_name: str,
+    same_name_rank: int,
+) -> tuple[int, int] | None:
+    """Select ``(rx_index, tx_index)`` for a card by name + same-name rank.
+
+    Platform-neutral counterpart of :func:`_pair_audio_device_for_location`:
+    where the macOS path derives the identity (name, rank) from IORegistry
+    locationIDs, the Linux path derives it from sysfs (ALSA card name + sysfs
+    card order). Both then select the rank-th
+    :func:`_cluster_usb_audio_devices` cluster carrying ``card_name``. Kept
+    separate from the macOS selector to avoid overloading its locationID-based
+    signature (MOR-228).
+    """
+    clusters = _cluster_usb_audio_devices(devices)
+    same_name_clusters = [c for c in clusters if c[0] == card_name]
+    if same_name_rank >= len(same_name_clusters):
+        logger.warning(
+            "usb-audio-resolve: %r rank %d out of range (%d matching clusters)",
+            card_name,
+            same_name_rank,
+            len(same_name_clusters),
+        )
+        return None
+    _name, rx, tx = same_name_clusters[same_name_rank]
+    if rx is None or tx is None:
+        logger.warning(
+            "usb-audio-resolve: incomplete audio cluster for %r rank %d (rx=%r, tx=%r)",
+            card_name,
+            same_name_rank,
+            rx,
+            tx,
+        )
+        return None
+    return rx, tx
 
 
 # ---------------------------------------------------------------------------
