@@ -261,7 +261,13 @@ def _cluster_usb_audio_devices(
         if pend_name == name and (
             (rx is not None and pend_rx is None) or (tx is not None and pend_tx is None)
         ):
-            clusters.append((pend_name, pend_rx or rx, pend_tx or tx))
+            # Coalesce the two halves with explicit None checks: a device
+            # index of 0 is valid and falsy, so `pend_rx or rx` would wrongly
+            # drop it (e.g. a USB codec enumerating at index 0 on a headless
+            # host with no built-in audio). MOR-230.
+            merged_rx = pend_rx if pend_rx is not None else rx
+            merged_tx = pend_tx if pend_tx is not None else tx
+            clusters.append((pend_name, merged_rx, merged_tx))
             pending = None
         else:
             clusters.append(pending)

@@ -764,6 +764,48 @@ class TestResolveMixedVendorShapes:
         assert x6200.tx_device_index != icom.tx_device_index
 
 
+class TestResolveSplitPairAtIndexZero:
+    """MOR-230 regression: a split-pair USB codec whose playback device
+    enumerates at sounddevice index 0 (e.g. a headless host with no built-in
+    audio ahead of the USB codec). Index 0 is a valid but falsy index; the
+    split-cluster merge must not drop it (the `pend_tx or tx` bug)."""
+
+    def _sd_codec_split_at_zero(self) -> MagicMock:
+        # No built-in device: the USB Audio CODEC pair occupies indices 0/1,
+        # output-only at 0 (the falsy index), input-only at 1.
+        devices: list[dict[str, Any]] = [
+            {
+                "name": "USB Audio CODEC",
+                "index": 0,
+                "max_input_channels": 0,
+                "max_output_channels": 2,
+                "default_samplerate": 48000.0,
+            },
+            {
+                "name": "USB Audio CODEC",
+                "index": 1,
+                "max_input_channels": 2,
+                "max_output_channels": 0,
+                "default_samplerate": 48000.0,
+            },
+        ]
+        sd = MagicMock()
+        sd.query_devices.return_value = devices
+        sd.default.device = [-1, -1]
+        return sd
+
+    def test_index_zero_playback_not_dropped(self) -> None:
+        result = _resolve_macos(
+            "/dev/cu.usbserial-201410",
+            sounddevice_module=self._sd_codec_split_at_zero(),
+            ioreg_output=IOREG_SINGLE_RADIO,
+        )
+        assert result is not None
+        assert result.rx_device_index == 1
+        # TX is the output-only device at index 0 — must survive the merge.
+        assert result.tx_device_index == 0
+
+
 class TestNameFallbackXiegu:
     """MOR-219: name-based fallback (Linux/Windows) prefers the C-Media codec
     over an unknown commodity device when topology is unavailable."""
