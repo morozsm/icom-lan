@@ -174,7 +174,9 @@ async def test_run_hardware_hamlib_orchestration(monkeypatch: Any) -> None:
 
         monkeypatch.setattr(_validate, "_await_tcp_ready", fake_await_tcp_ready)
 
-        exit_code = await _validate._run_hardware_hamlib(_base_args(), template, safety)
+        exit_code, artifact = await _validate._run_hardware_hamlib(
+            _base_args(), template, safety
+        )
 
     assert exit_code == 0
     assert len(_FakeBridge.instances) == 1
@@ -182,7 +184,6 @@ async def test_run_hardware_hamlib_orchestration(monkeypatch: Any) -> None:
     assert bridge.started is True
     assert bridge.stopped is True
     assert bridge.kwargs["model"] == "3091"  # hamlib_model_id for X6200
-    artifact = captured["artifact"]
     assert artifact.metadata["provider"] == "hamlib"
     assert artifact.metadata["hamlib_model_id"] == 3091
 
@@ -211,7 +212,9 @@ async def test_hamlib_provider_partial_start_is_torn_down(monkeypatch: Any) -> N
     monkeypatch.setattr("rigplane.backends.factory.create_radio", fake_create_radio)
     monkeypatch.setattr("rigplane.hamlib_bridge.HamlibBridge", _PartialStartBridge)
 
-    exit_code = await _validate._run_hardware_hamlib(_base_args(), template, safety)
+    exit_code, artifact = await _validate._run_hardware_hamlib(
+        _base_args(), template, safety
+    )
 
     assert exit_code == 3
     assert len(_FakeBridge.instances) == 1
@@ -219,7 +222,6 @@ async def test_hamlib_provider_partial_start_is_torn_down(monkeypatch: Any) -> N
     assert bridge.started is True  # partial start happened
     assert bridge.stopped is True  # ...and was still torn down
     # The failure is recorded as a transport-domain artifact.
-    artifact = captured["artifact"]
     checks = [c for lvl in artifact.levels for c in lvl.checks]
     assert any(c.failure_domain is not None for c in checks)
     assert artifact.metadata["profile_id"] == "xiegu_x6200"
@@ -247,13 +249,12 @@ async def test_hamlib_provider_rejects_non_civ(monkeypatch: Any) -> None:
         lambda artifact, args: captured.setdefault("artifact", artifact),
     )
 
-    exit_code = await _validate._run_hardware_hamlib(
+    exit_code, artifact = await _validate._run_hardware_hamlib(
         _base_args(model="FTX-1"), template, safety
     )
 
     assert exit_code == 3
     assert _FakeBridge.instances == []  # bridge never constructed/started
-    artifact = captured["artifact"]
     assert artifact.metadata["provider"] == "hamlib"
     checks = [c for level in artifact.levels for c in level.checks]
     assert any(
@@ -638,3 +639,371 @@ def test_cli_genb_native_provider_unchanged(monkeypatch: Any) -> None:
         entries_by_id["discovery.identify"].declaration
         == CapabilityDeclaration.SUPPORTED
     )
+
+
+# ---------------------------------------------------------------------------
+# --provider both tests (MOR-213)
+# ---------------------------------------------------------------------------
+
+
+def _make_hardware_args(**kwargs: Any) -> argparse.Namespace:
+    """Namespace with hardware-run defaults for _validate.run() with both."""
+    import os
+
+    defaults = dict(
+        template=None,
+        model="X6200",
+        hardware=True,
+        allow_hardware=True,
+        tx_allowed=False,
+        tuner_allowed=False,
+        read_only=True,
+        provider="both",
+        compare=None,
+        operator_id=None,
+        output=None,
+        json=True,
+    )
+    defaults.update(kwargs)
+    # Set the env gate so the hardware guard passes
+    os.environ["RIGPLANE_VALIDATION_ALLOW_HARDWARE"] = "1"
+    return argparse.Namespace(**defaults)
+
+
+def test_provider_both_parses() -> None:
+    """add_subparser accepts --provider both."""
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command")
+    _validate.add_subparser(sub)
+    args = parser.parse_args(["validate", "--template", "x.json", "--provider", "both"])
+    assert args.provider == "both"
+
+
+def test_provider_both_attaches_dimensions(monkeypatch: Any) -> None:
+    """--provider both runs native then hamlib, attaches comparison dims to native artifact.
+
+    Native: mode.set=pass, rf_gain.set=pass, discovery.identify=SUPPORTED+pass
+    Hamlib: mode.set=fail, rf_gain.set=pass, discovery.identify=UNSUPPORTED_PENDING+unsupported
+    Expected: cross_impl differ >= 1 (mode.set disagrees); exactly ONE artifact emitted.
+    """
+    import os
+
+    os.environ["RIGPLANE_VALIDATION_ALLOW_HARDWARE"] = "1"
+
+    from rigplane.backends.config import RigctldBackendConfig
+    from rigplane.backends.hamlib_models import HamlibCaps
+
+    native_config = RigctldBackendConfig(host="127.0.0.1", port=4532, model="X6200")
+
+    async def fake_build_backend_config(_args: Any) -> Any:
+        return native_config
+
+    def fake_create_radio(config: Any) -> Any:
+        return _FakeNativeRadio()
+
+    # Side-effect list: first call → native levels, second call → hamlib levels
+    call_count = {"n": 0}
+
+    async def fake_execute_hardware_checks(
+        radio: Any, template: Any, safety: Any, **kwargs: Any
+    ) -> Any:
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            # Native: mode.set pass, rf_gain pass, discovery pass
+            return _build_level_results(
+                [
+                    ("mode.set", "supported", "pass"),
+                    ("rf_gain.set", "supported", "pass"),
+                    ("discovery.identify", "supported", "pass"),
+                ]
+            )
+        else:
+            # Hamlib: mode.set fail, rf_gain pass, discovery unsupported_pending→unsupported
+            return _build_level_results(
+                [
+                    ("mode.set", "supported", "fail"),
+                    ("rf_gain.set", "supported", "pass"),
+                    (
+                        "discovery.identify",
+                        "unsupported_pending_evidence",
+                        "unsupported",
+                    ),  # noqa: E501
+                ]
+            )
+
+    emitted: list[Any] = []
+    monkeypatch.setattr("rigplane.cli._build_backend_config", fake_build_backend_config)
+    monkeypatch.setattr("rigplane.backends.factory.create_radio", fake_create_radio)
+    monkeypatch.setattr(
+        "rigplane.validation.hardware.execute_hardware_checks",
+        fake_execute_hardware_checks,
+    )
+    monkeypatch.setattr(
+        "rigplane.hamlib_bridge.HamlibBridge",
+        _FakeBridge,
+    )
+
+    async def fake_await_tcp_ready(
+        host: str, port: int, *, timeout: float = 10.0
+    ) -> bool:
+        return True
+
+    monkeypatch.setattr(_validate, "_await_tcp_ready", fake_await_tcp_ready)
+    monkeypatch.setattr(
+        _validate,
+        "_emit_artifact",
+        lambda artifact, args: emitted.append(artifact),
+    )
+
+    # Also patch load_hamlib_caps so the Gen-B template build doesn't fail
+    fake_caps = HamlibCaps(
+        get_levels=frozenset({"RF"}),
+        set_levels=frozenset({"RF"}),
+        modes=frozenset({"USB"}),
+        has_set_freq=True,
+    )
+    monkeypatch.setattr(
+        "rigplane.backends.hamlib_models.load_hamlib_caps",
+        lambda model_id: fake_caps,
+    )
+
+    _FakeBridge.instances.clear()
+    args = _make_hardware_args()
+    rc = _validate.run(args)
+
+    # Exactly one artifact emitted (the native primary)
+    assert len(emitted) == 1, f"Expected 1 artifact, got {len(emitted)}"
+    artifact = emitted[0]
+
+    # It is the native artifact (provider=native)
+    assert artifact.metadata.get("provider") == "native"
+
+    # generated_from is set to "profile"
+    assert artifact.metadata.get("generated_from") == "profile"
+
+    # comparison block exists
+    comp = artifact.metadata.get("comparison")
+    assert comp is not None, "No comparison in metadata"
+    assert comp["other_provider"] == "hamlib"
+
+    # cross_impl must have at least 1 differ (mode.set: native=pass, hamlib=fail)
+    dims = comp["dimensions"]
+    assert dims["cross_impl"]["differ"] >= 1, (
+        f"Expected cross_impl differ >= 1, got {dims['cross_impl']}"
+    )
+
+    # rc is non-zero only if either run returned non-zero; both succeeded here
+    assert rc == 0
+
+    # execute_hardware_checks was called exactly twice (native + hamlib)
+    assert call_count["n"] == 2
+
+
+def test_provider_both_compare_warns(monkeypatch: Any, capsys: Any) -> None:
+    """--provider both + --compare path emits warning to stderr, still emits primary."""
+    import os
+
+    os.environ["RIGPLANE_VALIDATION_ALLOW_HARDWARE"] = "1"
+
+    from rigplane.backends.config import RigctldBackendConfig
+    from rigplane.backends.hamlib_models import HamlibCaps
+
+    native_config = RigctldBackendConfig(host="127.0.0.1", port=4532, model="X6200")
+
+    async def fake_build_backend_config(_args: Any) -> Any:
+        return native_config
+
+    def fake_create_radio(config: Any) -> Any:
+        return _FakeNativeRadio()
+
+    async def fake_execute_hardware_checks(
+        radio: Any, template: Any, safety: Any, **kwargs: Any
+    ) -> Any:
+        return _build_level_results([("discovery.identify", "supported", "pass")])
+
+    emitted: list[Any] = []
+    monkeypatch.setattr("rigplane.cli._build_backend_config", fake_build_backend_config)
+    monkeypatch.setattr("rigplane.backends.factory.create_radio", fake_create_radio)
+    monkeypatch.setattr(
+        "rigplane.validation.hardware.execute_hardware_checks",
+        fake_execute_hardware_checks,
+    )
+    monkeypatch.setattr("rigplane.hamlib_bridge.HamlibBridge", _FakeBridge)
+
+    async def fake_await_tcp_ready(
+        host: str, port: int, *, timeout: float = 10.0
+    ) -> bool:
+        return True
+
+    monkeypatch.setattr(_validate, "_await_tcp_ready", fake_await_tcp_ready)
+    monkeypatch.setattr(
+        _validate,
+        "_emit_artifact",
+        lambda artifact, args: emitted.append(artifact),
+    )
+
+    fake_caps = HamlibCaps(
+        get_levels=frozenset({"RF"}),
+        set_levels=frozenset({"RF"}),
+    )
+    monkeypatch.setattr(
+        "rigplane.backends.hamlib_models.load_hamlib_caps",
+        lambda model_id: fake_caps,
+    )
+
+    _FakeBridge.instances.clear()
+    args = _make_hardware_args(compare="/some/nonexistent/path.json")
+    _validate.run(args)
+
+    captured = capsys.readouterr()
+    assert "Warning" in captured.err and "--compare" in captured.err, (
+        f"Expected --compare warning in stderr, got: {captured.err!r}"
+    )
+    # Still emits primary artifact
+    assert len(emitted) == 1
+
+
+def test_single_provider_native_unchanged(monkeypatch: Any) -> None:
+    """Single-provider native hardware run emits exactly one artifact (regression)."""
+    import os
+
+    os.environ["RIGPLANE_VALIDATION_ALLOW_HARDWARE"] = "1"
+
+    from rigplane.backends.config import RigctldBackendConfig
+
+    native_config = RigctldBackendConfig(host="127.0.0.1", port=4532, model="X6200")
+
+    async def fake_build_backend_config(_args: Any) -> Any:
+        return native_config
+
+    def fake_create_radio(config: Any) -> Any:
+        return _FakeNativeRadio()
+
+    async def fake_execute_hardware_checks(
+        radio: Any, template: Any, safety: Any, **kwargs: Any
+    ) -> Any:
+        return _build_level_results([("discovery.identify", "supported", "pass")])
+
+    emitted: list[Any] = []
+    monkeypatch.setattr("rigplane.cli._build_backend_config", fake_build_backend_config)
+    monkeypatch.setattr("rigplane.backends.factory.create_radio", fake_create_radio)
+    monkeypatch.setattr(
+        "rigplane.validation.hardware.execute_hardware_checks",
+        fake_execute_hardware_checks,
+    )
+    monkeypatch.setattr(
+        _validate,
+        "_emit_artifact",
+        lambda artifact, args: emitted.append(artifact),
+    )
+
+    args = _make_hardware_args(provider="native")
+    rc = _validate.run(args)
+
+    assert len(emitted) == 1, f"Expected exactly 1 artifact, got {len(emitted)}"
+    assert emitted[0].metadata["provider"] == "native"
+    assert rc == 0
+
+
+def test_single_provider_hamlib_unchanged(monkeypatch: Any) -> None:
+    """Single-provider hamlib hardware run still emits exactly one artifact (regression)."""
+    import os
+
+    os.environ["RIGPLANE_VALIDATION_ALLOW_HARDWARE"] = "1"
+    _FakeBridge.instances.clear()
+
+    from rigplane.backends.config import RigctldBackendConfig
+
+    native_config = RigctldBackendConfig(host="127.0.0.1", port=4532, model="X6200")
+
+    async def fake_build_backend_config(_args: Any) -> Any:
+        return native_config
+
+    def fake_create_radio(config: Any) -> Any:
+        return _FakeNativeRadio()
+
+    async def fake_execute_hardware_checks(
+        radio: Any, template: Any, safety: Any, **kwargs: Any
+    ) -> Any:
+        return _build_level_results([("discovery.identify", "supported", "pass")])
+
+    async def fake_await_tcp_ready(
+        host: str, port: int, *, timeout: float = 10.0
+    ) -> bool:
+        return True
+
+    emitted: list[Any] = []
+    monkeypatch.setattr("rigplane.cli._build_backend_config", fake_build_backend_config)
+    monkeypatch.setattr("rigplane.backends.factory.create_radio", fake_create_radio)
+    monkeypatch.setattr(
+        "rigplane.validation.hardware.execute_hardware_checks",
+        fake_execute_hardware_checks,
+    )
+    monkeypatch.setattr("rigplane.hamlib_bridge.HamlibBridge", _FakeBridge)
+    monkeypatch.setattr(_validate, "_await_tcp_ready", fake_await_tcp_ready)
+    monkeypatch.setattr(
+        _validate,
+        "_emit_artifact",
+        lambda artifact, args: emitted.append(artifact),
+    )
+
+    args = _make_hardware_args(provider="hamlib")
+    rc = _validate.run(args)
+
+    assert len(emitted) == 1, f"Expected exactly 1 artifact, got {len(emitted)}"
+    assert emitted[0].metadata["provider"] == "hamlib"
+    assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# Helper to build LevelResult lists from plain tuples
+# ---------------------------------------------------------------------------
+
+
+def _build_level_results(
+    checks: list[tuple[str, str, str]],
+) -> list[Any]:
+    """Build a list of LevelResult from (check_id, declaration, status) tuples.
+
+    declaration strings: "supported", "unsupported_pending_evidence", "manual_required"
+    status strings: "pass", "fail", "skip", "unsupported", "blocked", "manual_required"
+    """
+    from rigplane.validation.schema import (
+        CapabilityDeclaration,
+        CheckResult,
+        CheckStatus,
+        FailureDomain,
+        LevelResult,
+        ValidationLevel,
+    )
+
+    decl_map = {
+        "supported": CapabilityDeclaration.SUPPORTED,
+        "unsupported_pending_evidence": CapabilityDeclaration.UNSUPPORTED_PENDING_EVIDENCE,
+        "manual_required": CapabilityDeclaration.MANUAL_REQUIRED,
+    }
+    status_map = {
+        "pass": CheckStatus.PASS,
+        "fail": CheckStatus.FAIL,
+        "skip": CheckStatus.SKIP,
+        "unsupported": CheckStatus.UNSUPPORTED,
+        "blocked": CheckStatus.BLOCKED,
+        "manual_required": CheckStatus.MANUAL_REQUIRED,
+    }
+    results = []
+    for check_id, decl_str, status_str in checks:
+        decl = decl_map[decl_str]
+        status = status_map[status_str]
+        failure_domain = FailureDomain.TRANSPORT if status == CheckStatus.FAIL else None
+        results.append(
+            CheckResult(
+                check_id=check_id,
+                capability="",
+                level=ValidationLevel.DISCOVERY,
+                status=status,
+                declaration=decl,
+                summary=f"{check_id} synthetic",
+                failure_domain=failure_domain,
+            )
+        )
+    return [LevelResult(level=ValidationLevel.DISCOVERY, checks=results)]

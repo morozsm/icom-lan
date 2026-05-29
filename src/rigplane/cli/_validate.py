@@ -51,6 +51,7 @@ from rigplane.validation import (
     TransportInfo,
     ValidationArtifact,
     build_validation_artifact,
+    compute_comparison_dimensions,
     dry_run_results,
     human_summary,
     load_template,
@@ -152,12 +153,14 @@ def add_subparser(sub: Any) -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--provider",
-        choices=["native", "hamlib"],
+        choices=["native", "hamlib", "both"],
         default="native",
         help=(
             "Validation provider: native (default) drives the radio directly; "
             "hamlib drives it through an internally-spawned Hamlib rigctld and "
-            "compares results. Model is auto-detected (or use --model)."
+            "compares results; both runs native then hamlib sequentially and "
+            "attaches cross-implementation comparison dimensions to the primary "
+            "(native) artifact. Model is auto-detected (or use --model)."
         ),
     )
     p.add_argument(
@@ -187,13 +190,53 @@ def add_subparser(sub: Any) -> argparse.ArgumentParser:
     return p
 
 
+def _generate_template(
+    args: argparse.Namespace, profile: Any, provider: str
+) -> MatrixTemplate:
+    """Build a per-provider in-memory template from *profile*.
+
+    *provider* must be ``"native"`` (Gen-A) or ``"hamlib"`` (Gen-B).
+    The caller is responsible for resolving the profile before calling this.
+    """
+    if provider == "hamlib":
+        from rigplane.backends.hamlib_models import load_hamlib_caps
+        from rigplane.validation.registry import build_hamlib_template_from_capabilities
+
+        caps = load_hamlib_caps(profile.hamlib_model_id)
+        if caps.degraded_reason:
+            print(
+                f"Warning: Hamlib dump_caps unavailable for model "
+                f"{profile.hamlib_model_id} ({caps.degraded_reason}); "
+                f"all checks will be N/A.",
+                file=sys.stderr,
+            )
+        tokens = _hamlib_caps_to_tokens(caps)
+        return build_hamlib_template_from_capabilities(
+            profile.capabilities,
+            tokens,
+            model=profile.model,
+            profile_id=profile.id,
+        )
+    # native (Gen-A)
+    from rigplane.validation.registry import build_template_from_capabilities
+
+    return build_template_from_capabilities(
+        profile.capabilities,
+        model=profile.model,
+        profile_id=profile.id,
+    )
+
+
 def run(args: argparse.Namespace) -> int:
+    provider = getattr(args, "provider", "native")
+
     if args.template:
         try:
             template = load_template(Path(args.template))
         except (SchemaValidationError, OSError) as exc:
             print(f"Error: cannot load template: {exc}", file=sys.stderr)
             return 2
+        profile = None
     else:
         if not getattr(args, "model", None):
             print("Error: provide --template or --model", file=sys.stderr)
@@ -205,35 +248,12 @@ def run(args: argparse.Namespace) -> int:
         except KeyError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return 2
-        if getattr(args, "provider", "native") == "hamlib":
-            from rigplane.backends.hamlib_models import load_hamlib_caps
-            from rigplane.validation.registry import (
-                build_hamlib_template_from_capabilities,
-            )
-
-            caps = load_hamlib_caps(profile.hamlib_model_id)
-            if caps.degraded_reason:
-                print(
-                    f"Warning: Hamlib dump_caps unavailable for model "
-                    f"{profile.hamlib_model_id} ({caps.degraded_reason}); "
-                    f"all checks will be N/A.",
-                    file=sys.stderr,
-                )
-            tokens = _hamlib_caps_to_tokens(caps)
-            template = build_hamlib_template_from_capabilities(
-                profile.capabilities,
-                tokens,
-                model=profile.model,
-                profile_id=profile.id,
-            )
+        if provider in ("hamlib", "native"):
+            template = _generate_template(args, profile, provider)
         else:
-            from rigplane.validation.registry import build_template_from_capabilities
-
-            template = build_template_from_capabilities(
-                profile.capabilities,
-                model=profile.model,
-                profile_id=profile.id,
-            )
+            # "both": will build per-provider templates below; use native for
+            # dry-run / safety-block path.
+            template = _generate_template(args, profile, "native")
 
     authorized = bool(args.tx_allowed or args.tuner_allowed)
     safety = OperatorSafetyBlock(
@@ -252,9 +272,18 @@ def run(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 3
-        if getattr(args, "provider", "native") == "hamlib":
-            return asyncio.run(_run_hardware_hamlib(args, template, safety))
-        return asyncio.run(_run_hardware(args, template, safety))
+
+        if provider == "both":
+            return asyncio.run(_run_hardware_both(args, profile, safety))
+
+        if provider == "hamlib":
+            rc, artifact = asyncio.run(_run_hardware_hamlib(args, template, safety))
+        else:
+            rc, artifact = asyncio.run(_run_hardware(args, template, safety))
+        if getattr(args, "compare", None):
+            artifact = _attach_comparison(artifact, args.compare)
+        _emit_artifact(artifact, args)
+        return rc
 
     levels = dry_run_results(template, safety)
     transport = TransportInfo(backend="fixture")
@@ -276,6 +305,58 @@ def run(args: argparse.Namespace) -> int:
         artifact = _attach_comparison(artifact, args.compare)
     _emit_artifact(artifact, args)
     return 0
+
+
+async def _run_hardware_both(
+    args: argparse.Namespace,
+    profile: Any,
+    safety: OperatorSafetyBlock,
+) -> int:
+    """Run native then hamlib sequentially, attach comparison dims to native artifact."""
+    if getattr(args, "compare", None):
+        print(
+            "Warning: --compare is ignored under --provider both",
+            file=sys.stderr,
+        )
+
+    tmpl_native = _generate_template(args, profile, "native")
+    tmpl_hamlib = _generate_template(args, profile, "hamlib")
+
+    # Sequential: native first, then hamlib (serial port must release between).
+    rc_n, art_n = await _run_hardware(args, tmpl_native, safety)
+    rc_h, art_h = await _run_hardware_hamlib(args, tmpl_hamlib, safety)
+
+    dims = compute_comparison_dimensions(art_n.to_dict(), art_h.to_dict())
+
+    # Build per-check rows from both status maps.
+    map_n = _check_status_map(art_n)
+    map_h = _check_status_map(art_h)
+    all_ids = sorted(set(map_n) | set(map_h))
+    rows = [
+        {
+            "check_id": cid,
+            "this": map_n.get(cid),
+            "other": map_h.get(cid),
+            "agree": map_n.get(cid) == map_h.get(cid),
+        }
+        for cid in all_ids
+    ]
+
+    comparison: dict[str, Any] = {
+        "other_provider": "hamlib",
+        "rows": rows,
+        "dimensions": dims,
+    }
+    art_n = dataclasses.replace(
+        art_n,
+        metadata={
+            **art_n.metadata,
+            "generated_from": "profile",
+            "comparison": comparison,
+        },
+    )
+    _emit_artifact(art_n, args)
+    return rc_n if rc_n else rc_h
 
 
 def _emit_artifact(artifact: ValidationArtifact, args: argparse.Namespace) -> None:
@@ -324,12 +405,14 @@ async def _run_hardware(
     args: argparse.Namespace,
     template: MatrixTemplate,
     safety: OperatorSafetyBlock,
-) -> int:
+) -> tuple[int, ValidationArtifact]:
     """Connect to the configured radio and execute the validation checks.
 
-    Imports of the CLI backend-config builder, the backend factory, and the
-    hardware runner are deferred to function scope to avoid a circular import
-    between this module and ``rigplane.cli``.
+    Returns ``(exit_code, artifact)``; the caller is responsible for attaching
+    comparison metadata and emitting the artifact.  Imports of the CLI
+    backend-config builder, the backend factory, and the hardware runner are
+    deferred to function scope to avoid a circular import between this module
+    and ``rigplane.cli``.
     """
     from rigplane.backends.factory import create_radio
     from rigplane.cli import _build_backend_config
@@ -344,7 +427,24 @@ async def _run_hardware(
         config = await _build_backend_config(args)
     except ValueError as exc:
         print(f"Error: cannot build backend config: {exc}", file=sys.stderr)
-        return 3
+        # Build a minimal failure artifact so callers always get a tuple.
+        transport = TransportInfo(backend="fixture")
+        levels = _transport_failure_levels(template, exc)
+        artifact = build_validation_artifact(
+            template=template,
+            levels=levels,
+            transport=transport,
+            safety=safety,
+            core_version=__version__,
+            core_commit=None,
+            mode="hardware",
+        )
+        artifact = dataclasses.replace(
+            artifact,
+            metadata={**artifact.metadata, "provider": "native"},
+            generated_at=_utcnow_iso(),
+        )
+        return 3, artifact
 
     # Resolve the radio profile for per-radio validation classification
     # (write-only controls, MOR-208). Best-effort: unknown model → no profile.
@@ -390,10 +490,7 @@ async def _run_hardware(
         metadata={**artifact.metadata, "provider": "native"},
         generated_at=_utcnow_iso(),
     )
-    if getattr(args, "compare", None):
-        artifact = _attach_comparison(artifact, args.compare)
-    _emit_artifact(artifact, args)
-    return exit_code
+    return exit_code, artifact
 
 
 async def _await_tcp_ready(host: str, port: int, *, timeout: float = 10.0) -> bool:
@@ -435,15 +532,17 @@ async def _run_hardware_hamlib(
     args: argparse.Namespace,
     template: MatrixTemplate,
     safety: OperatorSafetyBlock,
-) -> int:
+) -> tuple[int, ValidationArtifact]:
     """Drive the radio through an internally-spawned Hamlib ``rigctld``.
 
-    A :class:`HamlibBridge` owns the real (RigPlane-controlled) radio and
-    proxies raw CI-V to a stock ``rigctld``; the rigctld client backend then
-    runs the same hardware checks through Hamlib, so results can be compared to
-    the native provider. Imports are deferred to function scope to avoid a
-    circular import with ``rigplane.cli`` and to keep ``hamlib_bridge`` /
-    backend assembly off this module's import graph (matching ``_run_hardware``).
+    Returns ``(exit_code, artifact)``; the caller is responsible for attaching
+    comparison metadata and emitting the artifact.  A :class:`HamlibBridge`
+    owns the real (RigPlane-controlled) radio and proxies raw CI-V to a stock
+    ``rigctld``; the rigctld client backend then runs the same hardware checks
+    through Hamlib, so results can be compared to the native provider. Imports
+    are deferred to function scope to avoid a circular import with
+    ``rigplane.cli`` and to keep ``hamlib_bridge`` / backend assembly off this
+    module's import graph (matching ``_run_hardware``).
     """
     from rigplane.backends.config import RigctldBackendConfig
     from rigplane.backends.factory import create_radio
@@ -461,10 +560,14 @@ async def _run_hardware_hamlib(
         config = await _build_backend_config(args)
     except ValueError as exc:
         print(f"Error: cannot build backend config: {exc}", file=sys.stderr)
-        return 3
+        transport = TransportInfo(backend="fixture")
+        levels = _transport_failure_levels(template, exc)
+        artifact = _build_hamlib_artifact(
+            template, levels, transport, safety, None, None
+        )
+        return 3, artifact
 
     transport = _transport_info_from_config(config)
-    levels: list[LevelResult]
 
     # Resolve the radio profile (model is required for the hamlib provider).
     profile = None
@@ -481,10 +584,7 @@ async def _run_hardware_hamlib(
         artifact = _build_hamlib_artifact(
             template, levels, transport, safety, profile, None
         )
-        if getattr(args, "compare", None):
-            artifact = _attach_comparison(artifact, args.compare)
-        _emit_artifact(artifact, args)
-        return 3
+        return 3, artifact
 
     # The bridge speaks raw CI-V; non-CI-V rigs (Yaesu/Kenwood) cannot be driven.
     if profile.protocol_type != "civ":
@@ -498,10 +598,7 @@ async def _run_hardware_hamlib(
         artifact = _build_hamlib_artifact(
             template, levels, transport, safety, profile, profile.hamlib_model_id
         )
-        if getattr(args, "compare", None):
-            artifact = _attach_comparison(artifact, args.compare)
-        _emit_artifact(artifact, args)
-        return 3
+        return 3, artifact
 
     hamlib_model = profile.hamlib_model_id
     civaddr = getattr(config, "radio_addr", None) or profile.civ_addr
@@ -579,10 +676,7 @@ async def _run_hardware_hamlib(
     artifact = _build_hamlib_artifact(
         template, levels, transport, safety, profile, hamlib_model
     )
-    if getattr(args, "compare", None):
-        artifact = _attach_comparison(artifact, args.compare)
-    _emit_artifact(artifact, args)
-    return exit_code
+    return exit_code, artifact
 
 
 def _build_hamlib_artifact(
