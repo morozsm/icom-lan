@@ -1,11 +1,13 @@
-"""Pure Hamlib ``dump_caps`` → draft rigplane TOML + cross-check (MOR-203).
+"""Hamlib ``dump_caps`` → draft rigplane TOML + cross-check (MOR-203 / MOR-220).
 
-This module is a *pure* data transform: ``str``/dataclass in, ``str``/dataclass
-out. It performs NO subprocess calls, NO disk I/O, and registers NO CLI verb —
-those belong to MOR-204. It lives in ``cli/`` because only the top layer may
-import BOTH ``rigplane.backends.hamlib_models`` (``HamlibCaps``) AND
-``rigplane.validation.registry`` (the token map). ``validation/`` must not import
-``backends/``.
+The core (``build_draft_toml`` / ``cross_check`` / ``caps_to_capabilities``) is a
+*pure* data transform: ``str``/dataclass in, ``str``/dataclass out, with NO
+subprocess calls and NO disk I/O (MOR-203). The ``rigplane convert`` CLI verb
+(``add_subparser`` / ``run``, MOR-220) is the thin I/O driver around it: it shells
+out via ``load_hamlib_caps`` and writes the draft to disk. Both live in ``cli/``
+because only the top layer may import BOTH ``rigplane.backends.hamlib_models``
+(``HamlibCaps``) AND ``rigplane.validation.registry`` (the token map);
+``validation/`` must not import ``backends/``.
 """
 
 from __future__ import annotations
