@@ -362,3 +362,74 @@ async def test_await_tcp_ready_timeout() -> None:
     # Port is now closed; _await_tcp_ready should time out quickly.
     result = await _await_tcp_ready("127.0.0.1", closed_port, timeout=1.0)
     assert result is False
+
+
+async def test_run_hardware_forwards_write_only_capabilities(
+    monkeypatch: Any,
+) -> None:
+    """_run_hardware (native) forwards profile.write_only_controls to the
+    hardware runner as write_only_capabilities (MOR-208)."""
+    template = _identify_template()
+    safety = OperatorSafetyBlock()
+    native_config = RigctldBackendConfig(host="127.0.0.1", port=4532, model="X6200")
+    captured: dict[str, Any] = {}
+
+    async def fake_build_backend_config(_args: Any) -> Any:
+        return native_config
+
+    def fake_create_radio(config: Any) -> Any:
+        return _FakeNativeRadio()
+
+    async def fake_execute(*args: Any, **kwargs: Any) -> Any:
+        captured["write_only_capabilities"] = kwargs.get("write_only_capabilities")
+        return []
+
+    monkeypatch.setattr("rigplane.cli._build_backend_config", fake_build_backend_config)
+    monkeypatch.setattr("rigplane.backends.factory.create_radio", fake_create_radio)
+    monkeypatch.setattr(
+        "rigplane.validation.hardware.execute_hardware_checks", fake_execute
+    )
+    monkeypatch.setattr(_validate, "_emit_artifact", lambda artifact, args: None)
+
+    await _validate._run_hardware(_base_args(read_only=False), template, safety)
+
+    assert captured["write_only_capabilities"] == frozenset({"rit", "xit"})
+
+
+async def test_run_hardware_hamlib_forwards_write_only_capabilities(
+    monkeypatch: Any,
+) -> None:
+    """_run_hardware_hamlib forwards profile.write_only_controls too."""
+    _FakeBridge.instances.clear()
+    template = _identify_template()
+    safety = OperatorSafetyBlock()
+    native_config = RigctldBackendConfig(host="127.0.0.1", port=4532, model="X6200")
+    captured: dict[str, Any] = {}
+
+    async def fake_build_backend_config(_args: Any) -> Any:
+        return native_config
+
+    def fake_create_radio(config: Any) -> Any:
+        return _FakeNativeRadio()
+
+    async def fake_execute(*args: Any, **kwargs: Any) -> Any:
+        captured["write_only_capabilities"] = kwargs.get("write_only_capabilities")
+        return []
+
+    async def fake_await_tcp_ready(
+        host: str, port: int, *, timeout: float = 10.0
+    ) -> bool:
+        return True
+
+    monkeypatch.setattr("rigplane.cli._build_backend_config", fake_build_backend_config)
+    monkeypatch.setattr("rigplane.backends.factory.create_radio", fake_create_radio)
+    monkeypatch.setattr("rigplane.hamlib_bridge.HamlibBridge", _FakeBridge)
+    monkeypatch.setattr(
+        "rigplane.validation.hardware.execute_hardware_checks", fake_execute
+    )
+    monkeypatch.setattr(_validate, "_await_tcp_ready", fake_await_tcp_ready)
+    monkeypatch.setattr(_validate, "_emit_artifact", lambda artifact, args: None)
+
+    await _validate._run_hardware_hamlib(_base_args(), template, safety)
+
+    assert captured["write_only_capabilities"] == frozenset({"rit", "xit"})

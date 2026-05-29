@@ -306,6 +306,19 @@ async def _run_hardware(
         print(f"Error: cannot build backend config: {exc}", file=sys.stderr)
         return 3
 
+    # Resolve the radio profile for per-radio validation classification
+    # (write-only controls, MOR-208). Best-effort: unknown model → no profile.
+    write_only_capabilities: frozenset[str] = frozenset()
+    if config.model:
+        from rigplane.profiles import get_radio_profile
+
+        try:
+            profile = get_radio_profile(config.model)
+        except KeyError:
+            profile = None
+        if profile is not None:
+            write_only_capabilities = profile.write_only_controls
+
     transport = _transport_info_from_config(config)
     radio = create_radio(config)
     exit_code = 0
@@ -317,6 +330,7 @@ async def _run_hardware(
                 safety,
                 allow_writes=not bool(getattr(args, "read_only", False)),
                 per_check_timeout=getattr(args, "timeout", 5.0) or 5.0,
+                write_only_capabilities=write_only_capabilities,
             )
     except (RigConnectionError, AuthenticationError, OSError, RigplaneError) as exc:
         levels = _transport_failure_levels(template, exc)
@@ -506,6 +520,9 @@ async def _run_hardware_hamlib(
                         safety,
                         allow_writes=not bool(getattr(args, "read_only", False)),
                         per_check_timeout=timeout,
+                        write_only_capabilities=(
+                            profile.write_only_controls if profile else frozenset()
+                        ),
                     )
             finally:
                 await bridge.stop()

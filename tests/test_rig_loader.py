@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from rigplane.command_map import CommandMap
-from rigplane.profiles import BandInfo, FreqRangeInfo, RadioProfile
+from rigplane.profiles import BandInfo, FreqRangeInfo, RadioProfile, get_radio_profile
 from rigplane.rig_loader import RigConfig, RigLoadError, discover_rigs, load_rig
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
@@ -765,3 +765,29 @@ browser_rx_transcode_to_opus = true
         toml = _MINIMAL_TOML + '\n[audio]\nbrowser_rx_transport = "rtmp"\n'
         with pytest.raises(RigLoadError, match="browser_rx_transport"):
             load_rig(_write_toml(tmp_path, toml))
+
+
+class TestWriteOnlyControls:
+    """[validation].write_only_controls parsing and propagation (MOR-208)."""
+
+    def test_write_only_controls_parsed(self, tmp_path):
+        # "scope" is declared in _MINIMAL_TOML's features; mark it write-only.
+        toml = _MINIMAL_TOML + '\n[validation]\nwrite_only_controls = ["scope"]\n'
+        rig = load_rig(_write_toml(tmp_path, toml))
+        assert rig.write_only_controls == ("scope",)
+        assert rig.to_profile().write_only_controls == frozenset({"scope"})
+
+    def test_write_only_controls_defaults_empty(self, tmp_path):
+        rig = load_rig(_write_toml(tmp_path, _MINIMAL_TOML))
+        assert rig.write_only_controls == ()
+        assert rig.to_profile().write_only_controls == frozenset()
+
+    def test_write_only_controls_must_be_declared_capability(self, tmp_path):
+        # "rit" is NOT in _MINIMAL_TOML's features.
+        toml = _MINIMAL_TOML + '\n[validation]\nwrite_only_controls = ["rit"]\n'
+        with pytest.raises(RigLoadError, match="rit"):
+            load_rig(_write_toml(tmp_path, toml))
+
+    def test_x6200_declares_rit_xit_write_only(self):
+        profile = get_radio_profile("X6200")
+        assert profile.write_only_controls >= {"rit", "xit"}
