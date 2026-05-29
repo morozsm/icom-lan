@@ -114,6 +114,7 @@ class RigConfig:
     sample_rate_by_codec: dict[str, int] | None = None
     browser_rx_transport: str | None = None
     browser_rx_transcode_to_opus: bool | None = None
+    write_only_controls: tuple[str, ...] = ()
 
     def to_profile(self) -> RadioProfile:
         """Build a ``RadioProfile`` from this config."""
@@ -193,6 +194,7 @@ class RigConfig:
             sample_rate_by_codec=self.sample_rate_by_codec,
             browser_rx_transport=self.browser_rx_transport,
             browser_rx_transcode_to_opus=self.browser_rx_transcode_to_opus,
+            write_only_controls=frozenset(self.write_only_controls),
         )
 
     def to_command_map(self) -> CommandMap:
@@ -547,6 +549,19 @@ def load_rig(path: Path) -> RigConfig:
                 f"{filename}: unknown capability {cap!r}. "
                 f"Known: {sorted(KNOWN_CAPABILITIES)}"
             )
+
+    # Validate [validation].write_only_controls — each entry must be a declared
+    # capability. These route through the validate set-and-observe engine path
+    # (MOR-208) instead of read-modify-verify-restore.
+    feature_set = set(features)
+    write_only_raw = data.get("validation", {}).get("write_only_controls", [])
+    for c in write_only_raw:
+        if c not in feature_set:
+            raise RigLoadError(
+                f"{filename}: [validation].write_only_controls entry {c!r} "
+                f"is not a declared capability"
+            )
+    write_only_controls = tuple(write_only_raw)
 
     # Validate [vfo]
     vfo = data["vfo"]
@@ -934,6 +949,7 @@ def load_rig(path: Path) -> RigConfig:
         sample_rate_by_codec=sample_rate_by_codec,
         browser_rx_transport=browser_rx_transport,
         browser_rx_transcode_to_opus=browser_rx_transcode_to_opus,
+        write_only_controls=write_only_controls,
     )
 
 

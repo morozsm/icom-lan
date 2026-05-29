@@ -102,6 +102,13 @@ values = [0, 1]
 modes = [0, 1, 2, 3]
 labels = { "0" = "OFF", "1" = "FAST", "2" = "SLOW", "3" = "AUTO" }
 
+# Per-radio validation classification (MOR-208). Controls whose capability
+# names appear here route through the validate set-and-observe engine path
+# (no read-first), so SET-but-no-GET controls report honest PASS instead of a
+# read-first-timeout FAIL. Each entry must be a declared [capabilities] feature.
+[validation]
+write_only_controls = ["rit", "xit"]  # X6200 RIT/XIT accept SET but GET times out (MOR-179)
+
 [controls.attenuator]
 style = "toggle"
 

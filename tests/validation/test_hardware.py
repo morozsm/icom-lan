@@ -19,6 +19,7 @@ import re
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+from rigplane.core.exceptions import TimeoutError as RigTimeoutError
 from rigplane.core.radio_protocol import Radio
 from rigplane.core.radio_state import RadioState
 from rigplane.core.types import AgcMode
@@ -154,6 +155,107 @@ async def test_default_run_produces_artifact_with_expected_statuses(connected_ra
     assert artifact.mode == "hardware"
     # Round-trips through schema validation.
     validate_artifact_dict(json.loads(json.dumps(artifact.to_dict())))
+
+
+def _write_only_rit_mock():
+    """A rit radio whose SET succeeds but GET times out (X6200 behaviour)."""
+    radio = MagicMock(spec=Radio)
+    radio.connected = True
+    radio.model = "X6200"
+    radio.capabilities = {"rit"}
+    radio.set_rit_frequency = AsyncMock(return_value=None)
+    radio.get_rit_frequency = AsyncMock(side_effect=RigTimeoutError("readback timeout"))
+    return radio
+
+
+async def test_write_only_cap_routes_to_set_observe():
+    """THE FIX: a write-only-classified cap routes through set-and-observe,
+    so a SET-only radio reports PASS instead of read-first-timeout FAIL."""
+    radio = _write_only_rit_mock()
+    template = _single_entry_template(check_id="rit.set", capability="rit")
+
+    # WITHOUT the write-only classification: the RMVR handler reads first and
+    # the readback timeout produces a FAIL.
+    levels = await execute_hardware_checks(
+        radio, template, OperatorSafetyBlock(), allow_writes=True
+    )
+    check = _flatten(levels)["rit.set"]
+    assert check.status is CheckStatus.FAIL
+    assert check.failure_domain is FailureDomain.COMMAND_EXECUTION
+
+    # WITH the classification: route through set-and-observe → honest PASS.
+    radio = _write_only_rit_mock()
+    levels = await execute_hardware_checks(
+        radio,
+        template,
+        OperatorSafetyBlock(),
+        allow_writes=True,
+        write_only_capabilities=frozenset({"rit"}),
+    )
+    check = _flatten(levels)["rit.set"]
+    assert check.status is CheckStatus.PASS
+    assert check.evidence["verification"] == "set_observe"
+    assert check.evidence["handler"] == "set_and_observe"
+    radio.get_rit_frequency.assert_not_called()
+    # SET test value (100) then restore (0).
+    assert radio.set_rit_frequency.call_count == 2
+
+
+async def test_non_write_only_cap_still_uses_rmvr():
+    """A cap NOT in write_only_capabilities keeps the RMVR read-modify-verify
+    path even when other caps are classified write-only."""
+    radio, store = _stateful_preamp_mock(start=0)
+    template = _single_entry_template(check_id="preamp.set", capability="preamp")
+    levels = await execute_hardware_checks(
+        radio,
+        template,
+        OperatorSafetyBlock(),
+        allow_writes=True,
+        write_only_capabilities=frozenset({"rit"}),
+    )
+    check = _flatten(levels)["preamp.set"]
+    assert check.status is CheckStatus.PASS
+    assert check.evidence["original"] == 0
+    assert check.evidence["changed"] == 1
+    assert check.evidence["restored"] is True
+    assert check.evidence.get("verification") != "set_observe"
+
+
+async def test_write_only_read_only_skips():
+    """Write-only cap under --read-only skips without touching the radio."""
+    radio = _write_only_rit_mock()
+    template = _single_entry_template(check_id="rit.set", capability="rit")
+    levels = await execute_hardware_checks(
+        radio,
+        template,
+        OperatorSafetyBlock(),
+        allow_writes=False,
+        write_only_capabilities=frozenset({"rit"}),
+    )
+    check = _flatten(levels)["rit.set"]
+    assert check.status is CheckStatus.SKIP
+    radio.set_rit_frequency.assert_not_called()
+
+
+async def test_write_only_cap_no_spec_falls_through():
+    """A cap in write_only_capabilities whose check_id has no registry spec
+    falls through to the named/SKIP path without crashing."""
+    radio = MagicMock(spec=Radio)
+    radio.connected = True
+    radio.model = "X6200"
+    radio.capabilities = {"madeup"}
+    template = _single_entry_template(
+        check_id="madeup.nonexistent", capability="madeup"
+    )
+    levels = await execute_hardware_checks(
+        radio,
+        template,
+        OperatorSafetyBlock(),
+        allow_writes=True,
+        write_only_capabilities=frozenset({"madeup"}),
+    )
+    check = _flatten(levels)["madeup.nonexistent"]
+    assert check.status is CheckStatus.SKIP
 
 
 async def test_rmvr_pass_on_stateful_mock():

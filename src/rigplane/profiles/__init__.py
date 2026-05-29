@@ -199,6 +199,11 @@ class RadioProfile:
     sample_rate_by_codec: dict[str, int] | None = None
     browser_rx_transport: str | None = None
     browser_rx_transcode_to_opus: bool | None = None
+    # Capability names whose validate checks route through the set-and-observe
+    # engine path (no read-first) instead of read-modify-verify-restore. Data-
+    # driven from ``[validation].write_only_controls`` in the rig TOML (MOR-208).
+    # Empty by default: every control uses the standard RMVR path.
+    write_only_controls: frozenset[str] = frozenset()
 
     @property
     def vfo_swap_code(self) -> int | None:

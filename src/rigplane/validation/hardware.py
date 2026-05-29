@@ -125,6 +125,7 @@ async def execute_hardware_checks(
     *,
     allow_writes: bool,
     per_check_timeout: float = DEFAULT_PER_CHECK_TIMEOUT,
+    write_only_capabilities: frozenset[str] = frozenset(),
 ) -> list[LevelResult]:
     """Run a template's checks against an already-connected ``radio``.
 
@@ -144,6 +145,7 @@ async def execute_hardware_checks(
             safety,
             allow_writes=allow_writes,
             per_check_timeout=per_check_timeout,
+            write_only_capabilities=write_only_capabilities,
         )
         finished = _utcnow_iso()
         result = dataclasses.replace(result, started_at=started, finished_at=finished)
@@ -207,6 +209,7 @@ async def _run_one_check(
     *,
     allow_writes: bool,
     per_check_timeout: float,
+    write_only_capabilities: frozenset[str] = frozenset(),
 ) -> CheckResult:
     """Execute a single template entry, applying universal pre-gates first."""
     # Pre-gate 1: authorization for TX-adjacent checks.
@@ -231,6 +234,19 @@ async def _run_one_check(
         elif present is not None:
             evidence["capability_present"] = present
         return _base_result(entry, CheckStatus.UNSUPPORTED, evidence=evidence)
+
+    # Per-radio write-only classification (MOR-208): controls whose capability
+    # is declared write-only route through set-and-observe (no read-first),
+    # overriding any named RMVR handler. Falls through if the check has no spec.
+    if entry.capability and entry.capability in write_only_capabilities:
+        spec = get_spec(entry.check_id)
+        if spec is not None:
+            gate = _write_gate(radio, entry, allow_writes=allow_writes)
+            if gate is not None:
+                return gate
+            return await _set_and_observe(
+                radio, entry, spec, per_check_timeout=per_check_timeout
+            )
 
     # Pre-gate 4: SUPPORTED -> check-specific logic.
     handler = _SUPPORTED_HANDLERS.get(entry.check_id)
