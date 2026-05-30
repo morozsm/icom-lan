@@ -111,6 +111,7 @@ class UsbAudioStreamContract:
     channels: int
     frame_ms: int
     sample_rate_source: str
+    channel_source: str = "requested"
     fallback_reason: str | None = None
 
     def to_dict(self) -> dict[str, object]:
@@ -121,6 +122,7 @@ class UsbAudioStreamContract:
             "channels": self.channels,
             "frame_ms": self.frame_ms,
             "sample_rate_source": self.sample_rate_source,
+            "channel_source": self.channel_source,
         }
         if self.fallback_reason:
             payload["fallback_reason"] = self.fallback_reason
@@ -480,6 +482,35 @@ class UsbAudioDriver:
     def _sample_rate_candidates(self, requested: int) -> tuple[int, ...]:
         return tuple(dict.fromkeys((requested, *_DEFAULT_SAMPLE_RATE_CANDIDATES)))
 
+    def _clamp_channels(
+        self,
+        *,
+        direction: str,
+        device: UsbAudioDevice,
+        requested_channels: int,
+    ) -> tuple[int, str, str | None]:
+        """Clamp requested channels to the device's real capability (MOR-238).
+
+        A profile / codec may request stereo from a device that only exposes a
+        mono capture (or playback) endpoint. PortAudio rejects that open with
+        PaErrorCode -9998 ("Invalid number of channels"). Mirroring the
+        sample-rate negotiation, the effective channel count is clamped down to
+        what the device advertises so any mono/stereo USB codec self-heals
+        without a per-profile ``codec_preference`` entry. Downstream DSP is
+        48 kHz mono, so a 1-channel capture feeds the broadcaster cleanly.
+        """
+
+        device_max = (
+            device.input_channels if direction == "rx" else device.output_channels
+        )
+        # A device advertising zero channels for this direction is a selection
+        # bug, not a clamp target — leave the request untouched and let the
+        # open surface the real error.
+        if device_max >= 1 and requested_channels > device_max:
+            reason = f"channels-{requested_channels}-clamped-to-device-{device_max}"
+            return device_max, "device-clamp", reason
+        return requested_channels, "requested", None
+
     def _resolve_stream_contract(
         self,
         *,
@@ -491,6 +522,11 @@ class UsbAudioDriver:
         allow_sample_rate_fallback: bool,
     ) -> UsbAudioStreamContract:
         device_id = AudioDeviceId(device.index)
+        effective_channels, channel_source, channel_reason = self._clamp_channels(
+            direction=direction,
+            device=device,
+            requested_channels=channels,
+        )
         if self._backend.check_sample_rate(
             device_id,
             requested_sample_rate,
@@ -501,9 +537,11 @@ class UsbAudioDriver:
                 direction=direction,
                 device=device,
                 sample_rate_hz=requested_sample_rate,
-                channels=channels,
+                channels=effective_channels,
                 frame_ms=frame_ms,
                 sample_rate_source=source,
+                channel_source=channel_source,
+                fallback_reason=channel_reason,
             )
 
         if not allow_sample_rate_fallback:
@@ -521,16 +559,21 @@ class UsbAudioDriver:
                 candidate,
                 direction=direction,
             ):
+                sample_reason = f"sample-rate-{requested_sample_rate}-unsupported"
+                fallback_reason = (
+                    f"{sample_reason}; {channel_reason}"
+                    if channel_reason
+                    else sample_reason
+                )
                 return UsbAudioStreamContract(
                     direction=direction,
                     device=device,
                     sample_rate_hz=candidate,
-                    channels=channels,
+                    channels=effective_channels,
                     frame_ms=frame_ms,
                     sample_rate_source="fallback",
-                    fallback_reason=(
-                        f"sample-rate-{requested_sample_rate}-unsupported"
-                    ),
+                    channel_source=channel_source,
+                    fallback_reason=fallback_reason,
                 )
 
         raise AudioDriverLifecycleError(
@@ -595,18 +638,21 @@ class UsbAudioDriver:
             # RX frames reaching the browser.
             logger.info(
                 "usb-audio: opening RX capture — device=[%d] %s, %d Hz, "
-                "%d ch, %d ms (device input_channels=%d)",
+                "%d ch (requested %d, source=%s), %d ms "
+                "(device input_channels=%d)",
                 selected_rx.index,
                 selected_rx.name,
                 contract.sample_rate_hz,
+                contract.channels,
                 ch,
+                contract.channel_source,
                 fm,
                 selected_rx.input_channels,
             )
             self._rx_stream = self._backend.open_rx(
                 AudioDeviceId(selected_rx.index),
                 sample_rate=contract.sample_rate_hz,
-                channels=ch,
+                channels=contract.channels,
                 frame_ms=fm,
             )
             await self._rx_stream.start(callback)
@@ -657,7 +703,7 @@ class UsbAudioDriver:
             self._tx_stream = self._backend.open_tx(
                 AudioDeviceId(selected_tx.index),
                 sample_rate=contract.sample_rate_hz,
-                channels=ch,
+                channels=contract.channels,
                 frame_ms=fm,
             )
             await self._tx_stream.start()

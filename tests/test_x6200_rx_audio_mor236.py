@@ -131,12 +131,23 @@ def test_x6200_profile_resolves_mono_rx_codec() -> None:
 
 
 @pytest.mark.asyncio
-async def test_usb_driver_rx_rejects_stereo_on_mono_device() -> None:
-    """Opening a 2-channel capture on a mono device fails (MOR-236 mode)."""
-    driver = UsbAudioDriver(serial_port=None, backend=_MonoUsbAudioBackend())
-    with pytest.raises(RuntimeError, match="Invalid number of channels"):
-        await driver.start_rx(lambda _frame: None, channels=2)
-    assert not driver.rx_running
+async def test_usb_driver_rx_clamps_stereo_on_mono_device() -> None:
+    """A stereo request on a mono device clamps to 1 ch (MOR-238 self-heal).
+
+    Before MOR-238 this raised PortAudio's -9998 "Invalid number of channels"
+    (the MOR-236 failure mode). The driver now clamps the open to the device's
+    real ``input_channels`` so the capture starts regardless of the requested
+    codec's channel count.
+    """
+    backend = _MonoUsbAudioBackend()
+    driver = UsbAudioDriver(serial_port=None, backend=backend)
+    await driver.start_rx(lambda _frame: None, channels=2)
+    assert driver.rx_running
+    contract = driver.usb_audio_contract
+    assert contract is not None and contract.rx is not None
+    assert contract.rx.channels == 1
+    assert contract.rx.channel_source == "device-clamp"
+    await driver.stop_rx()
 
 
 @pytest.mark.asyncio
